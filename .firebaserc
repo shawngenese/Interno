@@ -1,0 +1,16 @@
+{
+  "projects": {
+    "default": "interno-cec9f",
+    "staging": "interno-staging",
+    "prod": "interno-cec9f"
+  },
+  "targets": {
+    "interno-cec9f": {
+      "hosting": {
+        "interno": [
+          "interno-cec9f"
+        ]
+      }
+    }
+  }
+}
