@@ -1,7 +1,20 @@
+/**
+ * REFERENCE / EMULATOR ONLY — NEVER DEPLOYED ON SPARK (C2 free-only).
+ *
+ * Cloud Functions (any gen) require Blaze billing, so this codebase is kept
+ * for logic reference and `firebase emulators:start` local runs only.
+ * Production trusted logic lives in `supabase/functions/*` (Edge, Singapore).
+ * Do NOT run `firebase deploy --only functions` on the Spark plan.
+ */
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { setUserRoleHandler, getCurrentUserRoleHandler } from './auth/customClaims';
 import { logAction, getAuditLogs, getUserAuditLogs } from './audit/auditLog';
 import { getAdminDb, COLLECTIONS, type AuditAction, type EntityType } from './config';
+
+// Client connects with getFunctions(app, 'asia-southeast1').
+// v2 onCall defaults to us-central1, which caused CORS/404 when the client
+// called the asia-southeast1 URL. Pin all callables to asia-southeast1.
+const REGION = 'asia-southeast1';
 
 export const setUserRole = onCall<{
   uid: string;
@@ -10,9 +23,9 @@ export const setUserRole = onCall<{
   departmentId?: string;
   supervisorId?: string;
   traineeId?: string;
-}>(setUserRoleHandler);
+}>({ region: REGION }, setUserRoleHandler);
 
-export const getCurrentUserRole = onCall(getCurrentUserRoleHandler);
+export const getCurrentUserRole = onCall({ region: REGION }, getCurrentUserRoleHandler);
 
 export const writeAuditLog = onCall<{
   userId: string;
@@ -22,7 +35,7 @@ export const writeAuditLog = onCall<{
   originalValue?: Record<string, unknown>;
   newValue?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
-}>(async (request) => {
+}>({ region: REGION }, async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
@@ -45,7 +58,7 @@ export const getAuditLogsByEntity = onCall<{
   entityType: EntityType;
   entityId: string;
   limit?: number;
-}>(async (request) => {
+}>({ region: REGION }, async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
@@ -59,7 +72,7 @@ export const getAuditLogsByEntity = onCall<{
 export const getAuditLogsByUser = onCall<{
   userId: string;
   limit?: number;
-}>(async (request) => {
+}>({ region: REGION }, async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
@@ -75,11 +88,11 @@ export const getAuditLogsByUser = onCall<{
   return { logs };
 });
 
-export const healthCheck = onCall(async () => {
+export const healthCheck = onCall({ region: REGION }, async () => {
   return { status: 'ok', timestamp: Date.now() };
 });
 
-export const cleanupExpiredQRSessions = onCall(async (request) => {
+export const cleanupExpiredQRSessions = onCall({ region: REGION }, async (request) => {
   if (!request.auth || request.auth.token.role !== 'admin') {
     throw new HttpsError('permission-denied', 'Admin only');
   }

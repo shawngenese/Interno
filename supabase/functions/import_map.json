@@ -1,0 +1,7 @@
+{
+  "imports": {
+    "std/": "https://deno.land/std@0.224.0/",
+    "firebase-admin/": "https://deno.land/x/firebase_admin@12.7.0/",
+    "npm:firebase-admin@12.7.0": "https://esm.sh/firebase-admin@12.7.0"
+  }
+}

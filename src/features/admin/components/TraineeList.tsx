@@ -5,14 +5,18 @@ import type { Trainee, ListTraineesParams } from '../types';
 interface TraineeListProps {
   onEdit?: (trainee: Trainee) => void;
   onView?: (trainee: Trainee) => void;
+  onViewDocuments?: (trainee: Trainee) => void;
+  onStatusChange?: (trainee: Trainee) => void;
 }
 
-export function TraineeList({ onEdit, onView }: TraineeListProps) {
+export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }: TraineeListProps) {
   const [trainees, setTrainees] = useState<Trainee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ListTraineesParams>({ page: 1, limit: 10 });
   const [total, setTotal] = useState(0);
+  const [statusDropdownId, setStatusDropdownId] = useState<string | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   const fetchTrainees = useCallback(async () => {
     setLoading(true);
@@ -47,6 +51,26 @@ export function TraineeList({ onEdit, onView }: TraineeListProps) {
 
   const handleOJTStatusChange = (ojtStatus: Trainee['ojtStatus'] | undefined) => {
     setFilters(p => ({ ...p, ojtStatus, page: 1 }));
+  };
+
+  const handleOJTStatusUpdate = async (traineeId: string, newStatus: Trainee['ojtStatus']) => {
+    setUpdatingStatus(traineeId);
+    try {
+      await adminService.updateTraineeOJTStatus(traineeId, newStatus);
+      setTrainees(prev => prev.map(t => 
+        t.id === traineeId ? { ...t, ojtStatus: newStatus } : t
+      ));
+      setStatusDropdownId(null);
+      if (onStatusChange) {
+        const updated = trainees.find(t => t.id === traineeId);
+        if (updated) onStatusChange({ ...updated, ojtStatus: newStatus });
+      }
+    } catch (err) {
+      console.error('Failed to update OJT status:', err);
+      setError('Failed to update status');
+    } finally {
+      setUpdatingStatus(null);
+    }
   };
 
   const totalPages = Math.ceil(total / (filters.limit || 10));
@@ -189,7 +213,7 @@ export function TraineeList({ onEdit, onView }: TraineeListProps) {
                     </span>
                   </td>
                   <td className="px-4 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-end gap-2 relative">
                       {onView && (
                         <button
                           onClick={() => onView(trainee)}
@@ -206,6 +230,41 @@ export function TraineeList({ onEdit, onView }: TraineeListProps) {
                           Edit
                         </button>
                       )}
+                      {onViewDocuments && (
+                        <button
+                          onClick={() => onViewDocuments(trainee)}
+                          className="px-3 py-1.5 text-xs font-medium text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 transition-colors"
+                        >
+                          Docs
+                        </button>
+                      )}
+                      <div className="relative">
+                        <button
+                          onClick={() => setStatusDropdownId(statusDropdownId === trainee.id ? null : trainee.id)}
+                          className="px-3 py-1.5 text-xs font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors"
+                          disabled={updatingStatus === trainee.id}
+                        >
+                          {updatingStatus === trainee.id ? '...' : 'Status'}
+                        </button>
+                        {statusDropdownId === trainee.id && (
+                          <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 py-1">
+                            {(['pending', 'active', 'on_leave', 'completed', 'terminated', 'archived'] as const).map(status => (
+                              <button
+                                key={status}
+                                onClick={() => handleOJTStatusUpdate(trainee.id, status)}
+                                disabled={trainee.ojtStatus === status}
+                                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                                  trainee.ojtStatus === status
+                                    ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                                    : 'text-gray-700 dark:text-gray-300'
+                                }`}
+                              >
+                                {status.replace('_', ' ')}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </td>
                 </tr>

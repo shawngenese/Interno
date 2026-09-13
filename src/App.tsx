@@ -1,9 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '@/features/auth';
 import { LoginPage, UnauthorizedPage } from '@/features/auth';
-import { AdminRoute, SupervisorRoute, CoordinatorRoute, TraineeRoute } from '@/features/auth';
+import { AdminRoute, CoordinatorRoute, TraineeRoute } from '@/features/auth';
 import { AdminLayout } from '@/features/admin/components/AdminLayout';
 import { AdminDashboard } from '@/features/admin/components/AdminDashboard';
+import { SupervisorLayout, SupervisorDashboard, SupervisorTraineeList } from '@/features/supervisor';
+import { SupervisorQRPage } from '@/features/attendance/components/SupervisorQRPage';
+import { SupervisorDTRList } from '@/features/dtr/components/SupervisorDTRList';
 
 function App() {
   return (
@@ -14,10 +17,10 @@ function App() {
           <Route path="/unauthorized" element={<UnauthorizedPage />} />
           
           <Route element={<Navigate to="/dashboard" replace />}>
-            <Route index />
+            <Route index /> 
           </Route>
 
-          <Route path="/admin/*" element={
+          <Route path="/admin/*" element={  
             <AdminRoute>
               <AdminLayout>
                 <AdminDashboard />
@@ -57,10 +60,28 @@ function App() {
             </AdminRoute>
           } />
 
-          <Route path="/supervisor/*" element={
-            <SupervisorRoute>
+          <Route path="/supervisor" element={
+            <SupervisorLayout>
               <SupervisorDashboard />
-            </SupervisorRoute>
+            </SupervisorLayout>
+          } />
+
+          <Route path="/supervisor/trainees" element={
+            <SupervisorLayout>
+              <SupervisorTraineeList />
+            </SupervisorLayout>
+          } />
+
+          <Route path="/supervisor/qr" element={
+            <SupervisorLayout>
+              <SupervisorQRPage />
+            </SupervisorLayout>
+          } />
+
+          <Route path="/supervisor/dtr" element={
+            <SupervisorLayout>
+              <SupervisorDTRList />
+            </SupervisorLayout>
           } />
           
           <Route path="/coordinator/*" element={
@@ -105,15 +126,6 @@ function PrivateLayout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
     </div>
-  );
-}
-
-function SupervisorDashboard() {
-  return (
-    <PrivateLayout>
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Supervisor Dashboard</h2>
-      <p className="text-gray-600 dark:text-gray-400">Manage assigned trainees, create tasks, generate QR codes</p>
-    </PrivateLayout>
   );
 }
 

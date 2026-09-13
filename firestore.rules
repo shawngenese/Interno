@@ -180,6 +180,22 @@ service cloud.firestore {
     }
     
     // ============================================
+    // WORK_SCHEDULES Collection (C2: admin-managed via direct Firestore)
+    // ============================================
+    match /work_schedules/{scheduleId} {
+      allow read: if isSignedIn() && (isAdmin() || sameCompany(resource.data.companyId));
+      allow write: if isSignedIn() && isAdmin();
+    }
+    
+    // ============================================
+    // OJT_SCHEDULES Collection (C2: admin-managed via direct Firestore)
+    // ============================================
+    match /ojt_schedules/{scheduleId} {
+      allow read: if isSignedIn() && (isAdmin() || sameCompany(resource.data.companyId));
+      allow write: if isSignedIn() && isAdmin();
+    }
+    
+    // ============================================
     // ATTENDANCE_RECORDS Collection
     // ============================================
     match /attendance_records/{recordId} {

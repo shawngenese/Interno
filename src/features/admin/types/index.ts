@@ -147,6 +147,27 @@ export interface OJTScheduleFormData {
   description?: string;
 }
 
+export interface TraineeFormData {
+  userId: string;
+  companyId: string;
+  departmentId: string;
+  supervisorId?: string;
+  scheduleId?: string;
+  status: AccountStatus;
+  ojtStatus: Trainee['ojtStatus'];
+  profile?: {
+    studentId?: string;
+    course?: string;
+    school?: string;
+    yearLevel?: string;
+    emergencyContact?: {
+      name: string;
+      relationship: string;
+      phone: string;
+    };
+  };
+}
+
 export interface SupervisorTraineeAssignment {
   supervisorId: string;
   traineeIds: string[];

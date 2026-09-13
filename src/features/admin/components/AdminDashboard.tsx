@@ -7,6 +7,8 @@ import {
   DepartmentForm,
   SupervisorList,
   TraineeList,
+  TraineeForm,
+  DocumentRequirements,
   SupervisorTraineeAssignment,
   OJTScheduleList,
   OJTScheduleForm,
@@ -20,7 +22,7 @@ type Tab = 'users' | 'companies' | 'departments' | 'supervisors' | 'trainees' | 
 
 export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('users');
-  const [view, setView] = useState<'list' | 'create' | 'edit' | 'assign'>('list');
+  const [view, setView] = useState<'list' | 'create' | 'edit' | 'assign' | 'documents'>('list');
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editingCompanyId, setEditingCompanyId] = useState<string | null>(null);
   const [editingDepartmentId, setEditingDepartmentId] = useState<string | null>(null);
@@ -28,6 +30,7 @@ export function AdminDashboard() {
   const [editingWorkScheduleId, setEditingWorkScheduleId] = useState<string | null>(null);
   const [editingOJTScheduleId, setEditingOJTScheduleId] = useState<string | null>(null);
   const [assigningSupervisor, setAssigningSupervisor] = useState<Supervisor | null>(null);
+  const [viewingTraineeCompanyId, setViewingTraineeCompanyId] = useState<string | null>(null);
 
   const handleEditUser = (user: User) => {
     setEditingUserId(user.id);
@@ -108,6 +111,7 @@ export function AdminDashboard() {
 
   const handleViewTrainee = (trainee: Trainee) => {
     setEditingTraineeId(trainee.id);
+    setViewingTraineeCompanyId(trainee.companyId);
     setEditingUserId(null);
     setEditingCompanyId(null);
     setEditingDepartmentId(null);
@@ -115,6 +119,18 @@ export function AdminDashboard() {
     setEditingOJTScheduleId(null);
     setAssigningSupervisor(null);
     setView('edit');
+  };
+
+  const handleViewTraineeDocuments = (trainee: Trainee) => {
+    setEditingTraineeId(trainee.id);
+    setViewingTraineeCompanyId(trainee.companyId);
+    setEditingUserId(null);
+    setEditingCompanyId(null);
+    setEditingDepartmentId(null);
+    setEditingWorkScheduleId(null);
+    setEditingOJTScheduleId(null);
+    setAssigningSupervisor(null);
+    setView('documents');
   };
 
   const handleEditWorkSchedule = (schedule: WorkSchedule) => {
@@ -170,6 +186,7 @@ export function AdminDashboard() {
     setEditingWorkScheduleId(null);
     setEditingOJTScheduleId(null);
     setAssigningSupervisor(null);
+    setViewingTraineeCompanyId(null);
   };
 
   const handleAssignmentClose = () => {
@@ -346,14 +363,32 @@ export function AdminDashboard() {
               <div className="mb-6 flex items-center justify-between">
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Trainee Management</h1>
-                  <p className="text-gray-600 dark:text-gray-400 mt-1">Manage trainees</p>
+                  <p className="text-gray-600 dark:text-gray-400 mt-1">Manage trainees and their profiles</p>
                 </div>
+                <button
+                  onClick={() => { setView('create'); setEditingTraineeId(null); }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                >
+                  Add Trainee
+                </button>
               </div>
-              <TraineeList onEdit={handleEditTrainee} onView={handleViewTrainee} />
+              <TraineeList 
+                onEdit={handleEditTrainee} 
+                onView={handleViewTrainee}
+                onViewDocuments={handleViewTraineeDocuments}
+                onStatusChange={() => {}} 
+              />
             </>
           )}
 
-          {view === 'edit' && editingTraineeId && <TraineeList />}
+          {view === 'create' && <TraineeForm />}
+          {view === 'edit' && editingTraineeId && <TraineeForm />}
+          {view === 'documents' && editingTraineeId && viewingTraineeCompanyId && (
+            <DocumentRequirements 
+              traineeId={editingTraineeId} 
+              companyId={viewingTraineeCompanyId}
+            />
+          )}
         </>
       )}
 

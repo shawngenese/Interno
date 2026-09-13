@@ -25,6 +25,20 @@ import { getFunctions as getFirebaseFunctions, type Functions, connectFunctionsE
 import { getMessaging, type Messaging, isSupported } from 'firebase/messaging';
 import { initializeAppCheck, type AppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 
+/**
+ * C2 (Spark + Supabase Free) Firebase client.
+ *
+ * Spark prod surface: Auth, Firestore, Hosting, FCM, App Check.
+ * NOT deployed (Blaze-only): Cloud Functions (`functions/` v2) and the
+ * Firebase Storage bucket. Trusted logic lives in Supabase Edge Functions;
+ * files live in Supabase Storage; metadata stays in Firestore.
+ *
+ * Storage/Functions SDKs below are emulator/reference-only: they initialize
+ * solely when `VITE_USE_FIREBASE_EMULATORS=true` for local reference runs.
+ * In prod builds the getters throw a C2 error pointing at the Supabase
+ * replacement, so nobody accidentally wires a Blaze-only dependency.
+ */
+
 declare global {
   interface Window {
     __USER_ROLE__: string | null;
@@ -60,8 +74,7 @@ export function initializeFirebase(): FirebaseApp {
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
   db = getFirestore(app);
-  storage = getStorage(app);
-  functions = getFirebaseFunctions(app, 'asia-southeast1');
+  // C2: do NOT init Storage/Functions here — Blaze-only, emulator-only (see below).
 
   configureAuth();
   configureFirestore();
@@ -88,12 +101,40 @@ function getDbInstance(): Firestore {
 }
 
 function getStorageInstance(): FirebaseStorage {
-  if (!storage) throw new Error('Firebase not initialized. Call initializeFirebase() first.');
+  if (!storage) {
+    throw new Error(
+      'Firebase Storage is not used (C2 free-only: bucket requires Blaze). ' +
+        'Use Supabase Storage buckets (documents/tasks/profiles) via src/features/documents. ' +
+        'Storage SDK is emulator/reference-only: set VITE_USE_FIREBASE_EMULATORS=true for local runs.'
+    );
+  }
   return storage;
 }
 
 function getFunctionsInstance(): Functions {
-  if (!functions) throw new Error('Firebase not initialized. Call initializeFirebase() first.');
+  if (!functions) {
+    throw new Error(
+      'Cloud Functions are not deployed (C2 free-only: Functions require Blaze). ' +
+        'Use Supabase Edge Functions via callEdgeFunction() in src/config/supabase.ts. ' +
+        'Functions SDK is emulator/reference-only: set VITE_USE_FIREBASE_EMULATORS=true for local runs.'
+    );
+  }
+  return functions;
+}
+
+/** Emulator/reference-only: init Storage SDK for local runs. Never used in prod (C2). */
+function ensureStorageForEmulator(): FirebaseStorage {
+  if (!storage) {
+    storage = getStorage(getApp());
+  }
+  return storage;
+}
+
+/** Emulator/reference-only: init Functions SDK for local runs. Never used in prod (C2). */
+function ensureFunctionsForEmulator(): Functions {
+  if (!functions) {
+    functions = getFirebaseFunctions(getApp(), 'asia-southeast1');
+  }
   return functions;
 }
 
@@ -141,8 +182,27 @@ async function configureFirestore(): Promise<void> {
 
 function configureAppCheck(): void {
   const siteKey = import.meta.env.VITE_FIREBASE_APP_CHECK_RECAPTCHA_SITE_KEY;
+  const enableInDev = import.meta.env.VITE_ENABLE_APP_CHECK_IN_DEV === 'true';
+  const isLocalhost =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+  // reCAPTCHA v3 exchange fails with 400 on localhost unless a debug token
+  // and allowed domain are configured. Skip by default in local dev so
+  // Auth/Firestore/Edge calls are not throttled by App Check enforcement.
+  // Set VITE_ENABLE_APP_CHECK_IN_DEV=true to force-enable when testing App Check.
+  if (import.meta.env.DEV && isLocalhost && !enableInDev) {
+    console.warn('[Firebase] App Check skipped on localhost (set VITE_ENABLE_APP_CHECK_IN_DEV=true to enable)');
+    return;
+  }
+
   if (siteKey && siteKey !== 'your-recaptcha-site-key') {
     try {
+      const debugToken = import.meta.env.VITE_FIREBASE_APP_CHECK_DEBUG_TOKEN;
+      if (debugToken && debugToken !== 'your-debug-token') {
+        (self as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN: string | boolean }).FIREBASE_APPCHECK_DEBUG_TOKEN =
+          debugToken === 'true' ? true : debugToken;
+      }
       appCheck = initializeAppCheck(getApp(), {
         provider: new ReCaptchaV3Provider(siteKey),
         isTokenAutoRefreshEnabled: true,
@@ -195,12 +255,12 @@ function configureEmulators(): void {
 
     if (storageHost) {
       const [host, port] = storageHost.split(':');
-      connectStorageEmulator(getStorageInstance(), host, parseInt(port, 10));
+      connectStorageEmulator(ensureStorageForEmulator(), host, parseInt(port, 10));
     }
 
     if (functionsHost) {
       const [host, port] = functionsHost.split(':');
-      connectFunctionsEmulator(getFunctionsInstance(), host, parseInt(port, 10));
+      connectFunctionsEmulator(ensureFunctionsForEmulator(), host, parseInt(port, 10));
     }
 
     console.log('[Firebase] Emulators connected');
@@ -226,8 +286,10 @@ export function getFunctionsInstancePublic(): Functions {
 }
 
 export function getFunctions(): Functions {
-  const app = getApp();
-  return getFirebaseFunctions(app, 'asia-southeast1');
+  // C2: route through the guarded instance so prod callers get the
+  // Supabase Edge pointer instead of silently initing a Blaze-only SDK.
+  getApp();
+  return getFunctionsInstance();
 }
 
 export function getMessagingInstance(): Messaging | null {

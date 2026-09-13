@@ -41,6 +41,9 @@ coverage
 # Firebase
 firebase-debug.log
 firebase-debug.*.log
+serviceAccountKey.json
+*service-account*.json
+*serviceAccount*.json
 
 # Temporary files
 *.tmp
@@ -58,3 +61,7 @@ Desktop.ini
 ABOUT
 SKILLS.md
 AGENTS.md
+
+# AGENTS
+.agents
+.claude
