@@ -41,15 +41,35 @@ coverage
 # Firebase
 firebase-debug.log
 firebase-debug.*.log
+firestore-debug.log
+firestore-debug.*.log
 serviceAccountKey.json
 *service-account*.json
 *serviceAccount*.json
+.firebase/
+emulator-data/
 
 # Temporary files
 *.tmp
 *.temp
 .tmp/
 .temp/
+
+# Supabase
+supabase/.temp/
+
+# Local utility scripts
+assign-admin.cjs
+check-admin.cjs
+check-admin.js
+set-claims.cjs
+
+# Local temp/notes
+emulator.txt
+help.txt
+
+# OpenCode/Agents lock
+skills-lock.json
 
 # OS files
 Thumbs.db
