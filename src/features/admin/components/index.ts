@@ -7,6 +7,7 @@ export { CompanyForm } from './CompanyForm';
 export { DepartmentList } from './DepartmentList';
 export { DepartmentForm } from './DepartmentForm';
 export { SupervisorList } from './SupervisorList';
+export { SupervisorForm } from './SupervisorForm';
 export { TraineeList } from './TraineeList';
 export { TraineeForm } from './TraineeForm';
 export { DocumentRequirements } from './DocumentRequirements';

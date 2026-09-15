@@ -104,12 +104,15 @@ export async function getDTRReportData(filters: ReportFilters): Promise<DTRRepor
 /** Fetch tasks for report. */
 export async function getTaskReportData(filters: ReportFilters): Promise<TaskReportData[]> {
   const { getFirestoreInstancePublic } = await import('@/config/firebase');
-  const { collection, query, where, orderBy, getDocs } = await import('firebase/firestore');
+  const { collection, query, where, orderBy, getDocs, Timestamp } = await import('firebase/firestore');
   const db = getFirestoreInstancePublic();
 
+  const startTs = Timestamp.fromMillis(filters.startDate);
+  const endTs = Timestamp.fromMillis(filters.endDate);
+
   const constraints = [
-    where('createdAt', '>=', filters.startDate),
-    where('createdAt', '<=', filters.endDate),
+    where('createdAt', '>=', startTs),
+    where('createdAt', '<=', endTs),
     orderBy('createdAt', 'desc'),
   ];
   if (filters.traineeId) constraints.push(where('traineeId', '==', filters.traineeId));
@@ -123,12 +126,15 @@ export async function getTaskReportData(filters: ReportFilters): Promise<TaskRep
 /** Fetch documents for report. */
 export async function getDocumentReportData(filters: ReportFilters): Promise<DocumentReportData[]> {
   const { getFirestoreInstancePublic } = await import('@/config/firebase');
-  const { collection, query, where, orderBy, getDocs } = await import('firebase/firestore');
+  const { collection, query, where, orderBy, getDocs, Timestamp } = await import('firebase/firestore');
   const db = getFirestoreInstancePublic();
 
+  const startTs = Timestamp.fromMillis(filters.startDate);
+  const endTs = Timestamp.fromMillis(filters.endDate);
+
   const constraints = [
-    where('createdAt', '>=', filters.startDate),
-    where('createdAt', '<=', filters.endDate),
+    where('createdAt', '>=', startTs),
+    where('createdAt', '<=', endTs),
     orderBy('createdAt', 'desc'),
   ];
   if (filters.traineeId) constraints.push(where('traineeId', '==', filters.traineeId));

@@ -255,14 +255,20 @@ export async function markAllNotificationsRead(): Promise<void> {
 /** Delete a notification. */
 export async function deleteNotification(id: string): Promise<void> {
   const { getFirestoreInstancePublic } = await import('@/config/firebase');
-  const { doc, deleteDoc } = await import('firebase/firestore');
+  const { doc, getDoc, deleteDoc } = await import('firebase/firestore');
   const { getAuthInstancePublic } = await import('@/config/firebase');
   const auth = getAuthInstancePublic();
   const currentUser = auth.currentUser;
   if (!currentUser) throw new Error('Not authenticated');
 
   const db = getFirestoreInstancePublic();
-  await deleteDoc(doc(db, 'notifications', id));
+  const ref = doc(db, 'notifications', id);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error('Notification not found');
+  const data = snap.data();
+  if (data.userId !== currentUser.uid) throw new Error('Not authorized');
+
+  await deleteDoc(ref);
 }
 
 /** Get user notification preferences. */

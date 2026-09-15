@@ -11,7 +11,7 @@ export function SupervisorTraineeList() {
   const [attendance, setAttendance] = useState<Record<string, { hasTimeIn: boolean; hasTimeOut: boolean }>>({});
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.uid) return;
 
     const loadTrainees = async () => {
       setLoading(true);
@@ -33,7 +33,7 @@ export function SupervisorTraineeList() {
     };
 
     loadTrainees();
-  }, [user]);
+  }, [user?.uid]);
 
   if (loading) {
     return (
@@ -61,7 +61,7 @@ export function SupervisorTraineeList() {
 
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50 dark:bg-gray-800/50">
+          <thead className="bg-gray-50 dark:bg-gray-700/50">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Student ID</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Course</th>

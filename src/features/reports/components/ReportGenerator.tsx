@@ -1,5 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { generateAttendanceReport, generateDTRReport, generateTaskReport, generateDocumentReport, generateComprehensiveReport, downloadBlob, type ReportFilters } from '../services/reportService';
+import { getFirestoreInstancePublic } from '@/config/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { formatDateTime12 } from '@/shared/utils/dateUtils';
 
 type ReportType = 'attendance' | 'dtr' | 'tasks' | 'documents' | 'comprehensive';
 
@@ -18,6 +21,42 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
   const [format, setFormat] = useState<'pdf' | 'excel' | 'both'>('both');
   const [error, setError] = useState<string | null>(null);
   const [lastGenerated, setLastGenerated] = useState<string | null>(null);
+  const [companies, setCompanies] = useState<{ id: string; name: string }[]>([]);
+  const [trainees, setTrainees] = useState<{ id: string; name: string }[]>([]);
+
+  // Load companies
+  useEffect(() => {
+    async function loadCompanies() {
+      try {
+        const db = getFirestoreInstancePublic();
+        const snap = await getDocs(query(collection(db, 'companies'), where('status', '==', 'active')));
+        setCompanies(snap.docs.map((d) => ({ id: d.id, name: d.data().name || d.id })));
+      } catch (err) {
+        console.error('Failed to load companies:', err);
+      }
+    }
+    loadCompanies();
+  }, []);
+
+  // Load trainees when company changes
+  useEffect(() => {
+    async function loadTrainees() {
+      if (!filters.companyId) {
+        setTrainees([]);
+        return;
+      }
+      try {
+        const db = getFirestoreInstancePublic();
+        const snap = await getDocs(
+          query(collection(db, 'trainees'), where('companyId', '==', filters.companyId), where('status', '==', 'active')),
+        );
+        setTrainees(snap.docs.map((d) => ({ id: d.id, name: d.data().name || d.id })));
+      } catch (err) {
+        console.error('Failed to load trainees:', err);
+      }
+    }
+    loadTrainees();
+  }, [filters.companyId]);
 
   const handleDateChange = (field: 'startDate' | 'endDate', value: string) => {
     setFilters(f => ({ ...f, [field]: value ? new Date(value).getTime() : 0 }));
@@ -91,7 +130,7 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
         if (excelBlob) downloadBlob(excelBlob, `${baseFilename}.xlsx`);
       }
 
-      setLastGenerated(new Date().toLocaleString());
+      setLastGenerated(formatDateTime12(Date.now()));
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Report generation failed';
       setError(message);
@@ -163,7 +202,9 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
               className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Select Company (required)</option>
-              {/* Companies would be loaded from context/service */}
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -207,7 +248,9 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
               className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="">All Trainees</option>
-              {/* Trainees would be loaded from context/service */}
+              {trainees.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
             </select>
           </div>
 
@@ -260,6 +303,16 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
               Last generated: {lastGenerated}
             </span>
           )}
+
+          <button
+            onClick={() => window.print()}
+            className="px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            Print
+          </button>
         </div>
 
         <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-sm text-gray-600 dark:text-gray-400">

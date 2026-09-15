@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { QRScanner } from './QRScanner';
+import { AttendanceHistoryCalendar } from './AttendanceHistoryCalendar';
+import { MissingTimeOutAlert } from './MissingTimeOutAlert';
 import { getTodayAttendance } from '../services/attendanceService';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { formatTime12, formatDateTime12 } from '@/shared/utils/dateUtils';
 import type { TodayAttendanceStatus } from '../types';
 
 export function TraineeAttendance() {
@@ -49,15 +52,17 @@ export function TraineeAttendance() {
   };
 
   const timeInLabel = todayStatus.timeInRecord
-    ? `Timed in at ${new Date(todayStatus.timeInRecord.timestamp).toLocaleTimeString()}`
+    ? `Timed in at ${formatTime12(todayStatus.timeInRecord.timestamp)}`
     : 'Not timed in yet';
 
   const timeOutLabel = todayStatus.timeOutRecord
-    ? `Timed out at ${new Date(todayStatus.timeOutRecord.timestamp).toLocaleTimeString()}`
+    ? `Timed out at ${formatTime12(todayStatus.timeOutRecord.timestamp)}`
     : 'Not timed out yet';
 
   return (
     <div className="space-y-4">
+      <MissingTimeOutAlert />
+
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Today's Attendance</h2>
 
@@ -88,7 +93,7 @@ export function TraineeAttendance() {
                 {lastAction.action === 'time_in' ? '✓ Time In' : '✓ Time Out'} Recorded
               </p>
               <p className="text-sm text-green-600 dark:text-green-400">
-                {new Date(lastAction.timestamp).toLocaleString()}
+                {formatDateTime12(lastAction.timestamp)}
               </p>
             </div>
           </div>
@@ -96,6 +101,8 @@ export function TraineeAttendance() {
       )}
 
       <QRScanner onScanResult={handleScanResult} onError={handleError} />
+
+      <AttendanceHistoryCalendar />
 
       {loading && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

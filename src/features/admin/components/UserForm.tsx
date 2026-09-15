@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
 import { adminService } from '../services/adminService';
+import { resolveDocName } from '@/shared/utils/resolveDocName';
 import type { UserFormData, Company, Department, Supervisor } from '../types';
 
-export function UserForm() {
-  const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const isEditing = !!id;
+interface UserFormProps {
+  editingId?: string;
+  onCancel?: () => void;
+  onSaved?: () => void;
+}
+
+export function UserForm({ editingId, onCancel, onSaved }: UserFormProps) {
+  const isEditing = !!editingId;
 
   const [formData, setFormData] = useState<UserFormData>({
     email: '',
@@ -20,7 +24,7 @@ export function UserForm() {
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [supervisors, setSupervisors] = useState<Supervisor[]>([]);
+  const [supervisors, setSupervisors] = useState<(Supervisor & { userName?: string; userEmail?: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +50,16 @@ export function UserForm() {
   const loadSupervisors = async (companyId: string) => {
     try {
       const result = await adminService.listSupervisors({ companyId, limit: 100 });
-      setSupervisors(result.data);
+      const resolved = await Promise.all(
+        result.data.map(async (s) => {
+          const [userName, userEmail] = await Promise.all([
+            resolveDocName('users', s.userId, 'displayName'),
+            resolveDocName('users', s.userId, 'email'),
+          ]);
+          return { ...s, userName, userEmail };
+        }),
+      );
+      setSupervisors(resolved);
     } catch (err) {
       console.error('Failed to load supervisors:', err);
     }
@@ -67,15 +80,17 @@ export function UserForm() {
     } catch (err) {
       setError('Failed to load user');
       console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     loadCompanies();
-    if (isEditing) {
-      loadUser(id!);
+    if (isEditing && editingId) {
+      loadUser(editingId);
     }
-  }, [id, isEditing]);
+  }, [editingId, isEditing]);
 
   useEffect(() => {
     if (formData.companyId) {
@@ -97,12 +112,12 @@ export function UserForm() {
     setSaving(true);
 
     try {
-      if (isEditing) {
-        await adminService.updateUser(id!, formData);
+      if (isEditing && editingId) {
+        await adminService.updateUser(editingId, formData);
       } else {
         await adminService.createUser(formData);
       }
-      navigate('/admin/users');
+      onSaved?.();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to save user';
       setError(message);
@@ -112,7 +127,7 @@ export function UserForm() {
   };
 
   const handleCancel = () => {
-    navigate('/admin/users');
+    onCancel?.();
   };
 
   useEffect(() => {
@@ -139,7 +154,7 @@ export function UserForm() {
       </h2>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
+        <div role="alert" className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
           {error}
         </div>
       )}
@@ -242,7 +257,7 @@ export function UserForm() {
             >
               <option value="">Select Supervisor</option>
               {supervisors.map(sup => (
-                <option key={sup.id} value={sup.id}>{sup.id}</option>
+                <option key={sup.id} value={sup.id}>{sup.userName || sup.userEmail || sup.id}</option>
               ))}
             </select>
           </div>

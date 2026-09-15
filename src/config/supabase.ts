@@ -65,6 +65,11 @@ export interface EdgeCallOptions {
 /**
  * Call a Supabase Edge Function with the caller's Firebase ID token.
  * Used by Step 3+ (`set_user_role`, `write_audit`, QR, DTR, upload, FCM).
+ *
+ * The Firebase token is sent in the request body (not the Authorization
+ * header) to avoid Supabase's platform-level JWT verification, which only
+ * accepts Supabase-format JWTs. Edge Functions verify the Firebase token
+ * internally via Admin SDK.
  */
 export async function callEdgeFunction<TResponse>(
   name: string,
@@ -76,9 +81,11 @@ export async function callEdgeFunction<TResponse>(
     headers: {
       'Content-Type': 'application/json',
       apikey: import.meta.env.VITE_SUPABASE_ANON_KEY as string,
-      ...(options.idToken ? { Authorization: `Bearer ${options.idToken}` } : {}),
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      ...body,
+      ...(options.idToken ? { _firebase_token: options.idToken } : {}),
+    }),
   });
   if (!response.ok) {
     const detail = await response.text().catch(() => '');

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { adminService } from '../services/adminService';
+import { resolveDocName } from '@/shared/utils/resolveDocName';
 import type { Supervisor, ListSupervisorsParams } from '../types';
 
 interface SupervisorListProps {
@@ -7,8 +8,15 @@ interface SupervisorListProps {
   onAssignTrainees?: (supervisor: Supervisor) => void;
 }
 
+interface ResolvedSupervisor extends Supervisor {
+  userName?: string;
+  userEmail?: string;
+  companyName?: string;
+  departmentName?: string;
+}
+
 export function SupervisorList({ onEdit, onAssignTrainees }: SupervisorListProps) {
-  const [supervisors, setSupervisors] = useState<Supervisor[]>([]);
+  const [supervisors, setSupervisors] = useState<ResolvedSupervisor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ListSupervisorsParams>({ page: 1, limit: 10 });
@@ -19,7 +27,18 @@ export function SupervisorList({ onEdit, onAssignTrainees }: SupervisorListProps
     setError(null);
     try {
       const result = await adminService.listSupervisors(filters);
-      setSupervisors(result.data);
+      const resolved = await Promise.all(
+        result.data.map(async (s) => {
+          const [userName, companyName, departmentName] = await Promise.all([
+            resolveDocName('users', s.userId, 'displayName'),
+            resolveDocName('companies', s.companyId, 'name'),
+            resolveDocName('departments', s.departmentId, 'name'),
+          ]);
+          const userEmail = await resolveDocName('users', s.userId, 'email');
+          return { ...s, userName, userEmail, companyName, departmentName };
+        }),
+      );
+      setSupervisors(resolved);
       setTotal(result.total);
     } catch (err) {
       setError('Failed to load supervisors');
@@ -79,7 +98,7 @@ export function SupervisorList({ onEdit, onAssignTrainees }: SupervisorListProps
 
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50 dark:bg-gray-800/50">
+          <thead className="bg-gray-50 dark:bg-gray-700/50">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
@@ -100,16 +119,16 @@ export function SupervisorList({ onEdit, onAssignTrainees }: SupervisorListProps
               supervisors.map(supervisor => (
                 <tr key={supervisor.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                   <td className="px-4 py-4 text-sm text-gray-900 dark:text-white font-medium">
-                    {supervisor.id}
+                    {supervisor.userName || '—'}
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {supervisor.userId}
+                    {supervisor.userEmail || '-'}
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {supervisor.companyId}
+                    {supervisor.companyName || '—'}
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {supervisor.departmentId}
+                    {supervisor.departmentName || '—'}
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
                     {supervisor.assignedTrainees?.length || 0}

@@ -29,28 +29,26 @@ export async function getUploadUrl(params: UploadParams): Promise<UploadValidati
   return callEdgeFunction<UploadValidationResult>('validate_upload', params as unknown as Record<string, unknown>, { idToken });
 }
 
-/** Upload file to Supabase Storage using signed URL. */
-export async function uploadToStorage(uploadUrl: string, token: string, file: File): Promise<void> {
-  const response = await fetch(uploadUrl, {
-    method: 'PUT',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': file.type,
-      'x-upsert': 'true',
-    },
-    body: file,
+/** Upload file to Supabase Storage using Supabase JS SDK. */
+export async function uploadToStorage(bucket: string, path: string, file: File): Promise<void> {
+  const supabase = getSupabase();
+  const { error } = await supabase.storage.from(bucket).upload(path, file, {
+    contentType: file.type,
+    upsert: true,
   });
-  if (!response.ok) {
-    const text = await response.text().catch(() => '');
-    throw new Error(`Upload failed: ${response.status} ${text}`);
+  if (error) {
+    throw new Error(`Upload failed: ${error.message}`);
   }
 }
 
-/** Get download URL for a storage path. */
-export function getDownloadUrl(bucket: string, path: string): string {
+/** Get signed download URL for a storage path (valid for 1 hour). */
+export async function getDownloadUrl(bucket: string, path: string): Promise<string> {
   const supabase = getSupabase();
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-  return data.publicUrl;
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
+  if (error) {
+    throw new Error(`Failed to create signed URL: ${error.message}`);
+  }
+  return data.signedUrl;
 }
 
 /** Create document metadata in Firestore after upload. */
@@ -213,7 +211,7 @@ export async function uploadAndCreateDocument(
   metadata: Omit<UploadParams, 'fileName' | 'mimeType' | 'fileSize'>,
   documentData: Omit<Document, 'id' | 'fileName' | 'fileUrl' | 'fileSize' | 'mimeType' | 'storagePath' | 'createdAt' | 'updatedAt' | 'uploadedBy'>,
 ): Promise<Document> {
-  // 1. Get signed upload URL
+  // 1. Validate and get storage path
   const validation = await getUploadUrl({
     fileName: file.name,
     mimeType: file.type,
@@ -221,8 +219,8 @@ export async function uploadAndCreateDocument(
     ...metadata,
   } as UploadParams);
 
-  // 2. Upload to Supabase Storage
-  await uploadToStorage(validation.uploadUrl, validation.token, file);
+  // 2. Upload to Supabase Storage using SDK
+  await uploadToStorage(metadata.bucket, validation.path, file);
 
   // 3. Create metadata in Firestore with uploadedBy from current user
   const { getAuthInstancePublic } = await import('@/config/firebase');
@@ -230,7 +228,7 @@ export async function uploadAndCreateDocument(
   const currentUser = auth.currentUser;
   if (!currentUser) throw new Error('Not authenticated');
 
-  const downloadUrl = getDownloadUrl(metadata.bucket, validation.path);
+  const downloadUrl = await getDownloadUrl(metadata.bucket, validation.path);
   return createDocument({
     ...documentData,
     uploadedBy: currentUser.uid,
@@ -255,14 +253,14 @@ export async function uploadAndCreateTaskDocument(
     ...metadata,
   } as UploadParams);
 
-  await uploadToStorage(validation.uploadUrl, validation.token, file);
+  await uploadToStorage(metadata.bucket, validation.path, file);
 
   const { getAuthInstancePublic } = await import('@/config/firebase');
   const auth = getAuthInstancePublic();
   const currentUser = auth.currentUser;
   if (!currentUser) throw new Error('Not authenticated');
 
-  const downloadUrl = getDownloadUrl(metadata.bucket, validation.path);
+  const downloadUrl = await getDownloadUrl(metadata.bucket, validation.path);
   return createTaskDocument({
     ...documentData,
     uploadedBy: currentUser.uid,
@@ -284,9 +282,9 @@ export async function uploadProfileImage(file: File, userId: string): Promise<Pr
     userId,
   });
 
-  await uploadToStorage(validation.uploadUrl, validation.token, file);
+  await uploadToStorage('profiles', validation.path, file);
 
-  const downloadUrl = getDownloadUrl('profiles', validation.path);
+  const downloadUrl = await getDownloadUrl('profiles', validation.path);
   const { getFirestoreInstancePublic } = await import('@/config/firebase');
   const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
   const db = getFirestoreInstancePublic();

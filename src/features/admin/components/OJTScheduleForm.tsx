@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
 import { adminService } from '../services/adminService';
-import type { OJTScheduleFormData, WorkSchedule } from '../types';
+import type { OJTScheduleFormData, WorkSchedule, Company } from '../types';
 
-export function OJTScheduleForm() {
-  const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const isEditing = !!id;
+interface OJTScheduleFormProps {
+  editingId?: string;
+  viewOnly?: boolean;
+  onCancel?: () => void;
+  onSaved?: () => void;
+}
+
+export function OJTScheduleForm({ editingId, viewOnly, onCancel, onSaved }: OJTScheduleFormProps) {
+  const isEditing = !!editingId;
 
   const [formData, setFormData] = useState<OJTScheduleFormData>({
     companyId: '',
@@ -18,14 +22,22 @@ export function OJTScheduleForm() {
     description: '',
   });
 
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [workSchedules, setWorkSchedules] = useState<WorkSchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadWorkSchedules = async () => {
+  const to12Hour = (time24: string) => {
+    const [h, m] = time24.split(':').map(Number);
+    const period = h >= 12 ? 'PM' : 'AM';
+    const hour12 = h % 12 || 12;
+    return `${hour12}:${m.toString().padStart(2, '0')} ${period}`;
+  };
+
+  const loadWorkSchedules = async (companyId?: string) => {
     try {
-      const result = await adminService.listWorkSchedules({ limit: 100 });
+      const result = await adminService.listWorkSchedules({ limit: 100, companyId: companyId || undefined });
       setWorkSchedules(result.data);
     } catch (err) {
       console.error('Failed to load work schedules:', err);
@@ -53,13 +65,30 @@ export function OJTScheduleForm() {
   };
 
   useEffect(() => {
-    loadWorkSchedules();
-    if (isEditing) {
-      loadSchedule(id!);
+    const init = async () => {
+      try {
+        const result = await adminService.listCompanies({ limit: 100 });
+        setCompanies(result.data);
+      } catch (err) {
+        console.error('Failed to load companies:', err);
+      }
+      if (isEditing && editingId) {
+        await loadSchedule(editingId);
+      } else {
+        setLoading(false);
+      }
+    };
+    init();
+  }, [editingId, isEditing]);
+
+  // Load work schedules when company changes
+  useEffect(() => {
+    if (formData.companyId) {
+      loadWorkSchedules(formData.companyId);
     } else {
-      setLoading(false);
+      setWorkSchedules([]);
     }
-  }, [id, isEditing]);
+  }, [formData.companyId]);
 
   const handleChange = (field: keyof OJTScheduleFormData, value: string | number | Date) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -77,12 +106,12 @@ export function OJTScheduleForm() {
         endDate: formData.endDate instanceof Date ? formData.endDate : new Date(formData.endDate),
       };
 
-      if (isEditing) {
-        await adminService.updateOJTSchedule(id!, submitData);
+      if (isEditing && editingId) {
+        await adminService.updateOJTSchedule(editingId, submitData);
       } else {
         await adminService.createOJTSchedule(submitData);
       }
-      navigate('/admin/ojt-schedules');
+      onSaved?.();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to save schedule';
       setError(message);
@@ -92,7 +121,7 @@ export function OJTScheduleForm() {
   };
 
   const handleCancel = () => {
-    navigate('/admin/ojt-schedules');
+    onCancel?.();
   };
 
   if (loading) {
@@ -109,7 +138,7 @@ export function OJTScheduleForm() {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 max-w-2xl mx-auto">
       <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-        {isEditing ? 'Edit OJT Schedule' : 'Create OJT Schedule'}
+        {viewOnly ? 'View OJT Schedule' : isEditing ? 'Edit OJT Schedule' : 'Create OJT Schedule'}
       </h2>
 
       {error && (
@@ -123,15 +152,19 @@ export function OJTScheduleForm() {
           <label htmlFor="companyId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Company <span className="text-red-500">*</span>
           </label>
-          <input
-            type="text"
+          <select
             id="companyId"
             value={formData.companyId}
             onChange={(e) => handleChange('companyId', e.target.value)}
             required
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Company ID"
-          />
+            disabled={viewOnly}
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <option value="">Select Company</option>
+            {companies.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
         </div>
 
         <div>
@@ -144,7 +177,8 @@ export function OJTScheduleForm() {
             value={formData.name}
             onChange={(e) => handleChange('name', e.target.value)}
             required
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={viewOnly}
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder="OJT Schedule Name"
           />
         </div>
@@ -160,7 +194,8 @@ export function OJTScheduleForm() {
               value={formData.startDate instanceof Date ? formData.startDate.toISOString().split('T')[0] : ''}
               onChange={(e) => handleChange('startDate', new Date(e.target.value))}
               required
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={viewOnly}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
 
@@ -174,7 +209,8 @@ export function OJTScheduleForm() {
               value={formData.endDate instanceof Date ? formData.endDate.toISOString().split('T')[0] : ''}
               onChange={(e) => handleChange('endDate', new Date(e.target.value))}
               required
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={viewOnly}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
         </div>
@@ -191,7 +227,8 @@ export function OJTScheduleForm() {
               onChange={(e) => handleChange('requiredHours', parseInt(e.target.value) || 0)}
               required
               min="1"
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={viewOnly}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               placeholder="480"
             />
           </div>
@@ -205,11 +242,12 @@ export function OJTScheduleForm() {
               value={formData.workScheduleId}
               onChange={(e) => handleChange('workScheduleId', e.target.value)}
               required
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={viewOnly}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Select Work Schedule</option>
               {workSchedules.map(ws => (
-                <option key={ws.id} value={ws.id}>{ws.name} ({ws.timeIn} - {ws.timeOut})</option>
+                <option key={ws.id} value={ws.id}>{ws.name} ({to12Hour(ws.timeIn)} - {to12Hour(ws.timeOut)})</option>
               ))}
             </select>
           </div>
@@ -224,7 +262,8 @@ export function OJTScheduleForm() {
             value={formData.description}
             onChange={(e) => handleChange('description', e.target.value)}
             rows={3}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={viewOnly}
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder="Schedule description"
           />
         </div>
@@ -235,15 +274,17 @@ export function OJTScheduleForm() {
             onClick={handleCancel}
             className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
           >
-            Cancel
+            {viewOnly ? 'Close' : 'Cancel'}
           </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {saving ? 'Saving...' : (isEditing ? 'Update' : 'Create')}
-          </button>
+          {!viewOnly && (
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {saving ? 'Saving...' : (isEditing ? 'Update' : 'Create')}
+            </button>
+          )}
         </div>
       </form>
     </div>

@@ -1,13 +1,12 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useRequireRole } from './AuthProvider';
+import type { UserRole } from './AuthProvider';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedRoles: UserRole[];
   fallbackPath?: string;
 }
-
-export type UserRole = 'admin' | 'supervisor' | 'coordinator' | 'trainee';
 
 export function ProtectedRoute({ 
   children, 

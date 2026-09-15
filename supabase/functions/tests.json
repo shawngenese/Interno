@@ -1,0 +1,43 @@
+{
+  "functions": [
+    {
+      "name": "generate_qr_token",
+      "tests": [
+        "creates JWT token with correct payload",
+        "includes nonce in token",
+        "sets correct expiration",
+        "requires authentication",
+        "requires supervisor role"
+      ]
+    },
+    {
+      "name": "validate_qr_scan",
+      "tests": [
+        "validates correct token",
+        "rejects expired token",
+        "rejects used token",
+        "creates attendance record",
+        "marks token as used",
+        "requires authentication"
+      ]
+    },
+    {
+      "name": "write_audit",
+      "tests": [
+        "creates audit log entry",
+        "includes all required fields",
+        "rejects missing required fields"
+      ]
+    },
+    {
+      "name": "calculate_dtr",
+      "tests": [
+        "calculates regular hours correctly",
+        "calculates night differential",
+        "calculates overtime",
+        "applies grace period",
+        "handles holidays"
+      ]
+    }
+  ]
+}

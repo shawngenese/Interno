@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
 import { adminService } from '../services/adminService';
+import { resolveDocName } from '@/shared/utils/resolveDocName';
 import type { Department, ListDepartmentsParams } from '../types';
 
 interface DepartmentListProps {
@@ -8,9 +8,13 @@ interface DepartmentListProps {
   companyId?: string;
 }
 
+interface ResolvedDepartment extends Department {
+  companyName?: string;
+  headSupervisorName?: string;
+}
+
 export function DepartmentList({ onEdit, companyId: propCompanyId }: DepartmentListProps) {
-  const navigate = useNavigate();
-  const [departments, setDepartments] = useState<Department[]>([]);
+  const [departments, setDepartments] = useState<ResolvedDepartment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
@@ -30,9 +34,18 @@ export function DepartmentList({ onEdit, companyId: propCompanyId }: DepartmentL
     setError(null);
     try {
       const result = await adminService.listDepartments(filters);
-      setDepartments(result.data);
-      setPagination(p => ({
-        ...p,
+      const resolved = await Promise.all(
+        result.data.map(async (d) => {
+          const [companyName, headSupervisorName] = await Promise.all([
+            resolveDocName('companies', d.companyId, 'name'),
+            d.headSupervisorId ? resolveDocName('users', d.headSupervisorId, 'displayName') : Promise.resolve(''),
+          ]);
+          return { ...d, companyName, headSupervisorName };
+        }),
+      );
+      setDepartments(resolved);
+      setPagination(prev => ({
+        ...prev,
         total: result.total,
         totalPages: result.totalPages,
       }));
@@ -65,16 +78,8 @@ export function DepartmentList({ onEdit, companyId: propCompanyId }: DepartmentL
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Departments</h3>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => navigate('/admin/departments/create')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-          >
-            Add Department
-          </button>
-        </div>
       </div>
 
       {error && (
@@ -118,39 +123,38 @@ export function DepartmentList({ onEdit, companyId: propCompanyId }: DepartmentL
               departments.map((department) => (
                 <tr key={department.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                   <td className="px-4 py-4">
-                    <Link
-                      to={`/admin/departments/${department.id}`}
-                      onClick={(e) => { e.preventDefault(); onEdit?.(department); }}
+                    <button
+                      onClick={() => onEdit?.(department)}
                       className="font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400"
                     >
                       {department.name}
-                    </Link>
+                    </button>
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {department.companyId}
+                    {department.companyName || '—'}
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
                     {department.description || '-'}
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {department.headSupervisorId || '-'}
+                    {department.headSupervisorName || '—'}
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {new Date(department.createdAt.seconds * 1000).toLocaleDateString()}
+                    {department.createdAt?.seconds ? new Date(department.createdAt.seconds * 1000).toLocaleDateString() : '-'}
                   </td>
                   <td className="px-4 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       {onEdit && (
                         <button
                           onClick={() => onEdit(department)}
-                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium"
+                          className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                         >
                           Edit
                         </button>
                       )}
                       <button
                         onClick={() => handleDelete(department.id)}
-                        className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-sm font-medium"
+                        className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                       >
                         Delete
                       </button>

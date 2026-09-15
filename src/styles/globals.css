@@ -50,3 +50,45 @@ body {
 .safe-area-inset-top {
   padding-top: env(safe-area-inset-top);
 }
+
+/* Print-friendly styles */
+@media print {
+  body {
+    background: white !important;
+  }
+
+  .no-print,
+  nav,
+  aside,
+  .fixed {
+    display: none !important;
+  }
+
+  .print-break {
+    page-break-before: always;
+  }
+
+  * {
+    color: black !important;
+    background: white !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  a {
+    text-decoration: underline !important;
+  }
+
+  img {
+    max-width: 100% !important;
+  }
+
+  table {
+    border-collapse: collapse !important;
+  }
+
+  th, td {
+    border: 1px solid #ccc !important;
+    padding: 4px 8px !important;
+  }
+}

@@ -9,9 +9,9 @@
  *
  * Notes / limitations:
  * - Auth accounts: created via a secondary FirebaseApp so the admin stays
- *   signed in. Custom claims CANNOT be set client-side; `createUser` writes
- *   the `users/{uid}` doc role and claims sync later via Edge `set_user_role`
- *   or `assign-admin.cjs`. `AuthProvider` already falls back to the doc role.
+ *   signed in. `createUser` writes the `users/{uid}` doc AND calls Edge
+ *   `set_user_role` to set custom claims immediately. `AuthProvider` falls
+ *   back to the doc role if claims are not yet available.
  * - `deleteUser` removes the Firestore doc only; remove the Auth account in
  *   Console (Authentication > Users) or a future Edge function.
  * - Audit: `audit_logs` is client-write-blocked (`allow create:false`), so
@@ -132,6 +132,7 @@ const COLLECTIONS = {
   TRAINEES: 'trainees',
   WORK_SCHEDULES: 'work_schedules',
   OJT_SCHEDULES: 'ojt_schedules',
+  AUDIT_LOGS: 'audit_logs',
 } as const;
 
 /** Server fetch cap per list call (Spark quota guard; paginate client-side). */
@@ -153,38 +154,69 @@ function updatedSeconds(value: unknown): number {
   return 0;
 }
 
-/** Fire-and-forget audit via Edge `write_audit` (falls back to console if Supabase not configured). */
+/** Write audit log to Firestore directly (client SDK, admin-only per rules). */
+async function writeAuditDirectly(
+  action: string,
+  entityType: string,
+  entityId: string,
+  userId: string,
+  newValue?: Record<string, unknown>,
+): Promise<void> {
+  await addDoc(collection(getFirestoreInstancePublic(), COLLECTIONS.AUDIT_LOGS), {
+    timestamp: serverTimestamp(),
+    userId,
+    action,
+    entityType,
+    entityId,
+    originalValue: null,
+    newValue: newValue ?? null,
+    metadata: null,
+  });
+}
+
+/**
+ * Fire-and-forget audit: tries Edge `write_audit` first, falls back to
+ * direct Firestore write if Edge is unavailable or fails.
+ */
 async function audit(
   action: string,
   entityType: string,
   entityId: string,
   newValue?: Record<string, unknown>,
 ): Promise<void> {
-  if (!isSupabaseConfigured()) {
-    console.debug('[audit:staged]', { action, entityType, entityId, newValue });
+  const auth = getAuthInstancePublic();
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    console.warn('[audit] no current user, skipping');
     return;
   }
-  try {
-    const auth = getAuthInstancePublic();
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      console.warn('[audit] no current user, skipping');
+
+  // Try Edge Function first (server-side write via Admin SDK).
+  if (isSupabaseConfigured()) {
+    try {
+      const idToken = await currentUser.getIdToken(true);
+      await callEdgeFunction(
+        'write_audit',
+        {
+          userId: currentUser.uid,
+          action,
+          entityType,
+          entityId,
+          newValue,
+        },
+        { idToken },
+      );
       return;
+    } catch (err) {
+      console.warn('[audit] Edge call failed, falling back to direct write:', err);
     }
-    const idToken = await currentUser.getIdToken(true);
-    await callEdgeFunction(
-      'write_audit',
-      {
-        userId: currentUser.uid,
-        action,
-        entityType,
-        entityId,
-        newValue,
-      },
-      { idToken },
-    );
+  }
+
+  // Fallback: direct Firestore write (requires admin role per security rules).
+  try {
+    await writeAuditDirectly(action, entityType, entityId, currentUser.uid, newValue);
   } catch (err) {
-    console.error('[audit] Edge call failed, staged locally:', err);
+    console.error('[audit] Direct Firestore write also failed:', err);
   }
 }
 
@@ -305,8 +337,31 @@ export const adminService = {
     } finally {
       await signOut(provisioningAuth).catch(() => undefined);
     }
-    // Custom claims sync later via Edge `set_user_role` / assign-admin.cjs;
-    // AuthProvider falls back to the doc role meanwhile.
+    // 3. Sync custom claims via Edge `set_user_role` so the new user can log
+    //    in immediately without waiting for a manual claims sync.
+    if (isSupabaseConfigured()) {
+      try {
+        const auth = getAuthInstancePublic();
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+          const idToken = await currentUser.getIdToken(true);
+          await callEdgeFunction(
+            'set_user_role',
+            {
+              uid,
+              role: data.role,
+              ...(data.companyId ? { companyId: data.companyId } : {}),
+              ...(data.departmentId ? { departmentId: data.departmentId } : {}),
+              ...(data.supervisorId ? { supervisorId: data.supervisorId } : {}),
+            },
+            { idToken },
+          );
+        }
+      } catch (err) {
+        console.error('[createUser] set_user_role Edge call failed (claims not set):', err);
+        // Non-fatal: AuthProvider falls back to the Firestore doc role.
+      }
+    }
     audit('create', 'user', uid, { role: data.role, companyId: data.companyId });
     return this.getUser(uid);
   },
@@ -369,14 +424,48 @@ export const adminService = {
   },
 
   async deleteUser(uid: string): Promise<void> {
-    // Permanent delete per AGENTS.md requires admin + audit; rules allow it.
-    // Auth account must be removed separately in Console (client SDK cannot
-    // delete other users).
-    await deleteDoc(doc(getFirestoreInstancePublic(), COLLECTIONS.USERS, uid));
+    const db = getFirestoreInstancePublic();
+
+    // Delete Auth account via Edge Function (client SDK can't delete other users)
+    if (isSupabaseConfigured()) {
+      try {
+        const auth = getAuthInstancePublic();
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+          const idToken = await currentUser.getIdToken(true);
+          await callEdgeFunction('delete_user', { uid }, { idToken });
+        }
+      } catch (err) {
+        console.error('[deleteUser] Edge delete_user failed (Auth account still exists):', err);
+      }
+    }
+
+    // Delete corresponding supervisor/trainee records
+    const [supervisorSnap, traineeSnap] = await Promise.all([
+      getDocs(query(collection(db, COLLECTIONS.SUPERVISORS), where('userId', '==', uid))),
+      getDocs(query(collection(db, COLLECTIONS.TRAINEES), where('userId', '==', uid))),
+    ]);
+    const batch = writeBatch(db);
+
+    // Clean up assignedTrainees references before deleting trainee docs
+    for (const traineeDoc of traineeSnap.docs) {
+      const supSnap = await getDocs(
+        query(collection(db, COLLECTIONS.SUPERVISORS), where('assignedTrainees', 'array-contains', traineeDoc.id)),
+      );
+      for (const supDoc of supSnap.docs) {
+        batch.update(doc(db, COLLECTIONS.SUPERVISORS, supDoc.id), {
+          assignedTrainees: arrayRemove(traineeDoc.id),
+          updatedAt: serverTimestamp(),
+        });
+        batch.delete(doc(db, COLLECTIONS.SUPERVISORS, supDoc.id, 'assignedTrainees', traineeDoc.id));
+      }
+    }
+
+    supervisorSnap.docs.forEach((d) => batch.delete(d.ref));
+    traineeSnap.docs.forEach((d) => batch.delete(d.ref));
+    batch.delete(doc(db, COLLECTIONS.USERS, uid));
+    await batch.commit();
     audit('delete', 'user', uid);
-    console.warn(
-      `[adminService] Firestore users/${uid} deleted. Also remove the Auth account in Console > Authentication > Users.`,
-    );
   },
 
   // Companies
@@ -409,7 +498,25 @@ export const adminService = {
   },
 
   async deleteCompany(id: string): Promise<void> {
-    await deleteDoc(doc(getFirestoreInstancePublic(), COLLECTIONS.COMPANIES, id));
+    const db = getFirestoreInstancePublic();
+    // Check for related records
+    const [departments, supervisors, trainees, workSchedules, ojtSchedules] = await Promise.all([
+      getDocs(query(collection(db, COLLECTIONS.DEPARTMENTS), where('companyId', '==', id), limit(1))),
+      getDocs(query(collection(db, COLLECTIONS.SUPERVISORS), where('companyId', '==', id), limit(1))),
+      getDocs(query(collection(db, COLLECTIONS.TRAINEES), where('companyId', '==', id), limit(1))),
+      getDocs(query(collection(db, COLLECTIONS.WORK_SCHEDULES), where('companyId', '==', id), limit(1))),
+      getDocs(query(collection(db, COLLECTIONS.OJT_SCHEDULES), where('companyId', '==', id), limit(1))),
+    ]);
+    const deps: string[] = [];
+    if (!departments.empty) deps.push('departments');
+    if (!supervisors.empty) deps.push('supervisors');
+    if (!trainees.empty) deps.push('trainees');
+    if (!workSchedules.empty) deps.push('work schedules');
+    if (!ojtSchedules.empty) deps.push('OJT schedules');
+    if (deps.length > 0) {
+      throw new Error(`Cannot delete company: it has related ${deps.join(', ')}. Remove them first.`);
+    }
+    await deleteDoc(doc(db, COLLECTIONS.COMPANIES, id));
     audit('delete', 'company', id);
   },
 
@@ -445,7 +552,19 @@ export const adminService = {
   },
 
   async deleteDepartment(id: string): Promise<void> {
-    await deleteDoc(doc(getFirestoreInstancePublic(), COLLECTIONS.DEPARTMENTS, id));
+    const db = getFirestoreInstancePublic();
+    // Check for related records
+    const [supervisors, trainees] = await Promise.all([
+      getDocs(query(collection(db, COLLECTIONS.SUPERVISORS), where('departmentId', '==', id), limit(1))),
+      getDocs(query(collection(db, COLLECTIONS.TRAINEES), where('departmentId', '==', id), limit(1))),
+    ]);
+    const deps: string[] = [];
+    if (!supervisors.empty) deps.push('supervisors');
+    if (!trainees.empty) deps.push('trainees');
+    if (deps.length > 0) {
+      throw new Error(`Cannot delete department: it has related ${deps.join(', ')}. Remove them first.`);
+    }
+    await deleteDoc(doc(db, COLLECTIONS.DEPARTMENTS, id));
     audit('delete', 'department', id);
   },
 
@@ -461,13 +580,82 @@ export const adminService = {
     return getOne<Supervisor>(COLLECTIONS.SUPERVISORS, id, 'Supervisor');
   },
 
-  async assignTraineesToSupervisor(supervisorId: string, traineeIds: string[]): Promise<void> {
-    if (traineeIds.length === 0) return;
+  async createSupervisor(data: { userId: string; companyId: string; departmentId: string }): Promise<Supervisor> {
+    if (!data.userId || !data.companyId || !data.departmentId) {
+      throw new Error('User, company, and department are required');
+    }
+    const db = getFirestoreInstancePublic();
+    const supervisorDocId = data.userId;
+    await setDoc(doc(db, COLLECTIONS.SUPERVISORS, supervisorDocId), {
+      userId: data.userId,
+      companyId: data.companyId,
+      departmentId: data.departmentId,
+      assignedTrainees: [],
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    audit('create', 'supervisor', supervisorDocId, { userId: data.userId, companyId: data.companyId });
+    return this.getSupervisor(supervisorDocId);
+  },
+
+  async updateSupervisor(id: string, data: Partial<Pick<Supervisor, 'companyId' | 'departmentId'>>): Promise<Supervisor> {
+    await updateDoc(doc(getFirestoreInstancePublic(), COLLECTIONS.SUPERVISORS, id), {
+      ...data,
+      updatedAt: serverTimestamp(),
+    });
+    audit('update', 'supervisor', id, data as Record<string, unknown>);
+    return this.getSupervisor(id);
+  },
+
+  async assignTraineesToSupervisor(
+    supervisorId: string,
+    traineeIds: string[],
+    unassignTraineeIds: string[] = [],
+  ): Promise<void> {
     const db = getFirestoreInstancePublic();
     const supervisorRef = doc(db, COLLECTIONS.SUPERVISORS, supervisorId);
-    // WriteBatch caps at 500 ops; chunk by trainee (3 ops each).
+
+    // Unassign: remove from old supervisor's array + clear trainee's supervisorId
+    for (let i = 0; i < unassignTraineeIds.length; i += 150) {
+      const chunk = unassignTraineeIds.slice(i, i + 150);
+      const batch = writeBatch(db);
+      batch.update(supervisorRef, {
+        assignedTrainees: arrayRemove(...chunk),
+        updatedAt: serverTimestamp(),
+      });
+      for (const traineeId of chunk) {
+        batch.delete(doc(db, COLLECTIONS.SUPERVISORS, supervisorId, 'assignedTrainees', traineeId));
+        batch.update(doc(db, COLLECTIONS.TRAINEES, traineeId), {
+          supervisorId: '',
+          updatedAt: serverTimestamp(),
+        });
+      }
+      await batch.commit();
+    }
+
+    // Assign: add to this supervisor's array + set trainee's supervisorId
+    // First, remove trainees from any other supervisor before assigning here
     for (let i = 0; i < traineeIds.length; i += 150) {
       const chunk = traineeIds.slice(i, i + 150);
+
+      // Find and clean up any old supervisors for these trainees
+      for (const traineeId of chunk) {
+        const traineeSnap = await getDoc(doc(db, COLLECTIONS.TRAINEES, traineeId));
+        if (traineeSnap.exists()) {
+          const traineeData = traineeSnap.data() as Record<string, unknown>;
+          const oldSupervisorId = traineeData.supervisorId as string;
+          if (oldSupervisorId && oldSupervisorId !== supervisorId) {
+            const cleanupBatch = writeBatch(db);
+            cleanupBatch.update(doc(db, COLLECTIONS.SUPERVISORS, oldSupervisorId), {
+              assignedTrainees: arrayRemove(traineeId),
+              updatedAt: serverTimestamp(),
+            });
+            cleanupBatch.delete(doc(db, COLLECTIONS.SUPERVISORS, oldSupervisorId, 'assignedTrainees', traineeId));
+            await cleanupBatch.commit();
+          }
+        }
+      }
+
       const batch = writeBatch(db);
       batch.update(supervisorRef, {
         assignedTrainees: arrayUnion(...chunk),
@@ -486,7 +674,7 @@ export const adminService = {
       }
       await batch.commit();
     }
-    audit('assign', 'supervisor', supervisorId, { traineeIds });
+    audit('assign', 'supervisor', supervisorId, { traineeIds, unassignTraineeIds });
   },
 
   async unassignTraineeFromSupervisor(supervisorId: string, traineeId: string): Promise<void> {
@@ -524,10 +712,48 @@ export const adminService = {
   },
 
   async updateTrainee(id: string, data: Partial<Trainee>): Promise<Trainee> {
+    const db = getFirestoreInstancePublic();
     const editable: Record<string, unknown> = { ...data };
     delete editable.id;
     delete editable.createdAt;
-    await updateDoc(doc(getFirestoreInstancePublic(), COLLECTIONS.TRAINEES, id), {
+
+    // If supervisorId changed, sync both supervisors' assignedTrainees
+    if (data.supervisorId !== undefined) {
+      const currentSnap = await getDoc(doc(db, COLLECTIONS.TRAINEES, id));
+      const currentData = currentSnap.exists() ? currentSnap.data() as Record<string, unknown> : null;
+      const oldSupervisorId = (currentData?.supervisorId as string) || '';
+      const newSupervisorId = data.supervisorId || '';
+
+      if (oldSupervisorId !== newSupervisorId) {
+        const batch = writeBatch(db);
+
+        // Remove from old supervisor
+        if (oldSupervisorId) {
+          batch.update(doc(db, COLLECTIONS.SUPERVISORS, oldSupervisorId), {
+            assignedTrainees: arrayRemove(id),
+            updatedAt: serverTimestamp(),
+          });
+          batch.delete(doc(db, COLLECTIONS.SUPERVISORS, oldSupervisorId, 'assignedTrainees', id));
+        }
+
+        // Add to new supervisor
+        if (newSupervisorId) {
+          batch.update(doc(db, COLLECTIONS.SUPERVISORS, newSupervisorId), {
+            assignedTrainees: arrayUnion(id),
+            updatedAt: serverTimestamp(),
+          });
+          batch.set(
+            doc(db, COLLECTIONS.SUPERVISORS, newSupervisorId, 'assignedTrainees', id),
+            { traineeId: id, assignedAt: serverTimestamp() },
+            { merge: true },
+          );
+        }
+
+        await batch.commit();
+      }
+    }
+
+    await updateDoc(doc(db, COLLECTIONS.TRAINEES, id), {
       ...editable,
       updatedAt: serverTimestamp(),
     });
@@ -539,7 +765,8 @@ export const adminService = {
     if (!data.userId || !data.companyId || !data.departmentId) {
       throw new Error('User, company, and department are required');
     }
-    const ref = await addDoc(collection(getFirestoreInstancePublic(), COLLECTIONS.TRAINEES), {
+    const db = getFirestoreInstancePublic();
+    const ref = await addDoc(collection(db, COLLECTIONS.TRAINEES), {
       userId: data.userId,
       companyId: data.companyId,
       departmentId: data.departmentId,
@@ -551,6 +778,22 @@ export const adminService = {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
+
+    // Sync supervisor.assignedTrainees if supervisorId provided
+    if (data.supervisorId) {
+      const batch = writeBatch(db);
+      batch.update(doc(db, COLLECTIONS.SUPERVISORS, data.supervisorId), {
+        assignedTrainees: arrayUnion(ref.id),
+        updatedAt: serverTimestamp(),
+      });
+      batch.set(
+        doc(db, COLLECTIONS.SUPERVISORS, data.supervisorId, 'assignedTrainees', ref.id),
+        { traineeId: ref.id, assignedAt: serverTimestamp() },
+        { merge: true },
+      );
+      await batch.commit();
+    }
+
     audit('create', 'trainee', ref.id, { userId: data.userId, companyId: data.companyId });
     return this.getTrainee(ref.id);
   },
@@ -596,7 +839,13 @@ export const adminService = {
   },
 
   async deleteWorkSchedule(id: string): Promise<void> {
-    await deleteDoc(doc(getFirestoreInstancePublic(), COLLECTIONS.WORK_SCHEDULES, id));
+    const db = getFirestoreInstancePublic();
+    // Check for related OJT schedules
+    const ojtSchedules = await getDocs(query(collection(db, COLLECTIONS.OJT_SCHEDULES), where('workScheduleId', '==', id), limit(1)));
+    if (!ojtSchedules.empty) {
+      throw new Error('Cannot delete work schedule: it is used by OJT schedules. Remove them first.');
+    }
+    await deleteDoc(doc(db, COLLECTIONS.WORK_SCHEDULES, id));
     audit('delete', 'work_schedule', id);
   },
 

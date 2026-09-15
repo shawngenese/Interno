@@ -20,6 +20,8 @@ export interface DTREntry {
   lateMinutes: number;
   undertimeMinutes: number;
   nightDiffMinutes: number;
+  isHoliday: boolean;
+  holidayName?: string;
   status: DTRStatus;
   // Metadata
   createdAt: number;

@@ -19,24 +19,11 @@
  */
 import { serve } from 'std/http/server.ts';
 import { initAdmin, getDbInstance, AUDIT_ACTIONS, ENTITY_TYPES, COLLECTIONS } from '../_shared/config.ts';
-import { Timestamp } from 'npm:firebase-admin/firestore@12.7.0';
+import { Timestamp } from 'firebase-admin/firestore';
+import { corsResponse, errorResponse } from '../_shared/cors.ts';
+import { verifyFirebaseToken } from '../_shared/auth.ts';
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey',
-};
 
-function corsResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-  });
-}
-
-function errorResponse(message: string, status: number) {
-  return corsResponse({ error: message }, status);
-}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return corsResponse({});
@@ -45,25 +32,18 @@ serve(async (req) => {
     initAdmin();
     const db = getDbInstance();
 
-    // Verify Firebase ID token
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return errorResponse('Missing or invalid Authorization header', 401);
-    }
-    const idToken = authHeader.slice(7);
-
-    // Use the default app's auth to verify (initAdmin ensures it's initialized)
-    const { getAuth } = await import('firebase-admin/auth');
-    const auth = getAuth();
-    const decoded = await auth.verifyIdToken(idToken);
-    const callerUid = decoded.uid;
-
+    // Verify Firebase ID token from request body
     let body: Record<string, unknown>;
     try {
       body = await req.json();
     } catch {
       return errorResponse('Invalid JSON body', 400);
     }
+
+    const [verified, errResp] = await verifyFirebaseToken(body);
+    if (errResp) return errResp;
+    const decoded = verified!;
+    const callerUid = decoded.uid;
 
     const {
       userId,

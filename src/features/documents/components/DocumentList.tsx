@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { listDocuments, updateDocumentStatus, deleteDocument } from '../services/documentService';
 import { DocumentUploader } from './DocumentUploader';
+import { useToast } from '@/shared/components/Toast';
+import { useAuth } from '@/features/auth';
 import type { Document, DocumentType, DocumentStatus, ListDocumentsParams } from '../types';
 
 function formatDate(ms: number): string {
@@ -43,7 +45,12 @@ interface DocumentListProps {
   companyId?: string;
 }
 
-export function DocumentList({ traineeId, isSupervisor = false, companyId }: DocumentListProps) {
+export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, companyId }: DocumentListProps) {
+  const { addToast } = useToast();
+  const { user, role } = useAuth();
+  const traineeId = propTraineeId || (role === 'trainee' ? user?.uid : undefined);
+  const canApproveReject = role === 'supervisor' || role === 'admin' || role === 'coordinator';
+  const canDelete = role === 'admin';
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ListDocumentsParams>({ page: 1, limit: 20, status: 'pending' });
@@ -77,7 +84,7 @@ export function DocumentList({ traineeId, isSupervisor = false, companyId }: Doc
       await fetchDocuments();
     } catch (err) {
       console.error('Approve failed:', err);
-      alert('Failed to approve document');
+      addToast('error', 'Failed to approve document');
     }
   };
 
@@ -88,7 +95,7 @@ export function DocumentList({ traineeId, isSupervisor = false, companyId }: Doc
       await fetchDocuments();
     } catch (err) {
       console.error('Reject failed:', err);
-      alert('Failed to reject document');
+      addToast('error', 'Failed to reject document');
     }
   };
 
@@ -99,7 +106,7 @@ export function DocumentList({ traineeId, isSupervisor = false, companyId }: Doc
       await fetchDocuments();
     } catch (err) {
       console.error('Delete failed:', err);
-      alert('Failed to delete document');
+      addToast('error', 'Failed to delete document');
     }
   };
 
@@ -121,6 +128,7 @@ export function DocumentList({ traineeId, isSupervisor = false, companyId }: Doc
             <select
               value={filters.status || ''}
               onChange={(e) => setFilters(f => ({ ...f, status: e.target.value as DocumentStatus | undefined, page: 1 }))}
+              aria-label="Filter by status"
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="">All Status</option>
@@ -132,6 +140,7 @@ export function DocumentList({ traineeId, isSupervisor = false, companyId }: Doc
             <select
               value={filters.type || ''}
               onChange={(e) => setFilters(f => ({ ...f, type: e.target.value as DocumentType | undefined, page: 1 }))}
+              aria-label="Filter by document type"
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="">All Types</option>
@@ -159,13 +168,13 @@ export function DocumentList({ traineeId, isSupervisor = false, companyId }: Doc
             resourceId={filters.traineeId || ''}
             metadata={{ traineeId: filters.traineeId || '', companyId: filters.companyId || '', bucket: 'documents' }}
             onSuccess={handleUploadSuccess}
-            onError={(err) => alert(err)}
+            onError={(err) => addToast('error', err)}
           />
         )}
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-800/50">
+            <thead className="bg-gray-50 dark:bg-gray-700/50">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Trainee</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Type</th>
@@ -209,7 +218,7 @@ export function DocumentList({ traineeId, isSupervisor = false, companyId }: Doc
                         >
                           View
                         </a>
-                        {doc.status === 'pending' && (
+                        {canApproveReject && doc.status === 'pending' && (
                           <>
                             <button
                               onClick={() => handleApprove(doc)}
@@ -225,12 +234,14 @@ export function DocumentList({ traineeId, isSupervisor = false, companyId }: Doc
                             </button>
                           </>
                         )}
-                        <button
-                          onClick={() => handleDelete(doc)}
-                          className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-                        >
-                          Delete
-                        </button>
+                        {canDelete && (
+                          <button
+                            onClick={() => handleDelete(doc)}
+                            className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                          >
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

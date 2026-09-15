@@ -123,7 +123,7 @@ export async function createCorrectionRequest(
   const dtr = dtrSnap.data() as DTREntry;
 
   const db = getFirestoreInstancePublic();
-  const ref = await addDoc(collection(db, 'dtr_correction_requests'), {
+  const ref = await addDoc(collection(db, 'dtrs', dtrId, 'correction_requests'), {
     dtrId,
     traineeId: dtr.traineeId,
     requestedBy: currentUser.uid,
@@ -135,30 +135,20 @@ export async function createCorrectionRequest(
     updatedAt: serverTimestamp(),
   });
 
-  return {
-    id: ref.id,
-    dtrId,
-    traineeId: dtr.traineeId,
-    requestedBy: currentUser.uid,
-    reason,
-    originalValue: dtr,
-    proposedValue,
-    status: 'pending',
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  };
+  // Re-fetch to get actual server-resolved timestamps (serverTimestamp() resolves on write)
+  const createdSnap = await getDoc(ref);
+  return { id: createdSnap.id, ...createdSnap.data() } as DTRCorrectionRequest;
 }
 
 /** List correction requests for a DTR. */
 export async function listCorrectionRequests(dtrId: string): Promise<DTRCorrectionRequest[]> {
   const { getFirestoreInstancePublic } = await import('@/config/firebase');
-  const { collection, query, where, orderBy, getDocs } = await import('firebase/firestore');
+  const { collection, query, orderBy, getDocs } = await import('firebase/firestore');
   const db = getFirestoreInstancePublic();
 
   const snap = await getDocs(
     query(
-      collection(db, 'dtr_correction_requests'),
-      where('dtrId', '==', dtrId),
+      collection(db, 'dtrs', dtrId, 'correction_requests'),
       orderBy('createdAt', 'desc'),
     ),
   );

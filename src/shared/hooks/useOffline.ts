@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { onOnlineChange, getPendingMutations, syncPendingMutations, saveOfflineMutation } from '../utils/offline';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { onOnlineChange, getPendingMutations, syncPendingMutations, queueOfflineMutation } from '../utils/offline';
 
 /** Hook for online/offline status. */
 export function useOnlineStatus(): boolean {
@@ -39,18 +39,21 @@ export function usePendingMutations(): { count: number; refresh: () => Promise<v
 /** Hook for syncing pending mutations. */
 export function useSyncMutations(): { syncing: boolean; sync: () => Promise<void> } {
   const [syncing, setSyncing] = useState(false);
+  const syncingRef = useRef(false);
 
   const sync = useCallback(async () => {
-    if (syncing) return;
+    if (syncingRef.current) return;
+    syncingRef.current = true;
     setSyncing(true);
     try {
       await syncPendingMutations();
     } catch (err) {
       console.error('Sync failed:', err);
     } finally {
+      syncingRef.current = false;
       setSyncing(false);
     }
-  }, [syncing]);
+  }, []);
 
   return { syncing, sync };
 }
@@ -61,26 +64,30 @@ export function useOfflineWrite<T>(
   offlineFallback: { type: 'create' | 'update' | 'delete'; collection: string; docId: string; data?: Record<string, unknown> },
 ): { execute: () => Promise<T>; pending: boolean } {
   const [pending, setPending] = useState(false);
+  const onlineWriteRef = useRef(onlineWrite);
+  const offlineFallbackRef = useRef(offlineFallback);
+  onlineWriteRef.current = onlineWrite;
+  offlineFallbackRef.current = offlineFallback;
 
   const execute = useCallback(async () => {
     setPending(true);
     try {
       if (navigator.onLine) {
         try {
-          return await onlineWrite();
+          return await onlineWriteRef.current();
         } catch (err) {
           console.warn('Online write failed, queuing offline:', err);
-          await saveOfflineMutation(offlineFallback.type, offlineFallback.collection, offlineFallback.docId, offlineFallback.data);
+          await queueOfflineMutation(offlineFallbackRef.current);
           throw err;
         }
       } else {
-        await saveOfflineMutation(offlineFallback.type, offlineFallback.collection, offlineFallback.docId, offlineFallback.data);
+        await queueOfflineMutation(offlineFallbackRef.current);
         throw new Error('Offline - mutation queued for sync');
       }
     } finally {
       setPending(false);
     }
-  }, [onlineWrite, offlineFallback]);
+  }, []);
 
   return { execute, pending };
 }

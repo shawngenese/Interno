@@ -42,25 +42,10 @@
  */
 import { serve } from 'std/http/server.ts';
 import { initAdmin, getAuthInstance, getDbInstance, QR_ACTIONS, COLLECTIONS, AUDIT_ACTIONS } from '../_shared/config.ts';
-import { Timestamp, FieldValue } from 'npm:firebase-admin/firestore@12.7.0';
+import { corsResponse, errorResponse } from '../_shared/cors.ts';
+import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { jwtVerify } from 'npm:jose@5.9.0';
-
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey',
-};
-
-function corsResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-  });
-}
-
-function errorResponse(message: string, status: number) {
-  return corsResponse({ error: message }, status);
-}
+import { verifyFirebaseToken } from '../_shared/auth.ts';
 
 async function sha256Hex(input: string): Promise<string> {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
@@ -82,13 +67,17 @@ serve(async (req) => {
     const auth = getAuthInstance();
     const db = getDbInstance();
 
-    // Verify Firebase ID token (trainee)
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return errorResponse('Missing or invalid Authorization header', 401);
+    // Verify Firebase ID token from request body
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      return errorResponse('Invalid JSON body', 400);
     }
-    const idToken = authHeader.slice(7);
-    const decoded = await auth.verifyIdToken(idToken);
+
+    const [verified, errResp] = await verifyFirebaseToken(body);
+    if (errResp) return errResp;
+    const decoded = verified!;
     const traineeUid = decoded.uid;
     const traineeRole = (decoded as Record<string, unknown>).role as string | undefined;
 
@@ -117,13 +106,6 @@ serve(async (req) => {
     }
     const traineeDoc = traineeSnap.docs[0];
     const traineeId = traineeDoc.id;
-
-    let body: Record<string, unknown>;
-    try {
-      body = await req.json();
-    } catch {
-      return errorResponse('Invalid JSON body', 400);
-    }
 
     const { token, deviceInfo, location } = body as {
       token: string;
@@ -232,38 +214,38 @@ serve(async (req) => {
       return errorResponse('QR token expired', 400);
     }
 
-    // Business rules check (today's attendance)
-    const { start: dayStart, end: dayEnd } = getTodayRange();
-    const todayAttendance = await db.collection(COLLECTIONS.ATTENDANCE_RECORDS)
-      .where('traineeId', '==', traineeId)
-      .where('timestamp', '>=', dayStart)
-      .where('timestamp', '<=', dayEnd)
-      .get();
-
-    const hasTimeIn = todayAttendance.docs.some((d) => d.data().type === 'time_in');
-    const hasTimeOut = todayAttendance.docs.some((d) => d.data().type === 'time_out');
-
-    if (action === 'time_in' && hasTimeIn) {
-      return errorResponse('Already timed in today', 400);
-    }
-    if (action === 'time_out') {
-      if (!hasTimeIn) {
-        return errorResponse('Must time in before timing out', 400);
-      }
-      if (hasTimeOut) {
-        return errorResponse('Already timed out today', 400);
-      }
-    }
-
-    // All validations passed — atomic transaction
+    // All validations passed — atomic transaction (includes business rules)
     const now = Date.now();
     const attendanceRef = db.collection(COLLECTIONS.ATTENDANCE_RECORDS).doc();
 
     await db.runTransaction(async (tx) => {
-      // 1. Mark QR session as used
+      // 1. Mark QR session as used (prevents double-scan)
       tx.update(sessionDoc.ref, { used: true, usedAt: now, usedBy: traineeUid });
 
-      // 2. Create attendance record
+      // 2. Business rules check (today's attendance) — inside transaction for atomicity
+      const { start: dayStart, end: dayEnd } = getTodayRange();
+      const todayAttendance = await db.collection(COLLECTIONS.ATTENDANCE_RECORDS)
+        .where('traineeId', '==', traineeId)
+        .where('timestamp', '>=', dayStart)
+        .where('timestamp', '<=', dayEnd)
+        .get();
+
+      const hasTimeIn = todayAttendance.docs.some((d) => d.data().type === 'time_in');
+      const hasTimeOut = todayAttendance.docs.some((d) => d.data().type === 'time_out');
+
+      if (action === 'time_in' && hasTimeIn) {
+        throw new Error('Already timed in today');
+      }
+      if (action === 'time_out') {
+        if (!hasTimeIn) {
+          throw new Error('Must time in before timing out');
+        }
+        if (hasTimeOut) {
+          throw new Error('Already timed out today');
+        }
+      }
+
+      // 3. Create attendance record
       tx.set(attendanceRef, {
         traineeId,
         type: action,

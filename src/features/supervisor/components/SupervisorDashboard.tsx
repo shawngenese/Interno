@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth';
 import { getSupervisorByUserId, getAssignedTrainees, getPendingDTRs, getTraineeAttendanceSummary } from '../services/supervisorService';
@@ -44,7 +44,7 @@ export function SupervisorDashboard() {
     };
 
     loadDashboard();
-  }, [user]);
+  }, [user?.uid]);
 
   if (loading) {
     return (
@@ -65,9 +65,19 @@ export function SupervisorDashboard() {
     );
   }
 
-  const activeTrainees = trainees.filter(t => t.ojtStatus === 'active');
-  const todayPresent = trainees.filter(t => attendance[t.id]?.hasTimeIn).length;
-  const todayWithTimeout = trainees.filter(t => attendance[t.id]?.hasTimeOut).length;
+  const { activeTrainees, todayPresent, todayWithTimeout } = useMemo(() => {
+    let present = 0;
+    let withTimeout = 0;
+    for (const t of trainees) {
+      if (attendance[t.id]?.hasTimeIn) present++;
+      if (attendance[t.id]?.hasTimeOut) withTimeout++;
+    }
+    return {
+      activeTrainees: trainees.filter(t => t.ojtStatus === 'active'),
+      todayPresent: present,
+      todayWithTimeout: withTimeout,
+    };
+  }, [trainees, attendance]);
 
   return (
     <div className="space-y-6">

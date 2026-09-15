@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { listDTRs, getDTRSummary, listCorrectionRequests } from '../services/dtrService';
+import { listDTRs, listCorrectionRequests } from '../services/dtrService';
+import { useToast } from '@/shared/components/Toast';
+import { formatDateFull, formatTime12 } from '@/shared/utils/dateUtils';
 import type { DTREntry, DTRStatus, DTRCorrectionRequest, ListDTRParams } from '../types';
-
-function formatDate(ms: number): string {
-  return new Date(ms).toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-}
 
 function minutesToHours(mins: number): string {
   return (mins / 60).toFixed(2);
@@ -22,6 +20,7 @@ function statusBadge(status: DTREntry['status']): React.ReactNode {
 }
 
 export function SupervisorDTRList() {
+  const { addToast } = useToast();
   const [dtrs, setDtrs] = useState<DTREntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ListDTRParams>({ page: 1, limit: 20, status: 'pending' });
@@ -53,7 +52,6 @@ export function SupervisorDTRList() {
     setShowDetail(true);
     setDetailLoading(true);
     try {
-      await getDTRSummary(dtr.traineeId, dtr.date, dtr.date);
       const correctionData = await listCorrectionRequests(dtr.id);
       setCorrections(correctionData);
     } catch (err) {
@@ -82,7 +80,7 @@ export function SupervisorDTRList() {
       if (selectedDTR?.id === dtr.id) handleView(dtr);
     } catch (err) {
       console.error('Approve failed:', err);
-      alert('Failed to approve DTR');
+      addToast('error', 'Failed to approve DTR');
     }
   };
 
@@ -98,15 +96,15 @@ export function SupervisorDTRList() {
 
       await updateDoc(doc(getFirestoreInstancePublic(), 'dtrs', dtr.id), {
         status: 'rejected',
-        approvedAt: serverTimestamp(),
-        approvedBy: currentUser.uid,
+        reviewedAt: serverTimestamp(),
+        reviewedBy: currentUser.uid,
         updatedAt: serverTimestamp(),
       });
       await fetchDTRs();
       if (selectedDTR?.id === dtr.id) handleView(dtr);
     } catch (err) {
       console.error('Reject failed:', err);
-      alert('Failed to reject DTR');
+      addToast('error', 'Failed to reject DTR');
     }
   };
 
@@ -132,14 +130,14 @@ export function SupervisorDTRList() {
           correctionRequestId: correction.id,
           updatedAt: serverTimestamp(),
         });
-        await updateDoc(doc(db, 'dtr_correction_requests', correction.id), {
+        await updateDoc(doc(db, 'dtrs', correction.dtrId, 'correction_requests', correction.id), {
           status: 'approved',
           reviewedBy: currentUser.uid,
           reviewedAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
       } else {
-        await updateDoc(doc(db, 'dtr_correction_requests', correction.id), {
+        await updateDoc(doc(db, 'dtrs', correction.dtrId, 'correction_requests', correction.id), {
           status: 'rejected',
           reviewedBy: currentUser.uid,
           reviewedAt: serverTimestamp(),
@@ -149,7 +147,7 @@ export function SupervisorDTRList() {
       if (selectedDTR) handleView(selectedDTR);
     } catch (err) {
       console.error('Correction action failed:', err);
-      alert('Failed to process correction request');
+      addToast('error', 'Failed to process correction request');
     }
   };
 
@@ -161,9 +159,10 @@ export function SupervisorDTRList() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">DTR Approval</h2>
           <div className="flex flex-wrap gap-3">
-<select
+            <select
               value={filters.status || ''}
               onChange={(e) => setFilters(f => ({ ...f, status: e.target.value as DTRStatus | undefined, page: 1 }))}
+              aria-label="Filter by status"
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="">All Status</option>
@@ -173,6 +172,22 @@ export function SupervisorDTRList() {
               <option value="rejected">Rejected</option>
               <option value="corrected">Corrected</option>
             </select>
+            <input
+              type="date"
+              value={filters.startDate ? new Date(filters.startDate).toISOString().split('T')[0] : ''}
+              onChange={(e) => setFilters(f => ({ ...f, startDate: e.target.value ? new Date(e.target.value).getTime() : undefined, page: 1 }))}
+              aria-label="Start date"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              placeholder="Start Date"
+            />
+            <input
+              type="date"
+              value={filters.endDate ? new Date(filters.endDate).toISOString().split('T')[0] : ''}
+              onChange={(e) => setFilters(f => ({ ...f, endDate: e.target.value ? new Date(e.target.value).getTime() + 86400000 - 1 : undefined, page: 1 }))}
+              aria-label="End date"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              placeholder="End Date"
+            />
             <select
               value={filters.page || 1}
               onChange={(e) => setFilters(f => ({ ...f, page: Number(e.target.value) }))}
@@ -187,7 +202,7 @@ export function SupervisorDTRList() {
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-800/50">
+            <thead className="bg-gray-50 dark:bg-gray-700/50">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Trainee</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Date</th>
@@ -217,7 +232,7 @@ export function SupervisorDTRList() {
                 dtrs.map((dtr) => (
                   <tr key={dtr.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onClick={() => handleView(dtr)}>
                     <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">{dtr.traineeId.slice(0, 8)}...</td>
-                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{formatDate(dtr.date)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{formatDateFull(dtr.date)}</td>
                     <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{minutesToHours(dtr.regularMinutes)}</td>
                     <td className="px-4 py-3 text-sm text-blue-600 dark:text-blue-400">{minutesToHours(dtr.overtimeMinutes)}</td>
                     <td className="px-4 py-3 text-sm text-red-600 dark:text-red-400">{dtr.lateMinutes}</td>
@@ -266,13 +281,24 @@ export function SupervisorDTRList() {
       </div>
 
       {showDetail && selectedDTR && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dtr-detail-modal-title"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
+          onClick={(e) => { if (e.target === e.currentTarget) { setShowDetail(false); setSelectedDTR(null); } }}
+        >
+          {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+          <div
+            className="bg-white dark:bg-gray-800 rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+            onKeyDown={(e) => { if (e.key === 'Escape') { setShowDetail(false); setSelectedDTR(null); } }}
+          >
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                DTR Detail: {selectedDTR.traineeId.slice(0, 8)}... - {formatDate(selectedDTR.date)}
+              <h3 id="dtr-detail-modal-title" className="text-lg font-semibold text-gray-900 dark:text-white">
+                DTR Detail: {selectedDTR.traineeId.slice(0, 8)}... - {formatDateFull(selectedDTR.date)}
               </h3>
-              <button onClick={() => { setShowDetail(false); setSelectedDTR(null); }} className="text-gray-400 hover:text-gray-600">✕</button>
+              <button aria-label="Close" onClick={() => { setShowDetail(false); setSelectedDTR(null); }} className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
 
             {detailLoading ? (
@@ -287,11 +313,11 @@ export function SupervisorDTRList() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                     <p className="text-sm text-gray-500 dark:text-gray-400">Time In</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">{selectedDTR.actualTimeIn ? new Date(selectedDTR.actualTimeIn).toLocaleTimeString() : '—'}</p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-white">{selectedDTR.actualTimeIn ? formatTime12(selectedDTR.actualTimeIn) : '—'}</p>
                   </div>
                   <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                     <p className="text-sm text-gray-500 dark:text-gray-400">Time Out</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">{selectedDTR.actualTimeOut ? new Date(selectedDTR.actualTimeOut).toLocaleTimeString() : '—'}</p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-white">{selectedDTR.actualTimeOut ? formatTime12(selectedDTR.actualTimeOut) : '—'}</p>
                   </div>
                   <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                     <p className="text-sm text-gray-500 dark:text-gray-400">Regular (hrs)</p>
@@ -345,7 +371,7 @@ export function SupervisorDTRList() {
                           </div>
                           <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Reason: {c.reason}</p>
                           <div className="text-xs text-gray-500 mb-2">
-                            Proposed: {c.proposedValue.actualTimeIn ? new Date(c.proposedValue.actualTimeIn).toLocaleTimeString() : '—'} - {c.proposedValue.actualTimeOut ? new Date(c.proposedValue.actualTimeOut).toLocaleTimeString() : '—'}
+                            Proposed: {c.proposedValue.actualTimeIn ? formatTime12(c.proposedValue.actualTimeIn) : '—'} - {c.proposedValue.actualTimeOut ? formatTime12(c.proposedValue.actualTimeOut) : '—'}
                           </div>
                           {c.status === 'pending' && (
                             <div className="flex gap-2 mt-2">

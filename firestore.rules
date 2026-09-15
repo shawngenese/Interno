@@ -156,7 +156,9 @@ service cloud.firestore {
         allow read: if isSignedIn() && (
           isAdmin() ||
           isOwner(supervisorId) ||
-          (isCoordinator() && sameCompany(resource.data.companyId))
+          (isCoordinator() && sameCompany(
+            get(/databases/$(database)/documents/supervisors/$(supervisorId)).data.companyId
+          ))
         );
         
         allow write: if isSignedIn() && isAdmin();
@@ -337,7 +339,12 @@ service cloud.firestore {
       
       // Only Cloud Functions can create/update DTRs (via calculateDTR)
       allow create: if false;
-      allow update: if false;
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        isSupervisorOf(resource.data.traineeId)
+      ) && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'status', 'approvedBy', 'approvedAt', 'rejectedBy', 'rejectedAt', 'reviewedBy', 'reviewedAt', 'updatedAt'
+      ]);
       
       allow delete: if false;
       
@@ -394,8 +401,9 @@ service cloud.firestore {
     match /audit_logs/{logId} {
       allow read: if isSignedIn() && isAdmin();
       
-      // Only Cloud Functions can write audit logs
-      allow create: if false;
+      // Admins can write audit logs directly (fallback when Edge Function is unavailable).
+      // In production, write_audit Edge Function is the primary writer via Admin SDK.
+      allow create: if isSignedIn() && isAdmin();
       
       allow update: if false;
       allow delete: if false;
@@ -407,6 +415,93 @@ service cloud.firestore {
     match /settings/{settingId} {
       allow read: if isSignedIn() && (isAdmin() || isCoordinatorOrAbove());
       allow write: if isSignedIn() && isAdmin();
+    }
+    
+    // ============================================
+    // NOTIFICATIONS Collection
+    // ============================================
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && isOwner(resource.data.userId);
+      allow create: if isSignedIn() && isSupervisorOrAdmin();
+      allow update: if isSignedIn() && isOwner(resource.data.userId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'readAt']);
+      allow delete: if isSignedIn() && isOwner(resource.data.userId);
+    }
+    
+    // ============================================
+    // FCM_TOKENS Collection
+    // ============================================
+    match /fcm_tokens/{tokenId} {
+      allow read: if isSignedIn() && isOwner(resource.data.userId);
+      allow create: if isSignedIn() && isOwner(resource.data.userId);
+      allow update: if isSignedIn() && isOwner(resource.data.userId);
+      allow delete: if isSignedIn() && isOwner(resource.data.userId);
+    }
+    
+    // ============================================
+    // NOTIFICATION_PREFERENCES Collection
+    // ============================================
+    match /notification_preferences/{prefId} {
+      allow read: if isSignedIn() && isOwner(resource.data.userId);
+      allow write: if isSignedIn() && isOwner(resource.data.userId);
+    }
+    
+    // ============================================
+    // TASK_COMMENTS Collection (subcollection of tasks)
+    // ============================================
+    match /task_comments/{commentId} {
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        isAssignedTrainee(resource.data.traineeId) ||
+        isSupervisorOf(resource.data.traineeId) ||
+        (isCoordinator() && sameCompany(resource.data.companyId))
+      );
+      
+      allow create: if isSignedIn() && (
+        isAssignedTrainee(resource.data.traineeId) ||
+        isSupervisorOf(resource.data.traineeId) ||
+        (isCoordinator() && sameCompany(resource.data.companyId))
+      ) && request.resource.data.keys().hasAll(['traineeId', 'taskId', 'userId', 'content']);
+      
+      allow update: if isSignedIn() && isOwner(resource.data.userId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content']);
+      
+      allow delete: if isSignedIn() && (
+        isAdmin() ||
+        isOwner(resource.data.userId)
+      );
+    }
+    
+    // ============================================
+    // TASK_DOCUMENTS Collection
+    // ============================================
+    match /task_documents/{docId} {
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        isAssignedTrainee(resource.data.traineeId) ||
+        isSupervisorOf(resource.data.traineeId) ||
+        (isCoordinator() && sameCompany(resource.data.companyId))
+      );
+      
+      allow create: if isSignedIn() && (
+        isAssignedTrainee(resource.data.traineeId) ||
+        isSupervisorOrAdmin()
+      ) && request.resource.data.keys().hasAll(['traineeId', 'taskId', 'fileName', 'fileUrl', 'fileSize', 'mimeType']);
+      
+      allow delete: if isSignedIn() && (
+        isAdmin() ||
+        (isAssignedTrainee(resource.data.traineeId) && resource.data.status != 'approved')
+      );
+    }
+    
+    // ============================================
+    // PROFILE_IMAGES Collection
+    // ============================================
+    match /profile_images/{imageId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isOwner(resource.data.userId);
+      allow update: if isSignedIn() && isOwner(resource.data.userId);
+      allow delete: if isSignedIn() && isOwner(resource.data.userId);
     }
     
     // ============================================

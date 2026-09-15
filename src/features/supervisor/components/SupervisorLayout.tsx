@@ -1,13 +1,16 @@
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation, NavLink } from 'react-router-dom';
-import { SupervisorRoute } from '@/features/auth';
 import { LogoutButton } from '@/features/auth';
 
 const navigation = [
   { name: 'Dashboard', href: '/supervisor', icon: HomeIcon },
   { name: 'Trainees', href: '/supervisor/trainees', icon: UsersIcon },
+  { name: 'Tasks', href: '/supervisor/tasks', icon: ClipboardCheckIcon },
   { name: 'QR Code', href: '/supervisor/qr', icon: QRCodeIcon },
+  { name: 'Attendance', href: '/supervisor/attendance', icon: ClockIcon },
   { name: 'DTR Approvals', href: '/supervisor/dtr', icon: ClipboardIcon },
+  { name: 'Leave Requests', href: '/supervisor/leave', icon: CalendarIcon },
 ];
 
 function HomeIcon({ className }: { className?: string }) {
@@ -43,17 +46,62 @@ function ClipboardIcon({ className }: { className?: string }) {
   );
 }
 
+function ClockIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
+function ClipboardCheckIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
+function CalendarIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+    </svg>
+  );
+}
+
 export function SupervisorLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <SupervisorRoute>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0">
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-gray-900/80 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        <aside
+          aria-label="Supervisor navigation"
+          className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-700">
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">Interno</h1>
-              <span className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">Supervisor</span>
+              <button
+                type="button"
+                className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 lg:hidden"
+                onClick={() => setSidebarOpen(false)}
+                aria-label="Close navigation menu"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
             <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
               {navigation.map((item) => (
@@ -83,16 +131,27 @@ export function SupervisorLayout({ children }: { children: ReactNode }) {
         <div className="lg:pl-64">
           <header className="sticky top-0 z-40 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                {navigation.find(n => n.href === location.pathname)?.name || 'Supervisor'}
-              </h2>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 lg:hidden"
+                  onClick={() => setSidebarOpen(true)}
+                  aria-label="Open navigation menu"
+                >
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                  </svg>
+                </button>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  {navigation.find(n => location.pathname === n.href || (n.href !== '/supervisor' && location.pathname.startsWith(n.href)))?.name || 'Supervisor'}
+                </h2>
+              </div>
             </div>
           </header>
-          <main className="p-4 sm:p-6 lg:p-8">
+          <main id="main-content" className="p-4 sm:p-6 lg:p-8">
             {children}
           </main>
         </div>
       </div>
-    </SupervisorRoute>
   );
 }

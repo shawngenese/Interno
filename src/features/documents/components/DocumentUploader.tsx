@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { uploadAndCreateDocument, uploadAndCreateTaskDocument, uploadProfileImage } from '../services/documentService';
 import type { UploadParams, DocumentType, TaskDocumentType } from '../types';
 
@@ -26,6 +26,8 @@ export function DocumentUploader({
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cancelledRef = useRef(false);
 
   const handleUpload = useCallback(async (file: File) => {
     // Client-side validation
@@ -48,10 +50,12 @@ export function DocumentUploader({
     setUploading(true);
     setProgress(0);
     setError(null);
+    cancelledRef.current = false;
 
+    let progressInterval: ReturnType<typeof setInterval> | null = null;
     try {
       // Simulate progress (real progress would need Supabase JS SDK with onUploadProgress)
-      const progressInterval = setInterval(() => {
+      progressInterval = setInterval(() => {
         setProgress(p => Math.min(p + 10, 90));
       }, 100);
 
@@ -71,16 +75,21 @@ export function DocumentUploader({
         await uploadProfileImage(file, resourceId);
       }
 
-      clearInterval(progressInterval);
+      if (cancelledRef.current) return;
+
       setProgress(100);
       onSuccess?.(file.name);
     } catch (err) {
+      if (cancelledRef.current) return;
       const message = err instanceof Error ? err.message : 'Upload failed';
       setError(message);
       onError?.(message);
     } finally {
-      setUploading(false);
-      setTimeout(() => setProgress(0), 500);
+      if (progressInterval) clearInterval(progressInterval);
+      if (!cancelledRef.current) {
+        setUploading(false);
+        setTimeout(() => setProgress(0), 500);
+      }
     }
   }, [bucket, resourceId, documentType, metadata, maxSizeMB, acceptedTypes, onSuccess, onError]);
 
@@ -100,14 +109,14 @@ export function DocumentUploader({
         className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
           uploading ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-gray-600 hover:border-blue-500'
         }`}
-        onClick={() => !uploading && document.getElementById('file-input')?.click()}
-        onKeyDown={(e) => e.key === 'Enter' && !uploading && document.getElementById('file-input')?.click()}
+        onClick={() => !uploading && fileInputRef.current?.click()}
+        onKeyDown={(e) => e.key === 'Enter' && !uploading && fileInputRef.current?.click()}
         role="button"
         tabIndex={0}
         aria-label="Upload file"
       >
         <input
-          id="file-input"
+          ref={fileInputRef}
           type="file"
           accept={acceptedTypes}
           className="hidden"
@@ -142,7 +151,7 @@ export function DocumentUploader({
 
       {uploading && (
         <button
-          onClick={() => setUploading(false)}
+          onClick={() => { cancelledRef.current = true; setUploading(false); setProgress(0); }}
           className="mt-4 w-full px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30"
         >
           Cancel Upload

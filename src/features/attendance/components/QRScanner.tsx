@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { callEdgeFunction, isSupabaseConfigured } from '@/config/supabase';
+import { formatTime12 } from '@/shared/utils/dateUtils';
 
 interface QRScannerProps {
   onScanResult?: (result: { action: 'time_in' | 'time_out'; timestamp: number; message: string }) => void;
@@ -47,6 +48,7 @@ export function QRScanner({ onScanResult, onError }: QRScannerProps) {
   const [submitting, setSubmitting] = useState(false);
   const html5QrcodeRef = useRef<Html5Qrcode | null>(null);
   const videoRef = useRef<HTMLDivElement>(null);
+  const processingRef = useRef(false);
 
   const startScanningRef = useRef<() => Promise<void>>();
 
@@ -140,7 +142,13 @@ export function QRScanner({ onScanResult, onError }: QRScannerProps) {
           qrbox: { width: 250, height: 250 },
         },
         async (decodedText: string) => {
-          await processToken(decodedText);
+          if (processingRef.current) return;
+          processingRef.current = true;
+          try {
+            await processToken(decodedText);
+          } finally {
+            processingRef.current = false;
+          }
         },
         () => {
           // Ignore scan errors
@@ -292,7 +300,7 @@ export function QRScanner({ onScanResult, onError }: QRScannerProps) {
       </div>
 
       <div className="relative aspect-square max-w-xs mx-auto bg-gray-100 dark:bg-gray-900">
-        <div id="qr-reader" className="w-full h-full" ref={videoRef as React.RefObject<HTMLDivElement>} />
+        <div id="qr-reader" aria-label="QR code scanner camera view" className="w-full h-full" ref={videoRef as React.RefObject<HTMLDivElement>} />
         {scanning && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="relative w-64 h-64">
@@ -316,7 +324,7 @@ export function QRScanner({ onScanResult, onError }: QRScannerProps) {
                 {lastScan.action === 'time_in' ? 'Time In' : 'Time Out'} Recorded
               </p>
               <p className="text-xs text-green-600 dark:text-green-400">
-                {new Date(lastScan.timestamp).toLocaleTimeString()}
+                {formatTime12(lastScan.timestamp)}
               </p>
             </div>
             <span className="text-2xl">&#10003;</span>

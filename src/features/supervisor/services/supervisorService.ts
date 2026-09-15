@@ -39,17 +39,30 @@ export async function getAssignedTrainees(supervisorId: string): Promise<Trainee
   return snap.docs.map(d => toEntity<Trainee>(d.id, d.data() as Record<string, unknown>));
 }
 
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+  return chunks;
+}
+
 /** Get pending DTRs for trainees assigned to a supervisor. */
 export async function getPendingDTRs(traineeIds: string[]): Promise<DTREntry[]> {
   if (traineeIds.length === 0) return [];
   const db = getFirestoreInstancePublic();
-  const q = query(
-    collection(db, COLLECTIONS.DTRS),
-    where('traineeId', 'in', traineeIds),
-    where('status', '==', 'pending'),
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map(d => toEntity<DTREntry>(d.id, d.data() as Record<string, unknown>));
+  const chunks = chunkArray(traineeIds, 30);
+  const results: DTREntry[] = [];
+  for (const chunk of chunks) {
+    const q = query(
+      collection(db, COLLECTIONS.DTRS),
+      where('traineeId', 'in', chunk),
+      where('status', '==', 'pending'),
+    );
+    const snap = await getDocs(q);
+    results.push(...snap.docs.map(d => toEntity<DTREntry>(d.id, d.data() as Record<string, unknown>)));
+  }
+  return results;
 }
 
 /** Get today's attendance summary for assigned trainees. */
@@ -63,19 +76,24 @@ export async function getTraineeAttendanceSummary(
   const todayMs = today.getTime();
 
   const result: Record<string, { hasTimeIn: boolean; hasTimeOut: boolean }> = {};
+  for (const id of traineeIds) {
+    result[id] = { hasTimeIn: false, hasTimeOut: false };
+  }
 
-  for (const traineeId of traineeIds) {
+  const chunks = chunkArray(traineeIds, 30);
+  for (const chunk of chunks) {
     const q = query(
       collection(db, 'attendance_records'),
-      where('traineeId', '==', traineeId),
+      where('traineeId', 'in', chunk),
       where('timestamp', '>=', todayMs),
     );
     const snap = await getDocs(q);
-    const records = snap.docs.map(d => d.data());
-    result[traineeId] = {
-      hasTimeIn: records.some(r => r.type === 'time_in'),
-      hasTimeOut: records.some(r => r.type === 'time_out'),
-    };
+    for (const doc of snap.docs) {
+      const data = doc.data();
+      const tid = data.traineeId as string;
+      if (data.type === 'time_in') result[tid].hasTimeIn = true;
+      if (data.type === 'time_out') result[tid].hasTimeOut = true;
+    }
   }
 
   return result;

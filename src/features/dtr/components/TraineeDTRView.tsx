@@ -1,15 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { calculateDTR, getDTRSummary, createCorrectionRequest } from '../services/dtrService';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { useToast } from '@/shared/components/Toast';
+import { formatDateFull, formatTime12 } from '@/shared/utils/dateUtils';
 import type { DTREntry, DTRSummary } from '../types';
-
-function formatDate(ms: number): string {
-  return new Date(ms).toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-function formatTime(ms: number): string {
-  return new Date(ms).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
-}
 
 function minutesToHours(mins: number): string {
   return (mins / 60).toFixed(2);
@@ -28,43 +22,51 @@ function statusBadge(status: DTREntry['status']): React.ReactNode {
 
 export function TraineeDTRView() {
   const { user } = useAuth();
+  const { addToast } = useToast();
   const [summary, setSummary] = useState<DTRSummary | null>(null);
   const [entries, setEntries] = useState<DTREntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [calculating, setCalculating] = useState(false);
   const [period, setPeriod] = useState({ start: '', end: '' });
   const [showCorrection, setShowCorrection] = useState<DTREntry | null>(null);
   const [correctionReason, setCorrectionReason] = useState('');
+  const [traineeId, setTraineeId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!user?.uid) return;
     setLoading(true);
+    setError(null);
     try {
-      const { getFirestoreInstancePublic } = await import('@/config/firebase');
-      const { collection, query, where, getDocs } = await import('firebase/firestore');
-      const db = getFirestoreInstancePublic();
+      let resolvedId = traineeId;
+      if (!resolvedId) {
+        const { getFirestoreInstancePublic } = await import('@/config/firebase');
+        const { collection, query, where, getDocs } = await import('firebase/firestore');
+        const db = getFirestoreInstancePublic();
 
-      const traineeSnap = await getDocs(
-        query(collection(db, 'trainees'), where('userId', '==', user!.uid), where('status', '==', 'active'))
-      );
-      if (traineeSnap.empty) return;
+        const traineeSnap = await getDocs(
+          query(collection(db, 'trainees'), where('userId', '==', user!.uid), where('status', '==', 'active'))
+        );
+        if (traineeSnap.empty) return;
 
-      const traineeId = traineeSnap.docs[0].id;
+        resolvedId = traineeSnap.docs[0].id;
+        setTraineeId(resolvedId);
+      }
 
-      // Default to current month if no period set
       const now = new Date();
       const start = period.start ? new Date(period.start).getTime() : new Date(now.getFullYear(), now.getMonth(), 1).getTime();
       const end = period.end ? new Date(period.end).getTime() : new Date(now.getFullYear(), now.getMonth() + 1, 0).getTime();
 
-      const summaryData = await getDTRSummary(traineeId, start, end);
+      const summaryData = await getDTRSummary(resolvedId, start, end);
       setSummary(summaryData);
       setEntries(summaryData.entries);
     } catch (err) {
       console.error('Failed to load DTR:', err);
+      setError('Failed to load DTR data. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, [user, period]);
+  }, [user, period, traineeId]);
 
   useEffect(() => {
     refresh();
@@ -74,24 +76,28 @@ export function TraineeDTRView() {
     if (!user?.uid) return;
     setCalculating(true);
     try {
-      const { getFirestoreInstancePublic } = await import('@/config/firebase');
-      const { collection, query, where, getDocs } = await import('firebase/firestore');
-      const db = getFirestoreInstancePublic();
+      let resolvedId = traineeId;
+      if (!resolvedId) {
+        const { getFirestoreInstancePublic } = await import('@/config/firebase');
+        const { collection, query, where, getDocs } = await import('firebase/firestore');
+        const db = getFirestoreInstancePublic();
 
-      const traineeSnap = await getDocs(
-        query(collection(db, 'trainees'), where('userId', '==', user.uid), where('status', '==', 'active'))
-      );
-      if (traineeSnap.empty) return;
+        const traineeSnap = await getDocs(
+          query(collection(db, 'trainees'), where('userId', '==', user.uid), where('status', '==', 'active'))
+        );
+        if (traineeSnap.empty) return;
 
-      const traineeId = traineeSnap.docs[0].id;
+        resolvedId = traineeSnap.docs[0].id;
+        setTraineeId(resolvedId);
+      }
       const start = period.start ? new Date(period.start).getTime() : new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
       const end = period.end ? new Date(period.end).getTime() : new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getTime();
 
-      await calculateDTR({ traineeId, startDate: start, endDate: end, forceRecalc: true });
+      await calculateDTR({ traineeId: resolvedId, startDate: start, endDate: end, forceRecalc: true });
       await refresh();
     } catch (err) {
       console.error('Calculate DTR failed:', err);
-      alert('Failed to calculate DTR: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      addToast('error', 'Failed to calculate DTR: ' + (err instanceof Error ? err.message : 'Unknown error'));
     } finally {
       setCalculating(false);
     }
@@ -109,7 +115,7 @@ export function TraineeDTRView() {
       await refresh();
     } catch (err) {
       console.error('Correction request failed:', err);
-      alert('Failed to submit correction request');
+      addToast('error', 'Failed to submit correction request');
     }
   };
 
@@ -120,6 +126,20 @@ export function TraineeDTRView() {
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
         </svg>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <p className="text-red-500 dark:text-red-400">{error}</p>
+        <button
+          onClick={refresh}
+          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -135,6 +155,7 @@ export function TraineeDTRView() {
                 type="date"
                 value={period.start}
                 onChange={(e) => setPeriod(p => ({ ...p, start: e.target.value }))}
+                aria-label="Start date"
                 className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
               <span className="flex items-center text-gray-500">to</span>
@@ -142,6 +163,7 @@ export function TraineeDTRView() {
                 type="date"
                 value={period.end}
                 onChange={(e) => setPeriod(p => ({ ...p, end: e.target.value }))}
+                aria-label="End date"
                 className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
             </div>
@@ -178,7 +200,7 @@ export function TraineeDTRView() {
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-800/50">
+            <thead className="bg-gray-50 dark:bg-gray-700/50">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Date</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Time In</th>
@@ -201,9 +223,9 @@ export function TraineeDTRView() {
               ) : (
                 entries.map((entry) => (
                   <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{formatDate(entry.date)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{entry.actualTimeIn ? formatTime(entry.actualTimeIn) : '—'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{entry.actualTimeOut ? formatTime(entry.actualTimeOut) : '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{formatDateFull(entry.date)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{entry.actualTimeIn ? formatTime12(entry.actualTimeIn) : '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{entry.actualTimeOut ? formatTime12(entry.actualTimeOut) : '—'}</td>
                     <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{minutesToHours(entry.regularMinutes)}</td>
                     <td className="px-4 py-3 text-sm text-blue-600 dark:text-blue-400">{minutesToHours(entry.overtimeMinutes)}</td>
                     <td className="px-4 py-3 text-sm text-red-600 dark:text-red-400">{entry.lateMinutes}</td>
@@ -228,22 +250,35 @@ export function TraineeDTRView() {
       </div>
 
       {showCorrection && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Request Correction for {formatDate(showCorrection.date)}</h3>
+        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="correction-modal-title"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) { setShowCorrection(null); setCorrectionReason(''); } }}
+        >
+          {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+          <div
+            className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full"
+            onKeyDown={(e) => { if (e.key === 'Escape') { setShowCorrection(null); setCorrectionReason(''); } }}
+          >
+            <h3 id="correction-modal-title" className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Request Correction for {formatDateFull(showCorrection.date)}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              Current: {showCorrection.actualTimeIn ? formatTime(showCorrection.actualTimeIn) : '—'} - {showCorrection.actualTimeOut ? formatTime(showCorrection.actualTimeOut) : '—'}
+              Current: {showCorrection.actualTimeIn ? formatTime12(showCorrection.actualTimeIn) : '—'} - {showCorrection.actualTimeOut ? formatTime12(showCorrection.actualTimeOut) : '—'}
             </p>
             <textarea
               value={correctionReason}
               onChange={(e) => setCorrectionReason(e.target.value)}
               placeholder="Reason for correction (e.g., forgot to time out, system error, etc.)"
+              aria-label="Reason for correction"
               className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-h-[80px] resize-none"
               required
             />
             <div className="flex justify-end gap-3 mt-4">
               <button
                 onClick={() => { setShowCorrection(null); setCorrectionReason(''); }}
+                aria-label="Close"
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg"
               >
                 Cancel

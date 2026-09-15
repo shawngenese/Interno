@@ -4,6 +4,7 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { callEdgeFunction, isSupabaseConfigured } from '@/config/supabase';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
+import { formatTime12 } from '@/shared/utils/dateUtils';
 
 interface SupervisorQRDisplayProps {
   action: 'time_in' | 'time_out';
@@ -36,6 +37,7 @@ export function SupervisorQRDisplay({
   const countdownRef = useRef<number | null>(null);
   const refreshTimerRef = useRef<number | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
+  const timeLeftRef = useRef<number>(expirationSeconds);
 
   const generateQR = useCallback(async () => {
     if (!user?.uid) return;
@@ -119,38 +121,46 @@ export function SupervisorQRDisplay({
     };
   }, []);
 
-  // Countdown timer
+  // Countdown timer — uses ref to avoid re-creating interval every tick
   useEffect(() => {
     if (countdownRef.current) clearInterval(countdownRef.current);
-    if (timeLeft > 0) {
+
+    timeLeftRef.current = expirationSeconds;
+    setTimeLeft(expirationSeconds);
+
+    if (expiresAt) {
       countdownRef.current = window.setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            if (countdownRef.current) clearInterval(countdownRef.current);
-            return 0;
-          }
-          return prev - 1;
-        });
+        const next = timeLeftRef.current - 1;
+        timeLeftRef.current = next;
+        setTimeLeft(next);
+
+        if (next <= 0 && countdownRef.current) {
+          clearInterval(countdownRef.current);
+          countdownRef.current = null;
+        }
       }, 1000);
     }
+
     return () => {
       if (countdownRef.current) clearInterval(countdownRef.current);
     };
-  }, [timeLeft]);
+  }, [expiresAt, expirationSeconds]);
 
   // Auto-refresh 10 seconds before expiry
   useEffect(() => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-    if (expiresAt && timeLeft > 0) {
-      const refreshAt = Math.max(10, timeLeft - 10) * 1000;
-      refreshTimerRef.current = window.setTimeout(() => {
-        generateQR();
-      }, refreshAt);
+    if (expiresAt) {
+      const msUntilRefresh = Math.max(0, expiresAt - Date.now() - 10_000);
+      if (msUntilRefresh > 0) {
+        refreshTimerRef.current = window.setTimeout(() => {
+          generateQR();
+        }, msUntilRefresh);
+      }
     }
     return () => {
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     };
-  }, [expiresAt, timeLeft, generateQR]);
+  }, [expiresAt, generateQR]);
 
   // Initial generation
   useEffect(() => {
@@ -215,7 +225,7 @@ export function SupervisorQRDisplay({
 
         <div className="w-full max-w-md space-y-2 text-xs text-gray-500 dark:text-gray-400">
           <p>Session ID: <code className="font-mono">{sessionId?.slice(0, 8)}...</code></p>
-          <p>Expires: {expiresAt ? new Date(expiresAt).toLocaleTimeString() : '—'}</p>
+          <p>Expires: {expiresAt ? formatTime12(expiresAt) : '—'}</p>
         </div>
 
         <button
@@ -265,7 +275,7 @@ export function SupervisorQRDisplay({
                 </div>
                 <div className="text-right">
                   <p className="text-xs text-green-600 dark:text-green-400">
-                    {new Date(scan.timestamp).toLocaleTimeString()}
+                    {formatTime12(scan.timestamp)}
                   </p>
                 </div>
               </div>

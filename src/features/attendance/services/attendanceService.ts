@@ -92,7 +92,7 @@ export async function getTodayAttendance(traineeId: string): Promise<TodayAttend
   const db = getFirestoreInstancePublic();
 
   const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const start = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   const end = start + 24 * 60 * 60 * 1000 - 1;
 
   const snap = await getDocs(
@@ -131,6 +131,8 @@ export async function listAttendance(
   const constraints: QueryConstraint[] = [where('traineeId', '==', traineeId)];
   if (options.startDate) constraints.push(where('timestamp', '>=', options.startDate));
   if (options.endDate) constraints.push(where('timestamp', '<=', options.endDate));
+  // NOTE: Firestore has no cursor-based pagination; we cap at LIST_FETCH_CAP (500) records
+  // to avoid excessive reads. Trainers with >500 records may not see older entries.
   constraints.push(orderBy('timestamp', 'desc'), limit(LIST_FETCH_CAP));
 
   const snap = await getDocs(query(collection(db, 'attendance_records'), ...constraints));

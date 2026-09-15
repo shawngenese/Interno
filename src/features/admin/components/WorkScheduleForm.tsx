@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
 import { adminService } from '../services/adminService';
-import type { WorkScheduleFormData } from '../types';
+import type { WorkScheduleFormData, Company } from '../types';
+
+interface WorkScheduleFormProps {
+  editingId?: string;
+  viewOnly?: boolean;
+  onCancel?: () => void;
+  onSaved?: () => void;
+}
 
 const DAY_OPTIONS = [
   { value: 0, label: 'Sunday' },
@@ -13,10 +19,8 @@ const DAY_OPTIONS = [
   { value: 6, label: 'Saturday' },
 ];
 
-export function WorkScheduleForm() {
-  const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const isEditing = !!id;
+export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: WorkScheduleFormProps) {
+  const isEditing = !!editingId;
 
   const [formData, setFormData] = useState<WorkScheduleFormData>({
     companyId: '',
@@ -27,6 +31,7 @@ export function WorkScheduleForm() {
     workDays: [1, 2, 3, 4, 5],
   });
 
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,12 +56,21 @@ export function WorkScheduleForm() {
   };
 
   useEffect(() => {
-    if (isEditing) {
-      loadSchedule(id!);
-    } else {
-      setLoading(false);
-    }
-  }, [id, isEditing]);
+    const init = async () => {
+      try {
+        const result = await adminService.listCompanies({ limit: 100 });
+        setCompanies(result.data);
+      } catch (err) {
+        console.error('Failed to load companies:', err);
+      }
+      if (isEditing && editingId) {
+        await loadSchedule(editingId);
+      } else {
+        setLoading(false);
+      }
+    };
+    init();
+  }, [editingId, isEditing]);
 
   const handleChange = (field: keyof WorkScheduleFormData, value: string | number | number[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -64,6 +78,9 @@ export function WorkScheduleForm() {
 
   const handleWorkDayToggle = (day: number) => {
     setFormData(prev => {
+      if (prev.workDays.length === 1 && prev.workDays.includes(day)) {
+        return prev;
+      }
       const newWorkDays = prev.workDays.includes(day)
         ? prev.workDays.filter(d => d !== day)
         : [...prev.workDays, day].sort((a, b) => a - b);
@@ -77,12 +94,12 @@ export function WorkScheduleForm() {
     setSaving(true);
 
     try {
-      if (isEditing) {
-        await adminService.updateWorkSchedule(id!, formData);
+      if (isEditing && editingId) {
+        await adminService.updateWorkSchedule(editingId, formData);
       } else {
         await adminService.createWorkSchedule(formData);
       }
-      navigate('/admin/work-schedules');
+      onSaved?.();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to save schedule';
       setError(message);
@@ -92,7 +109,7 @@ export function WorkScheduleForm() {
   };
 
   const handleCancel = () => {
-    navigate('/admin/work-schedules');
+    onCancel?.();
   };
 
   if (loading) {
@@ -109,7 +126,7 @@ export function WorkScheduleForm() {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 max-w-2xl mx-auto">
       <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-        {isEditing ? 'Edit Work Schedule' : 'Create Work Schedule'}
+        {viewOnly ? 'View Work Schedule' : isEditing ? 'Edit Work Schedule' : 'Create Work Schedule'}
       </h2>
 
       {error && (
@@ -123,15 +140,19 @@ export function WorkScheduleForm() {
           <label htmlFor="companyId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Company <span className="text-red-500">*</span>
           </label>
-          <input
-            type="text"
+          <select
             id="companyId"
             value={formData.companyId}
             onChange={(e) => handleChange('companyId', e.target.value)}
             required
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Company ID"
-          />
+            disabled={viewOnly}
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <option value="">Select Company</option>
+            {companies.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
         </div>
 
         <div>
@@ -144,7 +165,8 @@ export function WorkScheduleForm() {
             value={formData.name}
             onChange={(e) => handleChange('name', e.target.value)}
             required
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={viewOnly}
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder="Work Schedule Name"
           />
         </div>
@@ -160,7 +182,8 @@ export function WorkScheduleForm() {
               value={formData.timeIn}
               onChange={(e) => handleChange('timeIn', e.target.value)}
               required
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={viewOnly}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
 
@@ -174,7 +197,8 @@ export function WorkScheduleForm() {
               value={formData.timeOut}
               onChange={(e) => handleChange('timeOut', e.target.value)}
               required
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={viewOnly}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
 
@@ -189,7 +213,8 @@ export function WorkScheduleForm() {
               onChange={(e) => handleChange('breakDurationMinutes', parseInt(e.target.value) || 0)}
               required
               min="0"
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={viewOnly}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               placeholder="60"
             />
           </div>
@@ -203,7 +228,11 @@ export function WorkScheduleForm() {
             {DAY_OPTIONS.map(day => (
               <label
                 key={day.value}
-                className={`inline-flex items-center px-3 py-2 border rounded-lg cursor-pointer transition-colors ${
+                className={`inline-flex items-center px-3 py-2 border rounded-lg transition-colors ${
+                  viewOnly
+                    ? 'cursor-not-allowed opacity-50'
+                    : 'cursor-pointer'
+                } ${
                   formData.workDays.includes(day.value)
                     ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-300'
                     : 'bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -214,7 +243,8 @@ export function WorkScheduleForm() {
                   value={day.value}
                   checked={formData.workDays.includes(day.value)}
                   onChange={() => handleWorkDayToggle(day.value)}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                  disabled={viewOnly}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <span className="ml-2 text-sm">{day.label}</span>
               </label>
@@ -228,15 +258,17 @@ export function WorkScheduleForm() {
             onClick={handleCancel}
             className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
           >
-            Cancel
+            {viewOnly ? 'Close' : 'Cancel'}
           </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {saving ? 'Saving...' : (isEditing ? 'Update' : 'Create')}
-          </button>
+          {!viewOnly && (
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {saving ? 'Saving...' : (isEditing ? 'Update' : 'Create')}
+            </button>
+          )}
         </div>
       </form>
     </div>

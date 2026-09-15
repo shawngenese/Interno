@@ -25,6 +25,7 @@ export function UnauthorizedPage() {
           <div className="mb-6">
             <svg 
               className="mx-auto h-16 w-16 text-red-500" 
+              aria-hidden="true"
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"

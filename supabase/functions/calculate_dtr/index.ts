@@ -39,24 +39,9 @@
  */
 import { serve } from 'std/http/server.ts';
 import { initAdmin, getAuthInstance, getDbInstance, COLLECTIONS, AUDIT_ACTIONS } from '../_shared/config.ts';
-import { Timestamp, FieldValue } from 'npm:firebase-admin/firestore@12.7.0';
-
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey',
-};
-
-function corsResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-  });
-}
-
-function errorResponse(message: string, status: number) {
-  return corsResponse({ error: message }, status);
-}
+import { Timestamp, FieldValue } from 'firebase-admin/firestore';
+import { corsResponse, errorResponse } from '../_shared/cors.ts';
+import { verifyFirebaseToken } from '../_shared/auth.ts';
 
 function getDayStart(date: Date): number {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
@@ -122,6 +107,8 @@ interface DTREntry {
   lateMinutes: number;
   undertimeMinutes: number;
   nightDiffMinutes: number;
+  isHoliday: boolean;
+  holidayName?: string;
   status: 'draft' | 'pending' | 'approved' | 'rejected' | 'corrected';
   // Metadata
   createdAt: number;
@@ -134,6 +121,28 @@ interface DTREntry {
 const GRACE_MINUTES = 10;           // grace period for late/undertime
 const NIGHT_DIFF_START = 22 * 60; // 10:00 PM in minutes from midnight
 const NIGHT_DIFF_END = 6 * 60;    // 6:00 AM
+
+// PH Regular Holidays (fixed dates, month is 0-indexed)
+// Expand as needed or fetch from a holidays collection
+const PH_HOLIDAYS: { month: number; day: number; name: string }[] = [
+  { month: 0, day: 1, name: "New Year's Day" },
+  { month: 3, day: 9, name: "Araw ng Kagitingan" },
+  { month: 4, day: 1, name: "Labor Day" },
+  { month: 5, day: 12, name: "Independence Day" },
+  { month: 7, day: 21, name: "Ninoy Aquino Day" },
+  { month: 9, day: 1, name: "All Saints' Day" },
+  { month: 10, day: 30, name: "Bonifacio Day" },
+  { month: 11, day: 25, name: "Christmas Day" },
+  { month: 11, day: 30, name: "Rizal Day" },
+  { month: 11, day: 31, name: "Last Day of Year" },
+];
+
+function isHoliday(date: Date): { isHoliday: boolean; name: string } {
+  const month = date.getMonth();
+  const day = date.getDate();
+  const found = PH_HOLIDAYS.find((h) => h.month === month && h.day === day);
+  return found ? { isHoliday: true, name: found.name } : { isHoliday: false, name: '' };
+}
 
 function isWorkDay(schedule: WorkSchedule, date: Date): boolean {
   return schedule.workDays.includes(date.getDay());
@@ -167,13 +176,10 @@ serve(async (req) => {
     const auth = getAuthInstance();
     const db = getDbInstance();
 
-    // Verify Firebase ID token
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return errorResponse('Missing or invalid Authorization header', 401);
-    }
-    const idToken = authHeader.slice(7);
-    const decoded = await auth.verifyIdToken(idToken);
+    // Verify Firebase ID token from request body
+    const [verified, errResp] = await verifyFirebaseToken(req);
+    if (errResp) return errResp;
+    const decoded = verified!;
     const callerUid = decoded.uid;
     const callerRole = (decoded as Record<string, unknown>).role as string | undefined;
     const callerCompanyId = (decoded as Record<string, unknown>).companyId as string | undefined;
@@ -288,6 +294,10 @@ serve(async (req) => {
       let undertimeMinutes = 0;
       let nightDiffMinutes = 0;
 
+      // PH holiday check
+      const currentDate = new Date(dayMs);
+      const holidayInfo = isHoliday(currentDate);
+
       if (actualTimeIn && actualTimeOut) {
         const workMs = actualTimeOut - actualTimeIn;
         const totalMinutes = workMs / 1000 / 60;
@@ -345,6 +355,8 @@ serve(async (req) => {
         lateMinutes,
         undertimeMinutes,
         nightDiffMinutes,
+        isHoliday: holidayInfo.isHoliday,
+        holidayName: holidayInfo.name || undefined,
         status: existing?.status === 'approved' ? 'corrected' : 'draft',
         createdAt: existing?.createdAt ?? now,
         updatedAt: now,

@@ -53,9 +53,8 @@ export interface ProfileImage {
 
 export interface UploadValidationResult {
   success: boolean;
-  uploadUrl: string;
   path: string;
-  token: string;
+  bucket: string;
   expiresAt: number;
 }
 

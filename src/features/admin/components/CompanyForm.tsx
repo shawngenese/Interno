@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
 import { adminService } from '../services/adminService';
 import type { CompanyFormData } from '../types';
 
-export function CompanyForm() {
-  const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const isEditing = !!id;
+interface CompanyFormProps {
+  editingId?: string;
+  onCancel?: () => void;
+  onSaved?: () => void;
+}
+
+export function CompanyForm({ editingId, onCancel, onSaved }: CompanyFormProps) {
+  const isEditing = !!editingId;
 
   const [formData, setFormData] = useState<CompanyFormData>({
     name: '',
@@ -37,12 +40,12 @@ export function CompanyForm() {
   };
 
   useEffect(() => {
-    if (isEditing) {
-      loadCompany(id!);
+    if (isEditing && editingId) {
+      loadCompany(editingId);
     } else {
       setLoading(false);
     }
-  }, [id, isEditing]);
+  }, [editingId, isEditing]);
 
   const handleChange = (field: keyof CompanyFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -54,12 +57,12 @@ export function CompanyForm() {
     setSaving(true);
 
     try {
-      if (isEditing) {
-        await adminService.updateCompany(id!, formData);
+      if (isEditing && editingId) {
+        await adminService.updateCompany(editingId, formData);
       } else {
         await adminService.createCompany(formData);
       }
-      navigate('/admin/companies');
+      onSaved?.();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to save company';
       setError(message);
@@ -69,7 +72,7 @@ export function CompanyForm() {
   };
 
   const handleCancel = () => {
-    navigate('/admin/companies');
+    onCancel?.();
   };
 
   if (loading) {
@@ -90,7 +93,7 @@ export function CompanyForm() {
       </h2>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
+        <div role="alert" className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
           {error}
         </div>
       )}

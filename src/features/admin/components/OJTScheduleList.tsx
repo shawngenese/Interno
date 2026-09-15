@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { adminService } from '../services/adminService';
+import { resolveDocName } from '@/shared/utils/resolveDocName';
 import type { OJTSchedule, ListOJTSchedulesParams } from '../types';
 
 interface OJTScheduleListProps {
@@ -7,8 +8,13 @@ interface OJTScheduleListProps {
   onView?: (schedule: OJTSchedule) => void;
 }
 
+interface ResolvedOJTSchedule extends OJTSchedule {
+  companyName?: string;
+  workScheduleName?: string;
+}
+
 export function OJTScheduleList({ onEdit, onView }: OJTScheduleListProps) {
-  const [schedules, setSchedules] = useState<OJTSchedule[]>([]);
+  const [schedules, setSchedules] = useState<ResolvedOJTSchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ListOJTSchedulesParams>({ page: 1, limit: 10 });
@@ -19,7 +25,16 @@ export function OJTScheduleList({ onEdit, onView }: OJTScheduleListProps) {
     setError(null);
     try {
       const result = await adminService.listOJTSchedules(filters);
-      setSchedules(result.data);
+      const resolved = await Promise.all(
+        result.data.map(async (s) => {
+          const [companyName, workScheduleName] = await Promise.all([
+            resolveDocName('companies', s.companyId, 'name'),
+            s.workScheduleId ? resolveDocName('work_schedules', s.workScheduleId, 'name') : Promise.resolve(''),
+          ]);
+          return { ...s, companyName, workScheduleName };
+        }),
+      );
+      setSchedules(resolved);
       setTotal(result.total);
     } catch (err) {
       setError('Failed to load OJT schedules');
@@ -84,7 +99,7 @@ export function OJTScheduleList({ onEdit, onView }: OJTScheduleListProps) {
 
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50 dark:bg-gray-800/50">
+          <thead className="bg-gray-50 dark:bg-gray-700/50">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
@@ -109,7 +124,7 @@ export function OJTScheduleList({ onEdit, onView }: OJTScheduleListProps) {
                     {schedule.name}
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {schedule.companyId}
+                    {schedule.companyName || '—'}
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
                     {formatDate(schedule.startDate)}
@@ -121,7 +136,7 @@ export function OJTScheduleList({ onEdit, onView }: OJTScheduleListProps) {
                     {schedule.requiredHours}
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {schedule.workScheduleId}
+                    {schedule.workScheduleName || '—'}
                   </td>
                   <td className="px-4 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">

@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { onOnlineChange, getPendingMutations, syncPendingMutations, cleanupSyncedMutations } from '@/shared/utils/offline';
 
 /**
  * Full-featured network status indicator with pending mutations counter and sync button.
  */
-export function NetworkStatusIndicator({ className = '', showWhenOnline = true }: { className?: string; showWhenOnline?: boolean }) {
+export const NetworkStatusIndicator = React.memo(function NetworkStatusIndicator({ className = '', showWhenOnline = true }: { className?: string; showWhenOnline?: boolean }) {
   const [online, setOnline] = useState(navigator.onLine);
   const [pendingCount, setPendingCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
@@ -46,12 +46,12 @@ export function NetworkStatusIndicator({ className = '', showWhenOnline = true }
     };
   }, [doRefreshPending]);
 
-  if (!online && !showWhenOnline) return null;
+  if (online && !showWhenOnline) return null;
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
+    <div className={`flex items-center gap-2 ${className}`} role="status" aria-live="polite">
       <div className="flex items-center gap-1.5">
-        <span className={`w-2 h-2 rounded-full ${online ? 'bg-green-500' : 'bg-red-500'}`} />
+        <span className={`w-2 h-2 rounded-full ${online ? 'bg-green-500' : 'bg-red-500'}`} aria-hidden="true" />
         <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
           {online ? 'Online' : 'Offline'}
         </span>
@@ -88,10 +88,10 @@ export function NetworkStatusIndicator({ className = '', showWhenOnline = true }
       )}
     </div>
   );
-}
+});
 
 /** Compact version for header. */
-export function NetworkStatusCompact() {
+export const NetworkStatusCompact = React.memo(function NetworkStatusCompact() {
   const [online, setOnline] = useState(navigator.onLine);
 
   useEffect(() => {
@@ -104,10 +104,10 @@ export function NetworkStatusCompact() {
       <span className={`w-1.5 h-1.5 rounded-full ${online ? 'bg-green-500' : 'bg-red-500'}`} />
     </div>
   );
-}
+});
 
 /** Full offline banner for top of app. */
-export function OfflineBanner({ onDismiss }: { onDismiss?: () => void }) {
+export const OfflineBanner = React.memo(function OfflineBanner({ onDismiss }: { onDismiss?: () => void }) {
   const [online, setOnline] = useState(navigator.onLine);
 
   useEffect(() => {
@@ -118,7 +118,7 @@ export function OfflineBanner({ onDismiss }: { onDismiss?: () => void }) {
   if (online) return null;
 
   return (
-    <div className="bg-yellow-50 dark:bg-yellow-900/30 border-b border-yellow-200 dark:border-yellow-800">
+    <div role="alert" className="bg-yellow-50 dark:bg-yellow-900/30 border-b border-yellow-200 dark:border-yellow-800">
       <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2">
           <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -137,4 +137,4 @@ export function OfflineBanner({ onDismiss }: { onDismiss?: () => void }) {
       </div>
     </div>
   );
-}
+});

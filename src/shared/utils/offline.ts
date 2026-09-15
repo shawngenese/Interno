@@ -147,12 +147,6 @@ export async function cleanupSyncedMutations(maxAgeMs = 7 * 24 * 60 * 60 * 1000)
   });
 }
 
-/** Get online status for UI. */
-export function useOnlineStatus(): boolean {
-  // This is a hook - use in components
-  return navigator.onLine;
-}
-
 /** Sync pending mutations when back online. */
 export async function syncPendingMutations(): Promise<{ synced: number; failed: number }> {
   if (!navigator.onLine) return { synced: 0, failed: 0 };
@@ -181,12 +175,6 @@ export async function syncPendingMutations(): Promise<{ synced: number; failed: 
   }
 
   return { synced, failed };
-}
-
-/** Hook for components to track pending count. */
-export function usePendingMutations(): { count: number; refreshing: boolean; refresh: () => Promise<void> } {
-  // This is a placeholder for a real React hook
-  return { count: 0, refreshing: false, refresh: async () => {} };
 }
 
 /** Save mutation to offline queue (for use in services). */

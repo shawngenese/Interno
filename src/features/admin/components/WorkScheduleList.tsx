@@ -1,14 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { adminService } from '../services/adminService';
+import { resolveDocName } from '@/shared/utils/resolveDocName';
 import type { WorkSchedule, ListWorkSchedulesParams } from '../types';
 
 interface WorkScheduleListProps {
   onEdit?: (schedule: WorkSchedule) => void;
   onView?: (schedule: WorkSchedule) => void;
+  onDelete?: (schedule: WorkSchedule) => void;
 }
 
-export function WorkScheduleList({ onEdit, onView }: WorkScheduleListProps) {
-  const [schedules, setSchedules] = useState<WorkSchedule[]>([]);
+interface ResolvedWorkSchedule extends WorkSchedule {
+  companyName?: string;
+}
+
+export function WorkScheduleList({ onEdit, onView, onDelete }: WorkScheduleListProps) {
+  const [schedules, setSchedules] = useState<ResolvedWorkSchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ListWorkSchedulesParams>({ page: 1, limit: 10 });
@@ -19,7 +25,13 @@ export function WorkScheduleList({ onEdit, onView }: WorkScheduleListProps) {
     setError(null);
     try {
       const result = await adminService.listWorkSchedules(filters);
-      setSchedules(result.data);
+      const resolved = await Promise.all(
+        result.data.map(async (s) => {
+          const companyName = await resolveDocName('companies', s.companyId, 'name');
+          return { ...s, companyName };
+        }),
+      );
+      setSchedules(resolved);
       setTotal(result.total);
     } catch (err) {
       setError('Failed to load work schedules');
@@ -46,6 +58,13 @@ export function WorkScheduleList({ onEdit, onView }: WorkScheduleListProps) {
   const formatWorkDays = (days: number[]) => {
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     return days.map(d => dayNames[d]).join(', ');
+  };
+
+  const to12Hour = (time24: string) => {
+    const [h, m] = time24.split(':').map(Number);
+    const period = h >= 12 ? 'PM' : 'AM';
+    const hour12 = h % 12 || 12;
+    return `${hour12}:${m.toString().padStart(2, '0')} ${period}`;
   };
 
   if (loading) {
@@ -84,7 +103,7 @@ export function WorkScheduleList({ onEdit, onView }: WorkScheduleListProps) {
 
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50 dark:bg-gray-800/50">
+          <thead className="bg-gray-50 dark:bg-gray-700/50">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
@@ -109,13 +128,13 @@ export function WorkScheduleList({ onEdit, onView }: WorkScheduleListProps) {
                     {schedule.name}
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {schedule.companyId}
+                    {schedule.companyName || '—'}
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {schedule.timeIn}
+                    {to12Hour(schedule.timeIn)}
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {schedule.timeOut}
+                    {to12Hour(schedule.timeOut)}
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
                     {schedule.breakDurationMinutes}
@@ -139,6 +158,14 @@ export function WorkScheduleList({ onEdit, onView }: WorkScheduleListProps) {
                           className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                         >
                           Edit
+                        </button>
+                      )}
+                      {onDelete && (
+                        <button
+                          onClick={() => onDelete(schedule)}
+                          className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
+                        >
+                          Delete
                         </button>
                       )}
                     </div>

@@ -30,26 +30,14 @@
  * One-time use: stored in qr_sessions with used=false, validated atomically.
  */
 import { serve } from 'std/http/server.ts';
-import { initAdmin, getAuthInstance, getDbInstance, QR_ACTIONS, QR_EXPIRATION_OPTIONS, COLLECTIONS } from '../_shared/config.ts';
-import { Timestamp } from 'npm:firebase-admin/firestore@12.7.0';
+import { initAdmin, getAuthInstance, getDbInstance, COLLECTIONS } from '../_shared/config.ts';
+import { Timestamp } from 'firebase-admin/firestore';
 import { SignJWT } from 'npm:jose@5.9.0';
+import { corsResponse, errorResponse } from '../_shared/cors.ts';
+import { verifyFirebaseToken } from '../_shared/auth.ts';
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey',
-};
-
-function corsResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-  });
-}
-
-function errorResponse(message: string, status: number) {
-  return corsResponse({ error: message }, status);
-}
+const QR_ACTIONS = ['time_in', 'time_out'] as const;
+const QR_EXPIRATION_OPTIONS = [30, 60, 120, 300] as const;
 
 function generateNonce(): string {
   const array = new Uint8Array(16);
@@ -74,13 +62,17 @@ serve(async (req) => {
     const auth = getAuthInstance();
     const db = getDbInstance();
 
-    // Verify Firebase ID token
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return errorResponse('Missing or invalid Authorization header', 401);
+    // Verify Firebase ID token from request body
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      return errorResponse('Invalid JSON body', 400);
     }
-    const idToken = authHeader.slice(7);
-    const decoded = await auth.verifyIdToken(idToken);
+
+    const [verified, errResp] = await verifyFirebaseToken(body);
+    if (errResp) return errResp;
+    const decoded = verified!;
     const callerUid = decoded.uid;
     const callerRole = (decoded as Record<string, unknown>).role as string | undefined;
     const callerCompanyId = (decoded as Record<string, unknown>).companyId as string | undefined;
@@ -90,13 +82,6 @@ serve(async (req) => {
     }
     if (callerRole !== 'supervisor' && callerRole !== 'admin') {
       return errorResponse('Only supervisors and admins can generate QR tokens', 403);
-    }
-
-    let body: Record<string, unknown>;
-    try {
-      body = await req.json();
-    } catch {
-      return errorResponse('Invalid JSON body', 400);
     }
 
     const { action, expirationSeconds } = body as {
@@ -136,10 +121,10 @@ serve(async (req) => {
 
     // Store session in Firestore (one-time use)
     const sessionRef = db.collection(COLLECTIONS.QR_SESSIONS).doc();
+    const tokenHashBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
+    const tokenHash = Array.from(new Uint8Array(tokenHashBuf), (b) => b.toString(16).padStart(2, '0')).join('');
     await sessionRef.set({
-      tokenHash: crypto.subtle.digest('SHA-256', new TextEncoder().encode(token)).then((buf) =>
-        Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, '0')).join('')
-      ),
+      tokenHash,
       companyId: callerCompanyId,
       action,
       expiresAt: exp * 1000,

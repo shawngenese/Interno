@@ -1,5 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { adminService } from '../services/adminService';
+import { resolveDocName } from '@/shared/utils/resolveDocName';
+import { getFirestoreInstancePublic } from '@/config/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import type { Trainee, ListTraineesParams } from '../types';
 
 interface TraineeListProps {
@@ -9,8 +12,16 @@ interface TraineeListProps {
   onStatusChange?: (trainee: Trainee) => void;
 }
 
+interface ResolvedTrainee extends Trainee {
+  userName?: string;
+  companyName?: string;
+  departmentName?: string;
+  supervisorName?: string;
+}
+
 export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }: TraineeListProps) {
-  const [trainees, setTrainees] = useState<Trainee[]>([]);
+  const [trainees, setTrainees] = useState<ResolvedTrainee[]>([]);
+  const traineesRef = useRef(trainees);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ListTraineesParams>({ page: 1, limit: 10 });
@@ -18,12 +29,46 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
   const [statusDropdownId, setStatusDropdownId] = useState<string | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
+  // Keep ref in sync with state
+  useEffect(() => {
+    traineesRef.current = trainees;
+  }, [trainees]);
+
+  // Close status dropdown on outside click
+  useEffect(() => {
+    if (!statusDropdownId) return;
+    const handleClickOutside = () => setStatusDropdownId(null);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [statusDropdownId]);
+
   const fetchTrainees = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const result = await adminService.listTrainees(filters);
-      setTrainees(result.data);
+      const db = getFirestoreInstancePublic();
+      const resolved = await Promise.all(
+        result.data.map(async (t) => {
+          const [userName, companyName, departmentName] = await Promise.all([
+            resolveDocName('users', t.userId, 'displayName'),
+            resolveDocName('companies', t.companyId, 'name'),
+            resolveDocName('departments', t.departmentId, 'name'),
+          ]);
+          let supervisorName = '-';
+          if (t.supervisorId) {
+            const supDoc = await getDoc(doc(db, 'supervisors', t.supervisorId));
+            if (supDoc.exists()) {
+              const supUserId = (supDoc.data() as Record<string, unknown>).userId as string;
+              if (supUserId) {
+                supervisorName = await resolveDocName('users', supUserId, 'displayName') || '-';
+              }
+            }
+          }
+          return { ...t, userName, companyName, departmentName, supervisorName };
+        }),
+      );
+      setTrainees(resolved);
       setTotal(result.total);
     } catch (err) {
       setError('Failed to load trainees');
@@ -62,7 +107,7 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
       ));
       setStatusDropdownId(null);
       if (onStatusChange) {
-        const updated = trainees.find(t => t.id === traineeId);
+        const updated = traineesRef.current.find(t => t.id === traineeId);
         if (updated) onStatusChange({ ...updated, ojtStatus: newStatus });
       }
     } catch (err) {
@@ -128,6 +173,7 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
           <select
             value={filters.status || ''}
             onChange={(e) => handleStatusChange((e.target.value as Trainee['status']) || undefined)}
+            aria-label="Filter by status"
             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="">All Statuses</option>
@@ -140,6 +186,7 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
           <select
             value={filters.ojtStatus || ''}
             onChange={(e) => handleOJTStatusChange((e.target.value as Trainee['ojtStatus']) || undefined)}
+            aria-label="Filter by OJT status"
             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="">All OJT Statuses</option>
@@ -161,14 +208,14 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
 
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50 dark:bg-gray-800/50">
+          <thead className="bg-gray-50 dark:bg-gray-700/50">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Student ID</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Course</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Department</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Supervisor</th>
+              <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Student ID</th>
+              <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Course</th>
+              <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
+              <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Department</th>
+              <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Supervisor</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">OJT Status</th>
               <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
@@ -185,31 +232,31 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
               trainees.map(trainee => (
                 <tr key={trainee.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                   <td className="px-4 py-4 text-sm text-gray-900 dark:text-white font-medium">
-                    {trainee.profile?.studentId || trainee.userId}
+                    {trainee.userName || '—'}
                   </td>
-                  <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                  <td className="hidden md:table-cell px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
                     {trainee.profile?.studentId || '-'}
                   </td>
-                  <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                  <td className="hidden md:table-cell px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
                     {trainee.profile?.course || '-'}
                   </td>
-                  <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {trainee.companyId}
+                  <td className="hidden lg:table-cell px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {trainee.companyName || '—'}
                   </td>
-                  <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {trainee.departmentId}
+                  <td className="hidden lg:table-cell px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {trainee.departmentName || '—'}
                   </td>
-                  <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {trainee.supervisorId || '-'}
+                  <td className="hidden lg:table-cell px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {trainee.supervisorName || '-'}
                   </td>
                   <td className="px-4 py-4">
                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(trainee.status)}`}>
-                      {trainee.status}
+                      {trainee.status.charAt(0).toUpperCase() + trainee.status.slice(1)}
                     </span>
                   </td>
                   <td className="px-4 py-4">
                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getOJTStatusColor(trainee.ojtStatus)}`}>
-                      {trainee.ojtStatus.replace('_', ' ')}
+                      {trainee.ojtStatus.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
                     </span>
                   </td>
                   <td className="px-4 py-4 text-right">
@@ -240,7 +287,7 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
                       )}
                       <div className="relative">
                         <button
-                          onClick={() => setStatusDropdownId(statusDropdownId === trainee.id ? null : trainee.id)}
+                          onClick={(e) => { e.stopPropagation(); setStatusDropdownId(statusDropdownId === trainee.id ? null : trainee.id); }}
                           className="px-3 py-1.5 text-xs font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors"
                           disabled={updatingStatus === trainee.id}
                         >
@@ -259,7 +306,7 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
                                     : 'text-gray-700 dark:text-gray-300'
                                 }`}
                               >
-                                {status.replace('_', ' ')}
+                                {status.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
                               </button>
                             ))}
                           </div>

@@ -6,6 +6,7 @@ import {
   DepartmentList, 
   DepartmentForm,
   SupervisorList,
+  SupervisorForm,
   TraineeList,
   TraineeForm,
   DocumentRequirements,
@@ -15,14 +16,63 @@ import {
   WorkScheduleList,
   WorkScheduleForm,
 } from './index';
-import { useState } from 'react';
+import { AdminOverview } from './AdminOverview';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import type { User, Company, Department, Supervisor, Trainee, WorkSchedule, OJTSchedule } from '../types';
 
-type Tab = 'users' | 'companies' | 'departments' | 'supervisors' | 'trainees' | 'work-schedules' | 'ojt-schedules';
+type Tab = 'dashboard' | 'users' | 'companies' | 'departments' | 'supervisors' | 'trainees' | 'work-schedules' | 'ojt-schedules';
+
+const TAB_LABELS: Record<string, string> = {
+  'dashboard': 'Dashboard',
+  'users': 'Users',
+  'supervisors': 'Supervisors',
+  'trainees': 'Trainees',
+  'companies': 'Companies',
+  'departments': 'Departments',
+  'work-schedules': 'Work Schedules',
+  'ojt-schedules': 'OJT Schedules',
+  'audit-logs': 'Audit Logs',
+};
+
+const TAB_FROM_PATH: Record<string, Tab> = {
+  '/admin': 'dashboard',
+  '/admin/users': 'users',
+  '/admin/companies': 'companies',
+  '/admin/departments': 'departments',
+  '/admin/supervisors': 'supervisors',
+  '/admin/trainees': 'trainees',
+  '/admin/work-schedules': 'work-schedules',
+  '/admin/ojt-schedules': 'ojt-schedules',
+};
+
+function getTabFromPathname(pathname: string): Tab {
+  if (TAB_FROM_PATH[pathname]) return TAB_FROM_PATH[pathname];
+  const base = '/admin/' + pathname.split('/')[2];
+  return TAB_FROM_PATH[base] || 'users';
+}
 
 export function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<Tab>('users');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState<Tab>(() => getTabFromPathname(location.pathname));
+
+  useEffect(() => {
+    setActiveTab(getTabFromPathname(location.pathname));
+    setView('list');
+    setViewOnly(false);
+    setEditingUserId(null);
+    setEditingCompanyId(null);
+    setEditingDepartmentId(null);
+    setEditingTraineeId(null);
+    setEditingWorkScheduleId(null);
+    setEditingOJTScheduleId(null);
+    setEditingSupervisorId(null);
+    setAssigningSupervisor(null);
+    setViewingTraineeCompanyId(null);
+  }, [location.pathname]);
+
   const [view, setView] = useState<'list' | 'create' | 'edit' | 'assign' | 'documents'>('list');
+  const [viewOnly, setViewOnly] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editingCompanyId, setEditingCompanyId] = useState<string | null>(null);
   const [editingDepartmentId, setEditingDepartmentId] = useState<string | null>(null);
@@ -30,6 +80,7 @@ export function AdminDashboard() {
   const [editingWorkScheduleId, setEditingWorkScheduleId] = useState<string | null>(null);
   const [editingOJTScheduleId, setEditingOJTScheduleId] = useState<string | null>(null);
   const [assigningSupervisor, setAssigningSupervisor] = useState<Supervisor | null>(null);
+  const [editingSupervisorId, setEditingSupervisorId] = useState<string | null>(null);
   const [viewingTraineeCompanyId, setViewingTraineeCompanyId] = useState<string | null>(null);
 
   const handleEditUser = (user: User) => {
@@ -77,7 +128,8 @@ export function AdminDashboard() {
   };
 
   const handleEditSupervisor = (_supervisor: Supervisor) => {
-    setEditingUserId(null);
+    setEditingSupervisorId(_supervisor.id);
+    setEditingUserId(_supervisor.userId);
     setEditingCompanyId(null);
     setEditingDepartmentId(null);
     setEditingTraineeId(null);
@@ -106,6 +158,7 @@ export function AdminDashboard() {
     setEditingWorkScheduleId(null);
     setEditingOJTScheduleId(null);
     setAssigningSupervisor(null);
+    setViewOnly(false);
     setView('edit');
   };
 
@@ -118,6 +171,7 @@ export function AdminDashboard() {
     setEditingWorkScheduleId(null);
     setEditingOJTScheduleId(null);
     setAssigningSupervisor(null);
+    setViewOnly(true);
     setView('edit');
   };
 
@@ -141,6 +195,7 @@ export function AdminDashboard() {
     setEditingTraineeId(null);
     setEditingOJTScheduleId(null);
     setAssigningSupervisor(null);
+    setViewOnly(false);
     setView('edit');
   };
 
@@ -152,7 +207,19 @@ export function AdminDashboard() {
     setEditingTraineeId(null);
     setEditingOJTScheduleId(null);
     setAssigningSupervisor(null);
+    setViewOnly(true);
     setView('edit');
+  };
+
+  const handleDeleteWorkSchedule = async (schedule: WorkSchedule) => {
+    if (!confirm(`Are you sure you want to delete "${schedule.name}"?`)) return;
+    try {
+      const { adminService } = await import('../services/adminService');
+      await adminService.deleteWorkSchedule(schedule.id);
+      setView('list');
+    } catch (err) {
+      console.error('Failed to delete work schedule:', err);
+    }
   };
 
   const handleEditOJTSchedule = (schedule: OJTSchedule) => {
@@ -163,6 +230,7 @@ export function AdminDashboard() {
     setEditingTraineeId(null);
     setEditingWorkScheduleId(null);
     setAssigningSupervisor(null);
+    setViewOnly(false);
     setView('edit');
   };
 
@@ -174,17 +242,20 @@ export function AdminDashboard() {
     setEditingTraineeId(null);
     setEditingWorkScheduleId(null);
     setAssigningSupervisor(null);
+    setViewOnly(true);
     setView('edit');
   };
 
   const handleBackToList = () => {
     setView('list');
+    setViewOnly(false);
     setEditingUserId(null);
     setEditingCompanyId(null);
     setEditingDepartmentId(null);
     setEditingTraineeId(null);
     setEditingWorkScheduleId(null);
     setEditingOJTScheduleId(null);
+    setEditingSupervisorId(null);
     setAssigningSupervisor(null);
     setViewingTraineeCompanyId(null);
   };
@@ -199,36 +270,8 @@ export function AdminDashboard() {
     setView('list');
   };
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: 'users', label: 'Users' },
-    { id: 'companies', label: 'Companies' },
-    { id: 'departments', label: 'Departments' },
-    { id: 'supervisors', label: 'Supervisors' },
-    { id: 'trainees', label: 'Trainees' },
-    { id: 'work-schedules', label: 'Work Schedules' },
-    { id: 'ojt-schedules', label: 'OJT Schedules' },
-  ];
-
   return (
     <div>
-      <div className="mb-6">
-        <nav className="flex gap-1 bg-white dark:bg-gray-800 rounded-lg p-1 border border-gray-200 dark:border-gray-700" aria-label="Admin tabs">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => { setActiveTab(tab.id); setView('list'); }}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
-      </div>
-
       {view !== 'list' && view !== 'assign' && (
         <div className="mb-4">
           <button
@@ -238,7 +281,7 @@ export function AdminDashboard() {
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
-            Back to {tabs.find(t => t.id === activeTab)?.label || 'List'}
+            Back to {TAB_LABELS[activeTab] || activeTab}
           </button>
         </div>
       )}
@@ -257,6 +300,8 @@ export function AdminDashboard() {
         </div>
       )}
 
+      {activeTab === 'dashboard' && <AdminOverview />}
+
       {activeTab === 'users' && (
         <>
           {view === 'list' && (
@@ -268,7 +313,7 @@ export function AdminDashboard() {
                 </div>
                 <button
                   onClick={() => { setView('create'); setEditingUserId(null); }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                 >
                   Add User
                 </button>
@@ -277,8 +322,8 @@ export function AdminDashboard() {
             </>
           )}
 
-          {view === 'create' && <UserForm />}
-          {view === 'edit' && editingUserId && <UserForm />}
+          {view === 'create' && <UserForm onCancel={handleBackToList} onSaved={handleBackToList} />}
+          {view === 'edit' && editingUserId && <UserForm editingId={editingUserId} onCancel={handleBackToList} onSaved={handleBackToList} />}
         </>
       )}
 
@@ -293,7 +338,7 @@ export function AdminDashboard() {
                 </div>
                 <button
                   onClick={() => { setView('create'); setEditingCompanyId(null); }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                 >
                   Add Company
                 </button>
@@ -302,8 +347,8 @@ export function AdminDashboard() {
             </>
           )}
 
-          {view === 'create' && <CompanyForm />}
-          {view === 'edit' && editingCompanyId && <CompanyForm />}
+          {view === 'create' && <CompanyForm onCancel={handleBackToList} onSaved={handleBackToList} />}
+          {view === 'edit' && editingCompanyId && <CompanyForm editingId={editingCompanyId} onCancel={handleBackToList} onSaved={handleBackToList} />}
         </>
       )}
 
@@ -318,7 +363,7 @@ export function AdminDashboard() {
                 </div>
                 <button
                   onClick={() => { setView('create'); setEditingDepartmentId(null); }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                 >
                   Add Department
                 </button>
@@ -327,8 +372,8 @@ export function AdminDashboard() {
             </>
           )}
 
-          {view === 'create' && <DepartmentForm />}
-          {view === 'edit' && editingDepartmentId && <DepartmentForm />}
+          {view === 'create' && <DepartmentForm onCancel={handleBackToList} onSaved={handleBackToList} />}
+          {view === 'edit' && editingDepartmentId && <DepartmentForm editingId={editingDepartmentId} onCancel={handleBackToList} onSaved={handleBackToList} />}
         </>
       )}
 
@@ -341,9 +386,25 @@ export function AdminDashboard() {
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Supervisor Management</h1>
                   <p className="text-gray-600 dark:text-gray-400 mt-1">Manage supervisors and trainee assignments</p>
                 </div>
+                <button
+                  onClick={() => { setView('create'); setEditingUserId(null); setEditingSupervisorId(null); }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+                >
+                  Add Supervisor
+                </button>
               </div>
               <SupervisorList onEdit={handleEditSupervisor} onAssignTrainees={handleAssignTrainees} />
             </>
+          )}
+
+          {view === 'create' && <SupervisorForm onCancel={handleBackToList} onSaved={handleBackToList} />}
+          {view === 'edit' && editingSupervisorId && (
+            <SupervisorForm
+              editingId={editingUserId ?? undefined}
+              editingSupervisorId={editingSupervisorId}
+              onCancel={handleBackToList}
+              onSaved={handleBackToList}
+            />
           )}
 
           {view === 'assign' && assigningSupervisor && (
@@ -367,7 +428,7 @@ export function AdminDashboard() {
                 </div>
                 <button
                   onClick={() => { setView('create'); setEditingTraineeId(null); }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                 >
                   Add Trainee
                 </button>
@@ -381,8 +442,8 @@ export function AdminDashboard() {
             </>
           )}
 
-          {view === 'create' && <TraineeForm />}
-          {view === 'edit' && editingTraineeId && <TraineeForm />}
+          {view === 'create' && <TraineeForm onCancel={handleBackToList} onSaved={handleBackToList} />}
+          {view === 'edit' && editingTraineeId && <TraineeForm editingId={editingTraineeId} viewOnly={viewOnly} onCancel={handleBackToList} onSaved={handleBackToList} />}
           {view === 'documents' && editingTraineeId && viewingTraineeCompanyId && (
             <DocumentRequirements 
               traineeId={editingTraineeId} 
@@ -403,17 +464,17 @@ export function AdminDashboard() {
                 </div>
                 <button
                   onClick={() => { setView('create'); setEditingWorkScheduleId(null); }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                 >
                   Add Work Schedule
                 </button>
               </div>
-              <WorkScheduleList onEdit={handleEditWorkSchedule} onView={handleViewWorkSchedule} />
+              <WorkScheduleList onEdit={handleEditWorkSchedule} onView={handleViewWorkSchedule} onDelete={handleDeleteWorkSchedule} />
             </>
           )}
 
-          {view === 'create' && <WorkScheduleForm />}
-          {view === 'edit' && editingWorkScheduleId && <WorkScheduleForm />}
+          {view === 'create' && <WorkScheduleForm onCancel={handleBackToList} onSaved={handleBackToList} />}
+          {view === 'edit' && editingWorkScheduleId && <WorkScheduleForm editingId={editingWorkScheduleId} viewOnly={viewOnly} onCancel={handleBackToList} onSaved={handleBackToList} />}
         </>
       )}
 
@@ -428,7 +489,7 @@ export function AdminDashboard() {
                 </div>
                 <button
                   onClick={() => { setView('create'); setEditingOJTScheduleId(null); }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                 >
                   Add OJT Schedule
                 </button>
@@ -437,8 +498,8 @@ export function AdminDashboard() {
             </>
           )}
 
-          {view === 'create' && <OJTScheduleForm />}
-          {view === 'edit' && editingOJTScheduleId && <OJTScheduleForm />}
+          {view === 'create' && <OJTScheduleForm onCancel={handleBackToList} onSaved={handleBackToList} />}
+          {view === 'edit' && editingOJTScheduleId && <OJTScheduleForm editingId={editingOJTScheduleId} viewOnly={viewOnly} onCancel={handleBackToList} onSaved={handleBackToList} />}
         </>
       )}
     </div>

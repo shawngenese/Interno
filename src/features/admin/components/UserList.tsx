@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
 import { adminService } from '../services/adminService';
+import { resolveDocName } from '@/shared/utils/resolveDocName';
+import { useAuth } from '@/features/auth';
 import type { User, ListUsersParams } from '../types';
 
 interface UserListProps {
@@ -8,9 +9,13 @@ interface UserListProps {
   onView?: (user: User) => void;
 }
 
+interface ResolvedUser extends User {
+  companyName?: string;
+}
+
 export function UserList({ onEdit, onView }: UserListProps) {
-  const navigate = useNavigate();
-  const [users, setUsers] = useState<User[]>([]);
+  const { user: currentUser } = useAuth();
+  const [users, setUsers] = useState<ResolvedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
@@ -29,9 +34,15 @@ export function UserList({ onEdit, onView }: UserListProps) {
     setError(null);
     try {
       const result = await adminService.listUsers(filters);
-      setUsers(result.data);
-      setPagination((p: typeof pagination) => ({
-        ...p,
+      const resolved = await Promise.all(
+        result.data.map(async (u) => {
+          const companyName = await resolveDocName('companies', u.companyId, 'name');
+          return { ...u, companyName };
+        }),
+      );
+      setUsers(resolved);
+      setPagination(prev => ({
+        ...prev,
         total: result.total,
         totalPages: result.totalPages,
       }));
@@ -63,6 +74,7 @@ export function UserList({ onEdit, onView }: UserListProps) {
   };
 
   const handleArchive = async (uid: string) => {
+    if (!confirm('Are you sure you want to archive this user?')) return;
     try {
       await adminService.archiveUser(uid);
       fetchUsers();
@@ -73,6 +85,7 @@ export function UserList({ onEdit, onView }: UserListProps) {
   };
 
   const handleRestore = async (uid: string) => {
+    if (!confirm('Are you sure you want to restore this user?')) return;
     try {
       await adminService.restoreUser(uid);
       fetchUsers();
@@ -98,16 +111,8 @@ export function UserList({ onEdit, onView }: UserListProps) {
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Users</h3>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => navigate('/admin/users/create')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-          >
-            Add User
-          </button>
-        </div>
       </div>
 
       {error && (
@@ -152,64 +157,68 @@ export function UserList({ onEdit, onView }: UserListProps) {
                 <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                   <td className="px-4 py-4">
                     <div>
-                      <Link
-                        to={`/admin/users/${user.id}`}
-                        onClick={(e) => { e.preventDefault(); onView?.(user); }}
+                      <button
+                        onClick={() => onView?.(user)}
                         className="font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400"
                       >
                         {user.displayName}
-                      </Link>
+                      </button>
+                      {currentUser?.uid === user.id && (
+                        <span className="ml-1.5 text-xs text-blue-600 dark:text-blue-400 font-medium">(You)</span>
+                      )}
                       <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
                     </div>
                   </td>
                   <td className="px-4 py-4">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${roleColors[user.role]}`}>
-                      {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${roleColors[user.role ?? ''] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}`}>
+                      {(user.role ?? 'unknown').charAt(0).toUpperCase() + (user.role ?? 'unknown').slice(1)}
                     </span>
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {user.companyId}
+                    {user.companyName || '—'}
                   </td>
                   <td className="px-4 py-4">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusColors[user.status]}`}>
-                      {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusColors[user.status ?? 'active'] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}`}>
+                      {(user.status ?? 'active').charAt(0).toUpperCase() + (user.status ?? 'active').slice(1)}
                     </span>
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {new Date(user.createdAt.seconds * 1000).toLocaleDateString()}
+                    {user.createdAt?.seconds ? new Date(user.createdAt.seconds * 1000).toLocaleDateString() : '-'}
                   </td>
                   <td className="px-4 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      {onEdit && (
+                      {onEdit && currentUser?.uid !== user.id && (
                         <button
                           onClick={() => onEdit(user)}
-                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium"
+                          className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                         >
                           Edit
                         </button>
                       )}
-                      {user.status === 'archived' ? (
-                        <button
-                          onClick={() => handleRestore(user.id)}
-                          className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 text-sm font-medium"
-                        >
-                          Restore
-                        </button>
-                      ) : (
-                        <>
+                      {currentUser?.uid !== user.id && (
+                        user.status === 'archived' ? (
                           <button
-                            onClick={() => handleArchive(user.id)}
-                            className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-300 text-sm font-medium"
+                            onClick={() => handleRestore(user.id)}
+                            className="px-3 py-1.5 text-xs font-medium text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
                           >
-                            Archive
+                            Restore
                           </button>
-                          <button
-                            onClick={() => handleDelete(user.id)}
-                            className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-sm font-medium"
-                          >
-                            Delete
-                          </button>
-                        </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleArchive(user.id)}
+                              className="px-3 py-1.5 text-xs font-medium text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-300 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-lg transition-colors"
+                            >
+                              Archive
+                            </button>
+                            <button
+                              onClick={() => handleDelete(user.id)}
+                              className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                            >
+                              Delete
+                            </button>
+                          </>
+                        )
                       )}
                     </div>
                   </td>

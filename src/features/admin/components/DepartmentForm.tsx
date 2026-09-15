@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
 import { adminService } from '../services/adminService';
-import type { DepartmentFormData, Company } from '../types';
+import { resolveDocName } from '@/shared/utils/resolveDocName';
+import type { DepartmentFormData, Company, Supervisor } from '../types';
 
-export function DepartmentForm() {
-  const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const isEditing = !!id;
+interface DepartmentFormProps {
+  editingId?: string;
+  onCancel?: () => void;
+  onSaved?: () => void;
+}
+
+export function DepartmentForm({ editingId, onCancel, onSaved }: DepartmentFormProps) {
+  const isEditing = !!editingId;
 
   const [formData, setFormData] = useState<DepartmentFormData>({
     companyId: '',
@@ -16,6 +20,7 @@ export function DepartmentForm() {
   });
 
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [supervisors, setSupervisors] = useState<(Supervisor & { userName?: string; userEmail?: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,12 +53,37 @@ export function DepartmentForm() {
 
   useEffect(() => {
     loadCompanies();
-    if (isEditing) {
-      loadDepartment(id!);
+    if (isEditing && editingId) {
+      loadDepartment(editingId);
     } else {
       setLoading(false);
     }
-  }, [id, isEditing]);
+  }, [editingId, isEditing]);
+
+  useEffect(() => {
+    if (formData.companyId) {
+      const loadSupervisors = async () => {
+        try {
+          const result = await adminService.listSupervisors({ companyId: formData.companyId, limit: 100 });
+          const resolved = await Promise.all(
+            result.data.map(async (s) => {
+              const [userName, userEmail] = await Promise.all([
+                resolveDocName('users', s.userId, 'displayName'),
+                resolveDocName('users', s.userId, 'email'),
+              ]);
+              return { ...s, userName, userEmail };
+            }),
+          );
+          setSupervisors(resolved);
+        } catch (err) {
+          console.error('Failed to load supervisors:', err);
+        }
+      };
+      loadSupervisors();
+    } else {
+      setSupervisors([]);
+    }
+  }, [formData.companyId]);
 
   const handleChange = (field: keyof DepartmentFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -65,12 +95,12 @@ export function DepartmentForm() {
     setSaving(true);
 
     try {
-      if (isEditing) {
-        await adminService.updateDepartment(id!, formData);
+      if (isEditing && editingId) {
+        await adminService.updateDepartment(editingId, formData);
       } else {
         await adminService.createDepartment(formData);
       }
-      navigate('/admin/departments');
+      onSaved?.();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to save department';
       setError(message);
@@ -80,7 +110,7 @@ export function DepartmentForm() {
   };
 
   const handleCancel = () => {
-    navigate('/admin/departments');
+    onCancel?.();
   };
 
   if (loading) {
@@ -101,7 +131,7 @@ export function DepartmentForm() {
       </h2>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
+        <div role="alert" className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
           {error}
         </div>
       )}
@@ -158,14 +188,17 @@ export function DepartmentForm() {
           <label htmlFor="headSupervisorId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Head Supervisor (optional)
           </label>
-          <input
-            type="text"
+          <select
             id="headSupervisorId"
             value={formData.headSupervisorId}
             onChange={(e) => handleChange('headSupervisorId', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Supervisor ID"
-          />
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">None</option>
+            {supervisors.map(sup => (
+              <option key={sup.id} value={sup.userId}>{sup.userName || sup.userEmail || sup.userId}</option>
+            ))}
+          </select>
         </div>
 
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">

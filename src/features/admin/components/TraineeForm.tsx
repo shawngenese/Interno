@@ -1,12 +1,17 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
 import { adminService } from '../services/adminService';
-import type { TraineeFormData, Company, Department, Supervisor, Trainee } from '../types';
+import { resolveDocName } from '@/shared/utils/resolveDocName';
+import type { TraineeFormData, Company, Department, Supervisor, Trainee, User } from '../types';
 
-export function TraineeForm() {
-  const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const isEditing = !!id;
+interface TraineeFormProps {
+  editingId?: string;
+  viewOnly?: boolean;
+  onCancel?: () => void;
+  onSaved?: () => void;
+}
+
+export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeFormProps) {
+  const isEditing = !!editingId;
 
   const [formData, setFormData] = useState<TraineeFormData>({
     userId: '',
@@ -31,87 +36,109 @@ export function TraineeForm() {
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [supervisors, setSupervisors] = useState<Supervisor[]>([]);
+  const [supervisors, setSupervisors] = useState<(Supervisor & { userName?: string; userEmail?: string })[]>([]);
+  const [existingUsers, setExistingUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [useExistingUser, setUseExistingUser] = useState(false);
 
-  const loadCompanies = async () => {
-    try {
-      const result = await adminService.listCompanies({ limit: 100 });
-      setCompanies(result.data);
-    } catch (err) {
-      console.error('Failed to load companies:', err);
-    }
-  };
-
-  const loadDepartments = async (companyId: string) => {
-    try {
-      const result = await adminService.listDepartments({ companyId, limit: 100 });
-      setDepartments(result.data);
-    } catch (err) {
-      console.error('Failed to load departments:', err);
-    }
-  };
-
-  const loadSupervisors = async (companyId: string) => {
-    try {
-      const result = await adminService.listSupervisors({ companyId, limit: 100 });
-      setSupervisors(result.data);
-    } catch (err) {
-      console.error('Failed to load supervisors:', err);
-    }
-  };
-
-  const loadTrainee = async (traineeId: string) => {
-    try {
-      const trainee = await adminService.getTrainee(traineeId);
-      setFormData({
-        userId: trainee.userId,
-        companyId: trainee.companyId,
-        departmentId: trainee.departmentId,
-        supervisorId: trainee.supervisorId || '',
-        scheduleId: trainee.scheduleId || '',
-        status: trainee.status,
-        ojtStatus: trainee.ojtStatus,
-        profile: {
-          studentId: trainee.profile?.studentId || '',
-          course: trainee.profile?.course || '',
-          school: trainee.profile?.school || '',
-          yearLevel: trainee.profile?.yearLevel || '',
-          emergencyContact: {
-            name: trainee.profile?.emergencyContact?.name || '',
-            relationship: trainee.profile?.emergencyContact?.relationship || '',
-            phone: trainee.profile?.emergencyContact?.phone || '',
-          },
-        },
-      });
-    } catch (err) {
-      setError('Failed to load trainee');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserDisplayName, setNewUserDisplayName] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
 
   useEffect(() => {
-    loadCompanies();
-    if (isEditing) {
-      loadTrainee(id!);
-    } else {
-      setLoading(false);
-    }
-  }, [id, isEditing]);
+    const init = async () => {
+      try {
+        const result = await adminService.listCompanies({ limit: 100 });
+        setCompanies(result.data);
+
+        if (isEditing && editingId) {
+          const trainee = await adminService.getTrainee(editingId);
+          setFormData({
+            userId: trainee.userId,
+            companyId: trainee.companyId,
+            departmentId: trainee.departmentId,
+            supervisorId: trainee.supervisorId || '',
+            scheduleId: trainee.scheduleId || '',
+            status: trainee.status,
+            ojtStatus: trainee.ojtStatus,
+            profile: {
+              studentId: trainee.profile?.studentId || '',
+              course: trainee.profile?.course || '',
+              school: trainee.profile?.school || '',
+              yearLevel: trainee.profile?.yearLevel || '',
+              emergencyContact: {
+                name: trainee.profile?.emergencyContact?.name || '',
+                relationship: trainee.profile?.emergencyContact?.relationship || '',
+                phone: trainee.profile?.emergencyContact?.phone || '',
+              },
+            },
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    init();
+  }, [isEditing, editingId]);
 
   useEffect(() => {
     if (formData.companyId) {
-      loadDepartments(formData.companyId);
-      loadSupervisors(formData.companyId);
+      const loadDepartments = async () => {
+        try {
+          const result = await adminService.listDepartments({ companyId: formData.companyId, limit: 100 });
+          setDepartments(result.data);
+        } catch (err) {
+          console.error('Failed to load departments:', err);
+        }
+      };
+      loadDepartments();
     } else {
       setDepartments([]);
+    }
+  }, [formData.companyId]);
+
+  useEffect(() => {
+    if (formData.companyId) {
+      const loadSupervisors = async () => {
+        try {
+          const result = await adminService.listSupervisors({ companyId: formData.companyId, limit: 100 });
+          const resolved = await Promise.all(
+            result.data.map(async (s) => {
+              const [userName, userEmail] = await Promise.all([
+                resolveDocName('users', s.userId, 'displayName'),
+                resolveDocName('users', s.userId, 'email'),
+              ]);
+              return { ...s, userName, userEmail };
+            }),
+          );
+          setSupervisors(resolved);
+        } catch (err) {
+          console.error('Failed to load supervisors:', err);
+        }
+      };
+      loadSupervisors();
+    } else {
       setSupervisors([]);
     }
   }, [formData.companyId]);
+
+  useEffect(() => {
+    if (useExistingUser && formData.companyId) {
+      const loadUsers = async () => {
+        try {
+          const result = await adminService.listUsers({ role: 'trainee', companyId: formData.companyId, limit: 100 });
+          setExistingUsers(result.data);
+        } catch (err) {
+          console.error('Failed to load users:', err);
+        }
+      };
+      loadUsers();
+    }
+  }, [useExistingUser, formData.companyId]);
 
   const handleChange = (field: string, value: string) => {
     if (field.startsWith('profile.')) {
@@ -148,8 +175,8 @@ export function TraineeForm() {
     setSaving(true);
 
     try {
-      if (isEditing) {
-        await adminService.updateTrainee(id!, {
+      if (isEditing && editingId) {
+        await adminService.updateTrainee(editingId, {
           companyId: formData.companyId,
           departmentId: formData.departmentId,
           supervisorId: formData.supervisorId,
@@ -159,9 +186,35 @@ export function TraineeForm() {
           profile: formData.profile,
         } as Partial<Trainee>);
       } else {
-        await adminService.createTrainee(formData);
+        let userId = formData.userId;
+
+        if (useExistingUser) {
+          if (!userId) throw new Error('Select a user');
+        } else {
+          if (!newUserEmail || !newUserDisplayName || !newUserPassword) {
+            throw new Error('Email, display name, and password are required');
+          }
+          const user = await adminService.createUser({
+            email: newUserEmail,
+            displayName: newUserDisplayName,
+            role: 'trainee',
+            companyId: formData.companyId,
+            departmentId: formData.departmentId,
+            password: newUserPassword,
+          });
+          userId = user.id;
+        }
+
+        if (!formData.companyId || !formData.departmentId) {
+          throw new Error('Company and department are required');
+        }
+
+        await adminService.createTrainee({
+          ...formData,
+          userId,
+        });
       }
-      navigate('/admin/trainees');
+      onSaved?.();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to save trainee';
       setError(message);
@@ -171,7 +224,7 @@ export function TraineeForm() {
   };
 
   const handleCancel = () => {
-    navigate('/admin/trainees');
+    onCancel?.();
   };
 
   if (loading) {
@@ -188,35 +241,100 @@ export function TraineeForm() {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 max-w-2xl mx-auto">
       <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-        {isEditing ? 'Edit Trainee Profile' : 'Create Trainee Profile'}
+        {viewOnly ? 'View Trainee Profile' : isEditing ? 'Edit Trainee Profile' : 'Add Trainee'}
       </h2>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
+        <div role="alert" className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
           {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {!isEditing && (
+          <div className="flex items-center gap-3 mb-4">
+            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <input
+                type="checkbox"
+                checked={useExistingUser}
+                onChange={(e) => setUseExistingUser(e.target.checked)}
+                disabled={viewOnly}
+                className="rounded border-gray-300 dark:border-gray-600"
+              />
+              Link to existing user account
+            </label>
+          </div>
+        )}
+
+        {!isEditing && (useExistingUser ? (
           <div>
             <label htmlFor="userId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              User ID <span className="text-red-500">*</span>
+              User <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
+            <select
               id="userId"
               value={formData.userId}
               onChange={(e) => handleChange('userId', e.target.value)}
               required
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Firebase Auth UID"
-            />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              The Firebase Auth UID of the user with role &quot;trainee&quot;
-            </p>
+              disabled={viewOnly}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="">Select User</option>
+              {existingUsers.map(user => (
+                <option key={user.id} value={user.id}>{user.displayName} ({user.email})</option>
+              ))}
+            </select>
           </div>
-        )}
+        ) : (
+          <>
+            <div>
+              <label htmlFor="newEmail" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Email <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                id="newEmail"
+                value={newUserEmail}
+                onChange={(e) => setNewUserEmail(e.target.value)}
+                required
+                disabled={viewOnly}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="trainee@example.com"
+              />
+            </div>
+            <div>
+              <label htmlFor="newDisplayName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Display Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="newDisplayName"
+                value={newUserDisplayName}
+                onChange={(e) => setNewUserDisplayName(e.target.value)}
+                required
+                disabled={viewOnly}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Juan Dela Cruz"
+              />
+            </div>
+            <div>
+              <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Password <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="password"
+                id="newPassword"
+                value={newUserPassword}
+                onChange={(e) => setNewUserPassword(e.target.value)}
+                required
+                minLength={6}
+                disabled={viewOnly}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="At least 6 characters"
+              />
+            </div>
+          </>
+        ))}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -228,7 +346,8 @@ export function TraineeForm() {
               value={formData.companyId}
               onChange={(e) => handleChange('companyId', e.target.value)}
               required
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={viewOnly}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Select Company</option>
               {companies.map(company => (
@@ -246,7 +365,8 @@ export function TraineeForm() {
               value={formData.departmentId}
               onChange={(e) => handleChange('departmentId', e.target.value)}
               required
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={viewOnly}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Select Department</option>
               {departments.map(dept => (
@@ -263,11 +383,12 @@ export function TraineeForm() {
               id="supervisorId"
               value={formData.supervisorId}
               onChange={(e) => handleChange('supervisorId', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={viewOnly}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Select Supervisor</option>
               {supervisors.map(sup => (
-                <option key={sup.id} value={sup.id}>{sup.userId}</option>
+                <option key={sup.id} value={sup.id}>{sup.userName || sup.userEmail || sup.userId}</option>
               ))}
             </select>
           </div>
@@ -280,7 +401,8 @@ export function TraineeForm() {
               id="status"
               value={formData.status}
               onChange={(e) => handleChange('status', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={viewOnly}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="pending">Pending</option>
               <option value="active">Active</option>
@@ -297,7 +419,8 @@ export function TraineeForm() {
               id="ojtStatus"
               value={formData.ojtStatus}
               onChange={(e) => handleChange('ojtStatus', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={viewOnly}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="pending">Pending</option>
               <option value="active">Active</option>
@@ -321,6 +444,7 @@ export function TraineeForm() {
                 id="studentId"
                 value={formData.profile?.studentId || ''}
                 onChange={(e) => handleChange('profile.studentId', e.target.value)}
+                disabled={viewOnly}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="e.g., 2024-00123"
               />
@@ -335,6 +459,7 @@ export function TraineeForm() {
                 id="course"
                 value={formData.profile?.course || ''}
                 onChange={(e) => handleChange('profile.course', e.target.value)}
+                disabled={viewOnly}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="e.g., BS Computer Science"
               />
@@ -349,6 +474,7 @@ export function TraineeForm() {
                 id="school"
                 value={formData.profile?.school || ''}
                 onChange={(e) => handleChange('profile.school', e.target.value)}
+                disabled={viewOnly}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="e.g., University of the Philippines"
               />
@@ -363,6 +489,7 @@ export function TraineeForm() {
                 id="yearLevel"
                 value={formData.profile?.yearLevel || ''}
                 onChange={(e) => handleChange('profile.yearLevel', e.target.value)}
+                disabled={viewOnly}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="e.g., 3rd Year"
               />
@@ -382,6 +509,7 @@ export function TraineeForm() {
                 id="ecName"
                 value={formData.profile?.emergencyContact?.name || ''}
                 onChange={(e) => handleChange('emergencyContact.name', e.target.value)}
+                disabled={viewOnly}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Contact name"
               />
@@ -396,6 +524,7 @@ export function TraineeForm() {
                 id="ecRelationship"
                 value={formData.profile?.emergencyContact?.relationship || ''}
                 onChange={(e) => handleChange('emergencyContact.relationship', e.target.value)}
+                disabled={viewOnly}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="e.g., Parent"
               />
@@ -410,6 +539,7 @@ export function TraineeForm() {
                 id="ecPhone"
                 value={formData.profile?.emergencyContact?.phone || ''}
                 onChange={(e) => handleChange('emergencyContact.phone', e.target.value)}
+                disabled={viewOnly}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="+63 9XX XXX XXXX"
               />
@@ -423,15 +553,17 @@ export function TraineeForm() {
             onClick={handleCancel}
             className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
           >
-            Cancel
+            {viewOnly ? 'Close' : 'Cancel'}
           </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {saving ? 'Saving...' : (isEditing ? 'Update' : 'Create')}
-          </button>
+          {!viewOnly && (
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {saving ? 'Saving...' : (isEditing ? 'Update' : 'Create Trainee')}
+            </button>
+          )}
         </div>
       </form>
     </div>

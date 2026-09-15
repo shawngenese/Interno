@@ -1,6 +1,6 @@
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation, NavLink } from 'react-router-dom';
-import { AdminRoute } from '@/features/auth';
 import { LogoutButton } from '@/features/auth';
 
 const navigation = [
@@ -12,6 +12,7 @@ const navigation = [
   { name: 'Trainees', href: '/admin/trainees', icon: UserCircleIcon },
   { name: 'Work Schedules', href: '/admin/work-schedules', icon: CalendarIcon },
   { name: 'OJT Schedules', href: '/admin/ojt-schedules', icon: ClockIcon },
+  { name: 'Audit Logs', href: '/admin/audit-logs', icon: ClipboardDocumentListIcon },
 ];
 
 function HomeIcon({ className }: { className?: string }) {
@@ -33,7 +34,7 @@ function UsersIcon({ className }: { className?: string }) {
 function BuildingIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-3.75 0l-1.966 2.5a1.125 1.125 0 01-1.074 0L9.75 13.5m4.5 0H9.75M3.75 3l8.896 11.322A12.062 12.062 0 009 22.5c.86 0 1.71-.07 2.52-.208l3.61-4.603a27.035 27.035 0 002.893 0l3.61 4.603c.81.138 1.66.208 2.52.208 3.331 0 6.296-2.01 7.39-4.813L18.75 3M9 16.5v1.5m0 0l2.25 2.25M15 18l2.25-2.25" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.016A3.001 3.001 0 0021 9.349m-18 0V6.375a3 3 0 013-3h.75a3 3 0 013 3v.375" />
     </svg>
   );
 }
@@ -41,7 +42,7 @@ function BuildingIcon({ className }: { className?: string }) {
 function BuildingOfficeIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-3.75 0l-1.966 2.5a1.125 1.125 0 01-1.074 0L9.75 13.5m4.5 0H9.75M3.75 3l8.896 11.322A12.062 12.062 0 009 22.5c.86 0 1.71-.07 2.52-.208l3.61-4.603a27.035 27.035 0 002.893 0l3.61 4.603c.81.138 1.66.208 2.52.208 3.331 0 6.296-2.01 7.39-4.813L18.75 3" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
     </svg>
   );
 }
@@ -78,22 +79,54 @@ function ClockIcon({ className }: { className?: string }) {
   );
 }
 
+function ClipboardDocumentListIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
+    </svg>
+  );
+}
+
 export function AdminLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <AdminRoute>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0">
+        {/* Mobile sidebar backdrop */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-gray-900/80 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        <aside
+          aria-label="Admin navigation"
+          className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-700">
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">Interno Admin</h1>
+              <button
+                type="button"
+                className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 lg:hidden"
+                onClick={() => setSidebarOpen(false)}
+                aria-label="Close navigation menu"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
             <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
               {navigation.map((item) => (
                 <NavLink
                   key={item.name}
                   to={item.href}
+                  end={item.href === '/admin'}
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                       isActive
@@ -102,8 +135,12 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                     }`
                   }
                 >
-                  <item.icon className="h-5 w-5" />
-                  {item.name}
+                  {({ isActive }) => (
+                    <>
+                      <item.icon className="h-5 w-5" />
+                      <span aria-current={isActive ? 'page' : undefined}>{item.name}</span>
+                    </>
+                  )}
                 </NavLink>
               ))}
             </nav>
@@ -116,9 +153,21 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         <div className="lg:pl-64">
           <header className="sticky top-0 z-40 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                {navigation.find(n => n.href === location.pathname)?.name || 'Admin'}
-              </h2>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 lg:hidden"
+                  onClick={() => setSidebarOpen(true)}
+                  aria-label="Open navigation menu"
+                >
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                  </svg>
+                </button>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  {navigation.find(n => location.pathname === n.href || location.pathname.startsWith(n.href + '/'))?.name || 'Admin'}
+                </h2>
+              </div>
             </div>
           </header>
           <main className="p-4 sm:p-6 lg:p-8">
@@ -126,6 +175,5 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           </main>
         </div>
       </div>
-    </AdminRoute>
   );
 }

@@ -18,9 +18,8 @@
  * Returns:
  * {
  *   success: true,
- *   uploadUrl: string,         // signed URL for PUT upload
  *   path: string,              // storage object path
- *   token: string,             // access token (same as uploadUrl auth)
+ *   bucket: string,            // target bucket
  *   expiresAt: number          // epoch ms
  * }
  *
@@ -32,24 +31,9 @@
  */
 import { serve } from 'std/http/server.ts';
 import { initAdmin, getAuthInstance, getDbInstance, COLLECTIONS } from '../_shared/config.ts';
-import { Timestamp } from 'npm:firebase-admin/firestore@12.7.0';
-
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey',
-};
-
-function corsResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-  });
-}
-
-function errorResponse(message: string, status: number) {
-  return corsResponse({ error: message }, status);
-}
+import { Timestamp } from 'firebase-admin/firestore';
+import { corsResponse, errorResponse } from '../_shared/cors.ts';
+import { verifyFirebaseToken } from '../_shared/auth.ts';
 
 const ALLOWED_MIME_TYPES = {
   documents: [
@@ -117,13 +101,10 @@ serve(async (req) => {
     const auth = getAuthInstance();
     const db = getDbInstance();
 
-    // Verify Firebase ID token
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return errorResponse('Missing or invalid Authorization header', 401);
-    }
-    const idToken = authHeader.slice(7);
-    const decoded = await auth.verifyIdToken(idToken);
+    // Verify Firebase ID token from request body
+    const [verified, errResp] = await verifyFirebaseToken(req);
+    if (errResp) return errResp;
+    const decoded = verified!;
     const callerUid = decoded.uid;
     const callerRole = (decoded as Record<string, unknown>).role as string | undefined;
     const callerCompanyId = (decoded as Record<string, unknown>).companyId as string | undefined;
@@ -219,18 +200,10 @@ serve(async (req) => {
     // Generate storage path
     const path = generateStoragePath(bucket, resourceId, fileName);
 
-    // Supabase Storage signed URL (valid for 1 hour)
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE');
-    if (!supabaseUrl || !serviceRoleKey) {
+    if (!supabaseUrl) {
       return errorResponse('Supabase configuration missing', 500);
     }
-
-    const expiresIn = 3600; // 1 hour
-    const signedUrl = `${supabaseUrl}/storage/v1/object/${bucket}/${path}?token=${serviceRoleKey}`;
-
-    // For actual upload, client uses the signed URL directly with PUT
-    // We return the path and token info; client uses Supabase JS SDK or fetch PUT
 
     // Audit log
     const now = Date.now();
@@ -244,12 +217,12 @@ serve(async (req) => {
       metadata: { via: 'validate_upload' },
     });
 
+    // Return path only — client uploads via Supabase JS SDK with anon key + RLS
     return corsResponse({
       success: true,
-      uploadUrl: `${supabaseUrl}/storage/v1/object/${bucket}/${path}`,
       path,
-      token: serviceRoleKey,
-      expiresAt: now + expiresIn * 1000,
+      bucket,
+      expiresAt: now + 3600 * 1000,
     });
   } catch (err) {
     console.error('[validate_upload] error:', err);
