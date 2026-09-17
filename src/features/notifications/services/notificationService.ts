@@ -1,5 +1,5 @@
-import { callEdgeFunction, isSupabaseConfigured } from '@/config/supabase';
-import { initializeFirebase } from '@/config/firebase';
+import { getFunctionsInstancePublic, initializeFirebase } from '@/config/firebase';
+import { httpsCallable } from 'firebase/functions';
 import type {
   Notification,
   NotificationPreferences,
@@ -83,20 +83,12 @@ export async function getUserFCMTokens(userId: string): Promise<string[]> {
   return snap.docs.map(d => d.id);
 }
 
-/** Send FCM notification via Edge function. */
+/** Send FCM notification via Cloud Function. */
 export async function sendFCM(params: SendFCMParams): Promise<SendFCMResult> {
-  if (!isSupabaseConfigured()) {
-    // Fallback: create in-app notification only
-    console.warn('Supabase not configured, skipping FCM send');
-    return { success: false, results: { success: 0, failure: 0 }, messageIds: [] };
-  }
-  const { getAuthInstancePublic } = await import('@/config/firebase');
-  const auth = getAuthInstancePublic();
-  const currentUser = auth.currentUser;
-  if (!currentUser) throw new Error('Not authenticated');
-
-  const idToken = await currentUser.getIdToken(true);
-  return callEdgeFunction<SendFCMResult>('send_fcm', params as unknown as Record<string, unknown>, { idToken });
+  const functions = getFunctionsInstancePublic();
+  const sendFCMNotification = httpsCallable<SendFCMParams, SendFCMResult>(functions, 'sendFCMNotification');
+  const result = await sendFCMNotification(params);
+  return result.data;
 }
 
 /** Send notification to specific user (creates in-app + optionally FCM). */
@@ -132,7 +124,7 @@ export async function sendUserNotification(
   });
 
   // Optionally send FCM
-  if (options.sendFCM && isSupabaseConfigured()) {
+  if (options.sendFCM) {
     const tokens = await getUserFCMTokens(userId);
     if (tokens.length > 0) {
       try {
@@ -170,10 +162,6 @@ export async function sendTopicNotification(
     priority?: Notification['priority'];
   } = {},
 ): Promise<void> {
-  if (!isSupabaseConfigured()) {
-    console.warn('Supabase not configured, skipping topic FCM');
-    return;
-  }
   await sendFCM({
     topic,
     title,

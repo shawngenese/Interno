@@ -4,6 +4,31 @@ export type DocumentStatus = 'pending' | 'approved' | 'rejected' | 'archived';
 
 export type TaskDocumentType = 'screenshot' | 'report' | 'output' | 'photo' | 'accomplishment' | 'other';
 
+export type PlacementType = 'internal' | 'external';
+
+export interface DocumentRequirement {
+  id: string;
+  companyId: string;
+  documentType: DocumentType;
+  label: string;
+  description: string;
+  requiredFor: PlacementType | 'all';
+  required: boolean;
+  order: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface DocumentRequirementFormData {
+  companyId: string;
+  documentType: DocumentType;
+  label: string;
+  description: string;
+  requiredFor: PlacementType | 'all';
+  required: boolean;
+  order: number;
+}
+
 export interface Document {
   id: string;
   traineeId: string;

@@ -21,6 +21,10 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
     scheduleId: '',
     status: 'active',
     ojtStatus: 'pending',
+    placementType: 'internal',
+    externalCompanyId: '',
+    externalSupervisorId: '',
+    placementNotes: '',
     profile: {
       studentId: '',
       course: '',
@@ -63,6 +67,10 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
             scheduleId: trainee.scheduleId || '',
             status: trainee.status,
             ojtStatus: trainee.ojtStatus,
+            placementType: trainee.placementType || 'internal',
+            externalCompanyId: trainee.externalCompanyId || '',
+            externalSupervisorId: trainee.externalSupervisorId || '',
+            placementNotes: trainee.placementNotes || '',
             profile: {
               studentId: trainee.profile?.studentId || '',
               course: trainee.profile?.course || '',
@@ -355,6 +363,59 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
               ))}
             </select>
           </div>
+
+          <div>
+            <label htmlFor="placementType" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Placement Type <span className="text-red-500">*</span>
+            </label>
+            <select
+              id="placementType"
+              value={formData.placementType}
+              onChange={(e) => handleChange('placementType', e.target.value)}
+              disabled={viewOnly}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="internal">Internal</option>
+              <option value="external">External</option>
+            </select>
+          </div>
+
+          {formData.placementType === 'external' && (
+            <>
+              <div>
+                <label htmlFor="externalCompanyId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  External Company <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="externalCompanyId"
+                  value={formData.externalCompanyId}
+                  onChange={(e) => handleChange('externalCompanyId', e.target.value)}
+                  disabled={viewOnly}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="">Select External Company</option>
+                  {companies.filter(c => c.type === 'external' && c.verified).map(company => (
+                    <option key={company.id} value={company.id}>{company.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="externalSupervisorId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  External Supervisor ID
+                </label>
+                <input
+                  type="text"
+                  id="externalSupervisorId"
+                  value={formData.externalSupervisorId}
+                  onChange={(e) => handleChange('externalSupervisorId', e.target.value)}
+                  disabled={viewOnly}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                  placeholder="External supervisor email or ID"
+                />
+              </div>
+            </>
+          )}
 
           <div>
             <label htmlFor="departmentId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

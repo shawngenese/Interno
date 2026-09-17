@@ -21,7 +21,9 @@ export function SupervisorTraineeList() {
         if (sup) {
           const assigned = await getAssignedTrainees(sup.id);
           setTrainees(assigned);
-          const att = await getTraineeAttendanceSummary(assigned.map(t => t.id));
+          const att = assigned.length > 0
+            ? await getTraineeAttendanceSummary(assigned.map(t => t.id)).catch(() => ({}))
+            : {};
           setAttendance(att);
         }
       } catch (err) {

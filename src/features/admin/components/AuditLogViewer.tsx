@@ -2,13 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, query, orderBy, limit, getDocs, getDoc, doc, type DocumentSnapshot, type QueryConstraint } from 'firebase/firestore';
 import { downloadBlob } from '@/features/reports/services/reportService';
-import { formatDateTime12 } from '@/shared/utils/dateUtils';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
 import { SkeletonCard } from '@/shared/components/Skeleton';
 
 interface AuditLog {
   id: string;
-  timestamp: number;
+  timestamp: number | { seconds: number; nanoseconds?: number; toDate?: () => Date };
   userId: string;
   action: string;
   entityType: string;
@@ -45,9 +44,25 @@ const ENTITY_LABELS: Record<string, string> = {
   correction_request: 'Correction Request',
 };
 
-function formatTimestamp(ts: number | { seconds: number; nanoseconds: number }): string {
-  const ms = typeof ts === 'number' ? ts : ts.seconds * 1000 + Math.floor(ts.nanoseconds / 1_000_000);
-  return formatDateTime12(ms);
+function formatTimestamp(ts: number | { seconds: number; nanoseconds?: number; toDate?: () => Date }): string {
+  let ms: number;
+  if (typeof ts === 'number') {
+    ms = ts;
+  } else if (typeof ts.toDate === 'function') {
+    // Firestore Timestamp object returned from getDocs
+    ms = ts.toDate().getTime();
+  } else {
+    ms = ts.seconds * 1000 + Math.floor((ts.nanoseconds ?? 0) / 1_000_000);
+  }
+  return new Date(ms).toLocaleString('en-PH', {
+    timeZone: 'Asia/Manila',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
 }
 
 const ENTITY_COLLECTION_MAP: Record<string, string> = {
@@ -131,7 +146,11 @@ export function AuditLogViewer() {
           if (filters.action && log.action !== filters.action) return false;
           if (filters.entityType && log.entityType !== filters.entityType) return false;
           if (filters.startDate || filters.endDate) {
-            const ts = typeof log.timestamp === 'number' ? log.timestamp : (log.timestamp as { seconds: number }).seconds * 1000;
+            const raw = log.timestamp;
+            const ts = typeof raw === 'number' ? raw
+              : typeof (raw as { toDate?: () => Date }).toDate === 'function'
+                ? (raw as { toDate: () => Date }).toDate().getTime()
+                : (raw as { seconds: number }).seconds * 1000;
             if (filters.startDate && ts < new Date(filters.startDate).getTime()) return false;
             if (filters.endDate && ts > new Date(filters.endDate).getTime() + 86400000 - 1) return false;
           }
@@ -148,7 +167,11 @@ export function AuditLogViewer() {
         if (filters.action && log.action !== filters.action) return false;
         if (filters.entityType && log.entityType !== filters.entityType) return false;
         if (filters.startDate || filters.endDate) {
-          const ts = typeof log.timestamp === 'number' ? log.timestamp : (log.timestamp as { seconds: number }).seconds * 1000;
+          const raw = log.timestamp;
+          const ts = typeof raw === 'number' ? raw
+            : typeof (raw as { toDate?: () => Date }).toDate === 'function'
+              ? (raw as { toDate: () => Date }).toDate().getTime()
+              : (raw as { seconds: number }).seconds * 1000;
           if (filters.startDate && ts < new Date(filters.startDate).getTime()) return false;
           if (filters.endDate && ts > new Date(filters.endDate).getTime() + 86400000 - 1) return false;
         }

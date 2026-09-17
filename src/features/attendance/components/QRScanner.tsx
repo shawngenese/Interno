@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useAuth } from '@/features/auth/AuthProvider';
-import { callEdgeFunction, isSupabaseConfigured } from '@/config/supabase';
+import { getFunctionsInstancePublic } from '@/config/firebase';
+import { httpsCallable } from 'firebase/functions';
 import { formatTime12 } from '@/shared/utils/dateUtils';
 
 interface QRScannerProps {
@@ -82,35 +83,34 @@ export function QRScanner({ onScanResult, onError }: QRScannerProps) {
     }
 
     try {
-      const auth = (await import('@/config/firebase')).getAuthInstancePublic();
-      const currentUser = auth.currentUser;
-      if (!currentUser) throw new Error('Not authenticated');
-
-      const idToken = await currentUser.getIdToken(true);
-      const result = await callEdgeFunction<{
+      const functions = getFunctionsInstancePublic();
+      const validateQRScan = httpsCallable<{
+        token: string;
+        deviceInfo?: Record<string, unknown>;
+        location?: { latitude: number; longitude: number; accuracy?: number };
+      }, {
         success: boolean;
         action: 'time_in' | 'time_out';
         timestamp: number;
         attendanceId: string;
         message: string;
-      }>(
-        'validate_qr_scan',
-        {
-          token,
-          deviceInfo: {
-            platform: navigator.platform,
-            userAgent: navigator.userAgent,
-            screenWidth: window.screen.width,
-            screenHeight: window.screen.height,
-          },
+      }>(functions, 'validateQRScan');
+
+      const result = await validateQRScan({
+        token,
+        deviceInfo: {
+          platform: navigator.platform,
+          userAgent: navigator.userAgent,
+          screenWidth: window.screen.width,
+          screenHeight: window.screen.height,
         },
-        { idToken }
-      );
+      });
 
       hapticFeedback('success');
-      setLastScan({ action: result.action, timestamp: result.timestamp, message: result.message });
+      const data = result.data;
+      setLastScan({ action: data.action, timestamp: data.timestamp, message: data.message });
       setManualError(null);
-      onScanResult?.({ action: result.action, timestamp: result.timestamp, message: result.message });
+      onScanResult?.({ action: data.action, timestamp: data.timestamp, message: data.message });
 
       setTimeout(() => startScanningRef.current?.(), 3000);
     } catch (err) {
@@ -124,11 +124,6 @@ export function QRScanner({ onScanResult, onError }: QRScannerProps) {
 
   const startScanning = useCallback(async () => {
     if (!videoRef.current || scanning) return;
-
-    if (!isSupabaseConfigured()) {
-      onError?.('Supabase not configured. Attendance scanning unavailable.');
-      return;
-    }
 
     setPermissionDenied(false);
     try {

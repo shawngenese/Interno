@@ -26,17 +26,10 @@ import { getMessaging, type Messaging, isSupported } from 'firebase/messaging';
 import { initializeAppCheck, type AppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 
 /**
- * C2 (Spark + Supabase Free) Firebase client.
+ * Firebase client (Blaze plan).
  *
- * Spark prod surface: Auth, Firestore, Hosting, FCM, App Check.
- * NOT deployed (Blaze-only): Cloud Functions (`functions/` v2) and the
- * Firebase Storage bucket. Trusted logic lives in Supabase Edge Functions;
- * files live in Supabase Storage; metadata stays in Firestore.
- *
- * Storage/Functions SDKs below are emulator/reference-only: they initialize
- * solely when `VITE_USE_FIREBASE_EMULATORS=true` for local reference runs.
- * In prod builds the getters throw a C2 error pointing at the Supabase
- * replacement, so nobody accidentally wires a Blaze-only dependency.
+ * All Firebase services: Auth, Firestore, Hosting, FCM, App Check,
+ * Cloud Functions, and Storage are enabled.
  */
 
 declare global {
@@ -74,7 +67,8 @@ export function initializeFirebase(): FirebaseApp {
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
   db = getFirestore(app);
-  // C2: do NOT init Storage/Functions here — Blaze-only, emulator-only (see below).
+  storage = getStorage(app);
+  functions = getFirebaseFunctions(app, 'asia-southeast1');
 
   configureAuth();
   configureFirestore();
@@ -101,24 +95,12 @@ function getDbInstance(): Firestore {
 }
 
 function getStorageInstance(): FirebaseStorage {
-  if (!storage) {
-    throw new Error(
-      'Firebase Storage is not used (C2 free-only: bucket requires Blaze). ' +
-        'Use Supabase Storage buckets (documents/tasks/profiles) via src/features/documents. ' +
-        'Storage SDK is emulator/reference-only: set VITE_USE_FIREBASE_EMULATORS=true for local runs.'
-    );
-  }
+  if (!storage) throw new Error('Firebase not initialized. Call initializeFirebase() first.');
   return storage;
 }
 
 function getFunctionsInstance(): Functions {
-  if (!functions) {
-    throw new Error(
-      'Cloud Functions are not deployed (C2 free-only: Functions require Blaze). ' +
-        'Use Supabase Edge Functions via callEdgeFunction() in src/config/supabase.ts. ' +
-        'Functions SDK is emulator/reference-only: set VITE_USE_FIREBASE_EMULATORS=true for local runs.'
-    );
-  }
+  if (!functions) throw new Error('Firebase not initialized. Call initializeFirebase() first.');
   return functions;
 }
 
@@ -181,6 +163,11 @@ async function configureFirestore(): Promise<void> {
 }
 
 function configureAppCheck(): void {
+  if (import.meta.env.VITE_ENABLE_APP_CHECK === 'false') {
+    console.info('[Firebase] App Check skipped (VITE_ENABLE_APP_CHECK is false)');
+    return;
+  }
+
   const siteKey = import.meta.env.VITE_FIREBASE_APP_CHECK_RECAPTCHA_SITE_KEY;
   const enableInDev = import.meta.env.VITE_ENABLE_APP_CHECK_IN_DEV === 'true';
   const isLocalhost =
@@ -286,8 +273,6 @@ export function getFunctionsInstancePublic(): Functions {
 }
 
 export function getFunctions(): Functions {
-  // C2: route through the guarded instance so prod callers get the
-  // Supabase Edge pointer instead of silently initing a Blaze-only SDK.
   getApp();
   return getFunctionsInstance();
 }

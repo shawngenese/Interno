@@ -8,15 +8,17 @@ import 'fake-indexeddb/auto';
 vi.mock('@/config/firebase', () => ({
   getFirestoreInstancePublic: vi.fn(),
   getAuthInstancePublic: vi.fn(),
+  getFunctionsInstancePublic: vi.fn(),
+  getStorageInstancePublic: vi.fn(),
   enableOfflineSupport: vi.fn(),
   disableOfflineSupport: vi.fn(),
   enableOnlineSupport: vi.fn(),
+  initializeFirebase: vi.fn(),
 }));
 
-// Mock Supabase
-vi.mock('@/config/supabase', () => ({
-  callEdgeFunction: vi.fn(),
-  isSupabaseConfigured: vi.fn(() => false),
+// Mock firebase/functions
+vi.mock('firebase/functions', () => ({
+  httpsCallable: vi.fn(() => vi.fn()),
 }));
 
 // Mock window.matchMedia

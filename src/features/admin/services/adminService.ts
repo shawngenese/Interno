@@ -1,5 +1,5 @@
 /**
- * C2 (Spark + Supabase Free): direct Firestore CRUD for admin management.
+ * Firebase Blaze: direct Firestore CRUD for admin management.
  *
  * Previously this file called ~25 Cloud Functions callables (getUsers,
  * createUser, ...) that were never implemented and cannot deploy on the
@@ -45,13 +45,14 @@ import {
   arrayRemove,
   type QueryConstraint,
 } from 'firebase/firestore';
-import { initializeFirebase, getFirestoreInstancePublic, getAuthInstancePublic } from '@/config/firebase';
-import { callEdgeFunction, isSupabaseConfigured } from '@/config/supabase';
+import { initializeFirebase, getFirestoreInstancePublic, getAuthInstancePublic, getFunctionsInstancePublic } from '@/config/firebase';
+import { httpsCallable } from 'firebase/functions';
 import type {
   User,
   Company,
   Department,
   Supervisor,
+  Coordinator,
   Trainee,
   WorkSchedule,
   OJTSchedule,
@@ -101,6 +102,8 @@ export interface ListTraineesParams {
   companyId?: string;
   departmentId?: string;
   supervisorId?: string;
+  placementType?: string;
+  placementStatus?: string;
   search?: string;
 }
 
@@ -129,6 +132,7 @@ const COLLECTIONS = {
   COMPANIES: 'companies',
   DEPARTMENTS: 'departments',
   SUPERVISORS: 'supervisors',
+  COORDINATORS: 'coordinators',
   TRAINEES: 'trainees',
   WORK_SCHEDULES: 'work_schedules',
   OJT_SCHEDULES: 'ojt_schedules',
@@ -191,25 +195,20 @@ async function audit(
     return;
   }
 
-  // Try Edge Function first (server-side write via Admin SDK).
-  if (isSupabaseConfigured()) {
-    try {
-      const idToken = await currentUser.getIdToken(true);
-      await callEdgeFunction(
-        'write_audit',
-        {
-          userId: currentUser.uid,
-          action,
-          entityType,
-          entityId,
-          newValue,
-        },
-        { idToken },
-      );
-      return;
-    } catch (err) {
-      console.warn('[audit] Edge call failed, falling back to direct write:', err);
-    }
+  // Use Cloud Function (server-side write via Admin SDK).
+  try {
+    const functions = getFunctionsInstancePublic();
+    const writeAuditLog = httpsCallable(functions, 'writeAuditLog');
+    await writeAuditLog({
+      userId: currentUser.uid,
+      action,
+      entityType,
+      entityId,
+      newValue,
+    });
+    return;
+  } catch (err) {
+    console.warn('[audit] Cloud Function call failed, falling back to direct write:', err);
   }
 
   // Fallback: direct Firestore write (requires admin role per security rules).
@@ -337,30 +336,21 @@ export const adminService = {
     } finally {
       await signOut(provisioningAuth).catch(() => undefined);
     }
-    // 3. Sync custom claims via Edge `set_user_role` so the new user can log
+    // 3. Sync custom claims via Cloud Function `setUserRole` so the new user can log
     //    in immediately without waiting for a manual claims sync.
-    if (isSupabaseConfigured()) {
-      try {
-        const auth = getAuthInstancePublic();
-        const currentUser = auth.currentUser;
-        if (currentUser) {
-          const idToken = await currentUser.getIdToken(true);
-          await callEdgeFunction(
-            'set_user_role',
-            {
-              uid,
-              role: data.role,
-              ...(data.companyId ? { companyId: data.companyId } : {}),
-              ...(data.departmentId ? { departmentId: data.departmentId } : {}),
-              ...(data.supervisorId ? { supervisorId: data.supervisorId } : {}),
-            },
-            { idToken },
-          );
-        }
-      } catch (err) {
-        console.error('[createUser] set_user_role Edge call failed (claims not set):', err);
-        // Non-fatal: AuthProvider falls back to the Firestore doc role.
-      }
+    try {
+      const functions = getFunctionsInstancePublic();
+      const setUserRole = httpsCallable(functions, 'setUserRole');
+      await setUserRole({
+        uid,
+        role: data.role,
+        ...(data.companyId ? { companyId: data.companyId } : {}),
+        ...(data.departmentId ? { departmentId: data.departmentId } : {}),
+        ...(data.supervisorId ? { supervisorId: data.supervisorId } : {}),
+      });
+    } catch (err) {
+      console.error('[createUser] setUserRole Cloud Function call failed (claims not set):', err);
+      // Non-fatal: AuthProvider falls back to the Firestore doc role.
     }
     audit('create', 'user', uid, { role: data.role, companyId: data.companyId });
     return this.getUser(uid);
@@ -372,30 +362,33 @@ export const adminService = {
     delete editable.email;
     delete editable.password;
 
-    // If role is being changed, sync via Edge `set_user_role` (requires admin caller).
-    const roleChanged = typeof editable.role === 'string';
-    if (roleChanged && isSupabaseConfigured()) {
+    // If role, company, department, supervisor, or trainee changed, sync via Cloud Function `setUserRole`.
+    const shouldSyncClaims =
+      typeof editable.role === 'string' ||
+      editable.companyId !== undefined ||
+      editable.departmentId !== undefined ||
+      editable.supervisorId !== undefined ||
+      editable.traineeId !== undefined;
+    if (shouldSyncClaims) {
       try {
-        const auth = getAuthInstancePublic();
-        const currentUser = auth.currentUser;
-        if (currentUser) {
-          const idToken = await currentUser.getIdToken(true);
-          await callEdgeFunction(
-            'set_user_role',
-            {
-              uid,
-              role: editable.role,
-              ...(editable.companyId ? { companyId: editable.companyId } : {}),
-              ...(editable.departmentId ? { departmentId: editable.departmentId } : {}),
-              ...(editable.supervisorId ? { supervisorId: editable.supervisorId } : {}),
-              ...(editable.traineeId ? { traineeId: editable.traineeId } : {}),
-            },
-            { idToken },
-          );
+        const functions = getFunctionsInstancePublic();
+        const setUserRole = httpsCallable(functions, 'setUserRole');
+        const currentSnap = await getDoc(doc(getFirestoreInstancePublic(), COLLECTIONS.USERS, uid));
+        const currentData = (currentSnap.exists() ? currentSnap.data() : {}) as Record<string, unknown>;
+        const effectiveRole = (editable.role as string) || (currentData.role as string);
+        if (effectiveRole) {
+          await setUserRole({
+            uid,
+            role: effectiveRole,
+            companyId: (editable.companyId !== undefined ? editable.companyId : currentData.companyId) as string || undefined,
+            departmentId: (editable.departmentId !== undefined ? editable.departmentId : currentData.departmentId) as string || undefined,
+            supervisorId: (editable.supervisorId !== undefined ? editable.supervisorId : currentData.supervisorId) as string || undefined,
+            traineeId: (editable.traineeId !== undefined ? editable.traineeId : currentData.traineeId) as string || undefined,
+          });
         }
       } catch (err) {
-        console.error('[updateUser] set_user_role Edge call failed:', err);
-        throw new Error('Failed to sync role via Edge. Check Supabase config and secrets.');
+        console.error('[updateUser] setUserRole Cloud Function call failed:', err);
+        throw new Error('Failed to sync role or claims. Check Cloud Functions config and secrets.');
       }
     }
 
@@ -426,18 +419,13 @@ export const adminService = {
   async deleteUser(uid: string): Promise<void> {
     const db = getFirestoreInstancePublic();
 
-    // Delete Auth account via Edge Function (client SDK can't delete other users)
-    if (isSupabaseConfigured()) {
-      try {
-        const auth = getAuthInstancePublic();
-        const currentUser = auth.currentUser;
-        if (currentUser) {
-          const idToken = await currentUser.getIdToken(true);
-          await callEdgeFunction('delete_user', { uid }, { idToken });
-        }
-      } catch (err) {
-        console.error('[deleteUser] Edge delete_user failed (Auth account still exists):', err);
-      }
+    // Delete Auth account via Cloud Function (client SDK can't delete other users)
+    try {
+      const functions = getFunctionsInstancePublic();
+      const deleteUserAccount = httpsCallable(functions, 'deleteUserAccount');
+      await deleteUserAccount({ uid });
+    } catch (err) {
+      console.error('[deleteUser] Cloud Function deleteUserAccount failed (Auth account still exists):', err);
     }
 
     // Delete corresponding supervisor/trainee records
@@ -520,6 +508,18 @@ export const adminService = {
     audit('delete', 'company', id);
   },
 
+  async verifyCompany(companyId: string, verifiedBy: string): Promise<Company> {
+    const db = getFirestoreInstancePublic();
+    await updateDoc(doc(db, COLLECTIONS.COMPANIES, companyId), {
+      verified: true,
+      verifiedBy,
+      verifiedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    audit('verify', 'company', companyId, { verifiedBy });
+    return this.getCompany(companyId);
+  },
+
   // Departments
   async listDepartments(params: ListDepartmentsParams = {}): Promise<PaginatedResponse<Department>> {
     const filters: [string, string][] = [];
@@ -594,6 +594,34 @@ export const adminService = {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
+
+    // Update users doc so Firestore data is consistent
+    await updateDoc(doc(db, COLLECTIONS.USERS, data.userId), {
+      role: 'supervisor',
+      companyId: data.companyId,
+      departmentId: data.departmentId,
+      supervisorId: supervisorDocId,
+      updatedAt: serverTimestamp(),
+    }).catch((err) => {
+      console.warn('[createSupervisor] Could not update users doc:', err);
+    });
+
+    // Sync custom claims via Cloud Function `setUserRole`
+    try {
+      const functions = getFunctionsInstancePublic();
+      const setUserRole = httpsCallable(functions, 'setUserRole');
+      await setUserRole({
+        uid: data.userId,
+        role: 'supervisor',
+        companyId: data.companyId,
+        departmentId: data.departmentId,
+        supervisorId: supervisorDocId,
+      });
+    } catch (err) {
+      console.error('[createSupervisor] setUserRole Cloud Function call failed:', err);
+      throw new Error('Failed to set supervisor custom claims. Please check Cloud Functions.');
+    }
+
     audit('create', 'supervisor', supervisorDocId, { userId: data.userId, companyId: data.companyId });
     return this.getSupervisor(supervisorDocId);
   },
@@ -603,8 +631,109 @@ export const adminService = {
       ...data,
       updatedAt: serverTimestamp(),
     });
+
+    if (data.companyId || data.departmentId) {
+      await updateDoc(doc(getFirestoreInstancePublic(), COLLECTIONS.USERS, id), {
+        ...(data.companyId ? { companyId: data.companyId } : {}),
+        ...(data.departmentId ? { departmentId: data.departmentId } : {}),
+        updatedAt: serverTimestamp(),
+      }).catch(() => undefined);
+
+      try {
+        const functions = getFunctionsInstancePublic();
+        const setUserRole = httpsCallable(functions, 'setUserRole');
+        await setUserRole({
+          uid: id,
+          role: 'supervisor',
+          ...(data.companyId ? { companyId: data.companyId } : {}),
+          ...(data.departmentId ? { departmentId: data.departmentId } : {}),
+          supervisorId: id,
+        });
+      } catch (err) {
+        console.warn('[updateSupervisor] setUserRole sync failed:', err);
+      }
+    }
+
     audit('update', 'supervisor', id, data as Record<string, unknown>);
     return this.getSupervisor(id);
+  },
+
+  async getCoordinator(id: string): Promise<Coordinator> {
+    return getOne<Coordinator>(COLLECTIONS.COORDINATORS, id, 'Coordinator');
+  },
+
+  async createCoordinator(data: { userId: string; companyId: string; departmentId: string }): Promise<Coordinator> {
+    if (!data.userId || !data.companyId || !data.departmentId) {
+      throw new Error('User, company, and department are required');
+    }
+    const db = getFirestoreInstancePublic();
+    const coordinatorDocId = data.userId;
+    await setDoc(doc(db, COLLECTIONS.COORDINATORS, coordinatorDocId), {
+      userId: data.userId,
+      companyId: data.companyId,
+      departmentId: data.departmentId,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+
+    // Update users doc so Firestore data is consistent
+    await updateDoc(doc(db, COLLECTIONS.USERS, data.userId), {
+      role: 'coordinator',
+      companyId: data.companyId,
+      departmentId: data.departmentId,
+      updatedAt: serverTimestamp(),
+    }).catch((err) => {
+      console.warn('[createCoordinator] Could not update users doc:', err);
+    });
+
+    // Sync custom claims via Cloud Function `setUserRole`
+    try {
+      const functions = getFunctionsInstancePublic();
+      const setUserRole = httpsCallable(functions, 'setUserRole');
+      await setUserRole({
+        uid: data.userId,
+        role: 'coordinator',
+        companyId: data.companyId,
+        departmentId: data.departmentId,
+      });
+    } catch (err) {
+      console.error('[createCoordinator] setUserRole Cloud Function call failed:', err);
+      throw new Error('Failed to set coordinator custom claims. Please check Cloud Functions.');
+    }
+
+    audit('create', 'coordinator', coordinatorDocId, { userId: data.userId, companyId: data.companyId });
+    return this.getCoordinator(coordinatorDocId);
+  },
+
+  async updateCoordinator(id: string, data: Partial<Pick<Coordinator, 'companyId' | 'departmentId'>>): Promise<Coordinator> {
+    await updateDoc(doc(getFirestoreInstancePublic(), COLLECTIONS.COORDINATORS, id), {
+      ...data,
+      updatedAt: serverTimestamp(),
+    });
+
+    if (data.companyId || data.departmentId) {
+      await updateDoc(doc(getFirestoreInstancePublic(), COLLECTIONS.USERS, id), {
+        ...(data.companyId ? { companyId: data.companyId } : {}),
+        ...(data.departmentId ? { departmentId: data.departmentId } : {}),
+        updatedAt: serverTimestamp(),
+      }).catch(() => undefined);
+
+      try {
+        const functions = getFunctionsInstancePublic();
+        const setUserRole = httpsCallable(functions, 'setUserRole');
+        await setUserRole({
+          uid: id,
+          role: 'coordinator',
+          ...(data.companyId ? { companyId: data.companyId } : {}),
+          ...(data.departmentId ? { departmentId: data.departmentId } : {}),
+        });
+      } catch (err) {
+        console.warn('[updateCoordinator] setUserRole sync failed:', err);
+      }
+    }
+
+    audit('update', 'coordinator', id, data as Record<string, unknown>);
+    return this.getCoordinator(id);
   },
 
   async assignTraineesToSupervisor(
@@ -704,6 +833,8 @@ export const adminService = {
     if (params.companyId) filters.push(['companyId', params.companyId]);
     if (params.departmentId) filters.push(['departmentId', params.departmentId]);
     if (params.supervisorId) filters.push(['supervisorId', params.supervisorId]);
+    if (params.placementType) filters.push(['placementType', params.placementType]);
+    if (params.placementStatus) filters.push(['placementStatus', params.placementStatus]);
     return listCollection<Trainee>(COLLECTIONS.TRAINEES, filters, ['userId'], params);
   },
 
@@ -757,6 +888,36 @@ export const adminService = {
       ...editable,
       updatedAt: serverTimestamp(),
     });
+
+    if (data.supervisorId !== undefined || data.companyId !== undefined || data.departmentId !== undefined) {
+      const traineeDoc = await getDoc(doc(db, COLLECTIONS.TRAINEES, id));
+      const traineeData = (traineeDoc.exists() ? traineeDoc.data() : {}) as Record<string, unknown>;
+      const userId = (traineeData?.userId as string) || '';
+      if (userId) {
+        await updateDoc(doc(db, COLLECTIONS.USERS, userId), {
+          ...(data.supervisorId !== undefined ? { supervisorId: data.supervisorId } : {}),
+          ...(data.companyId !== undefined ? { companyId: data.companyId } : {}),
+          ...(data.departmentId !== undefined ? { departmentId: data.departmentId } : {}),
+          updatedAt: serverTimestamp(),
+        }).catch(() => undefined);
+
+        try {
+          const functions = getFunctionsInstancePublic();
+          const setUserRole = httpsCallable(functions, 'setUserRole');
+          await setUserRole({
+            uid: userId,
+            role: 'trainee',
+            traineeId: id,
+            companyId: (data.companyId !== undefined ? data.companyId : traineeData?.companyId) as string || undefined,
+            departmentId: (data.departmentId !== undefined ? data.departmentId : traineeData?.departmentId) as string || undefined,
+            supervisorId: (data.supervisorId !== undefined ? data.supervisorId : traineeData?.supervisorId) as string || undefined,
+          });
+        } catch (err) {
+          console.warn('[updateTrainee] setUserRole sync failed:', err);
+        }
+      }
+    }
+
     audit('update', 'trainee', id, editable);
     return this.getTrainee(id);
   },
@@ -774,8 +935,23 @@ export const adminService = {
       scheduleId: data.scheduleId || '',
       status: data.status || 'active',
       ojtStatus: data.ojtStatus || 'pending',
+      placementType: data.placementType || 'internal',
+      externalCompanyId: data.externalCompanyId || null,
+      externalSupervisorId: data.externalSupervisorId || null,
+      placementStatus: data.placementType === 'external' ? 'pending' : 'active',
+      placementNotes: data.placementNotes || null,
       profile: data.profile || {},
       createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+
+    // Back-link traineeId to the users doc so Firestore rules can resolve isAssignedTrainee()
+    await updateDoc(doc(db, COLLECTIONS.USERS, data.userId), {
+      role: 'trainee',
+      companyId: data.companyId,
+      departmentId: data.departmentId,
+      traineeId: ref.id,
+      ...(data.supervisorId ? { supervisorId: data.supervisorId } : {}),
       updatedAt: serverTimestamp(),
     });
 
@@ -792,6 +968,23 @@ export const adminService = {
         { merge: true },
       );
       await batch.commit();
+    }
+
+    // Sync custom claims via Cloud Function `setUserRole` with traineeId
+    try {
+      const functions = getFunctionsInstancePublic();
+      const setUserRole = httpsCallable(functions, 'setUserRole');
+      await setUserRole({
+        uid: data.userId,
+        role: 'trainee',
+        companyId: data.companyId,
+        departmentId: data.departmentId,
+        ...(data.supervisorId ? { supervisorId: data.supervisorId } : {}),
+        traineeId: ref.id,
+      });
+    } catch (err) {
+      console.error('[createTrainee] setUserRole Cloud Function call failed:', err);
+      throw new Error('Failed to set trainee custom claims. Please check Cloud Functions.');
     }
 
     audit('create', 'trainee', ref.id, { userId: data.userId, companyId: data.companyId });

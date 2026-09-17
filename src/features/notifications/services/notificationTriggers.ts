@@ -1,5 +1,5 @@
-import { callEdgeFunction, isSupabaseConfigured } from '@/config/supabase';
-import { getAuthInstancePublic, getFirestoreInstancePublic } from '@/config/firebase';
+import { getFunctionsInstancePublic, getFirestoreInstancePublic } from '@/config/firebase';
+import { httpsCallable } from 'firebase/functions';
 import { collection, query, where, getDocs, doc, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import type { NotificationType, NotificationPriority } from '../types';
 
@@ -74,7 +74,7 @@ export async function triggerNotification(params: TriggerNotificationParams): Pr
     }
 
     // Send FCM
-    if (sendFCM && isSupabaseConfigured()) {
+    if (sendFCM) {
       try {
         const tokensSnap = await getDocs(
           query(
@@ -87,18 +87,15 @@ export async function triggerNotification(params: TriggerNotificationParams): Pr
         if (!tokensSnap.empty) {
           const tokens = tokensSnap.docs.map((d) => d.data().token);
 
-          const auth = getAuthInstancePublic();
-          const currentUser = auth.currentUser;
-          if (!currentUser) return;
-          const idToken = await currentUser.getIdToken(true);
-
-          await callEdgeFunction('send_fcm', {
+          const functions = getFunctionsInstancePublic();
+          const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
+          await sendFCMNotification({
             tokens,
             title,
             body,
             data,
             priority: priority === 'urgent' ? 'high' : 'normal',
-          }, { idToken });
+          });
         }
       } catch (err) {
         console.error('FCM send failed (in-app saved):', err);

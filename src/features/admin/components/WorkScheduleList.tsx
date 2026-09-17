@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { adminService } from '../services/adminService';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
+import { ActionsMenu } from '@/shared/components/ActionsMenu';
 import type { WorkSchedule, ListWorkSchedulesParams } from '../types';
 
 interface WorkScheduleListProps {
@@ -55,13 +56,16 @@ export function WorkScheduleList({ onEdit, onView, onDelete }: WorkScheduleListP
 
   const totalPages = Math.ceil(total / (filters.limit || 10));
 
-  const formatWorkDays = (days: number[]) => {
+  const formatWorkDays = (days: number[] | undefined) => {
+    if (!Array.isArray(days) || days.length === 0) return '—';
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    return days.map(d => dayNames[d]).join(', ');
+    return days.map(d => dayNames[d] ?? d).join(', ');
   };
 
-  const to12Hour = (time24: string) => {
+  const to12Hour = (time24: string | undefined) => {
+    if (!time24 || typeof time24 !== 'string' || !time24.includes(':')) return '—';
     const [h, m] = time24.split(':').map(Number);
+    if (isNaN(h) || isNaN(m)) return '—';
     const period = h >= 12 ? 'PM' : 'AM';
     const hour12 = h % 12 || 12;
     return `${hour12}:${m.toString().padStart(2, '0')} ${period}`;
@@ -137,38 +141,19 @@ export function WorkScheduleList({ onEdit, onView, onDelete }: WorkScheduleListP
                     {to12Hour(schedule.timeOut)}
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {schedule.breakDurationMinutes}
+                    {schedule.breakDurationMinutes ?? '—'}
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
                     {formatWorkDays(schedule.workDays)}
                   </td>
                   <td className="px-4 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      {onView && (
-                        <button
-                          onClick={() => onView(schedule)}
-                          className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
-                        >
-                          View
-                        </button>
-                      )}
-                      {onEdit && (
-                        <button
-                          onClick={() => onEdit(schedule)}
-                          className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-                        >
-                          Edit
-                        </button>
-                      )}
-                      {onDelete && (
-                        <button
-                          onClick={() => onDelete(schedule)}
-                          className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </div>
+                    <ActionsMenu
+                      items={[
+                        ...(onView ? [{ label: 'View', onClick: () => onView(schedule) }] : []),
+                        ...(onEdit ? [{ label: 'Edit', onClick: () => onEdit(schedule) }] : []),
+                        ...(onDelete ? [{ label: 'Delete', onClick: () => onDelete(schedule), danger: true }] : []),
+                      ]}
+                    />
                   </td>
                 </tr>
               ))

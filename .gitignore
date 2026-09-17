@@ -79,9 +79,16 @@ Desktop.ini
 # OPENCODE
 .opencode
 ABOUT
+_archive
 SKILLS.md
 AGENTS.md
 
 # AGENTS
 .agents
 .claude
+
+# OTHER
+figma-design.json
+TO_FIX.md
+.env.example
+seed-test-data.cjs

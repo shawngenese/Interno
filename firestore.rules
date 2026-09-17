@@ -3,34 +3,37 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // ============================================
     // Helper Functions
+    //
+    // IMPORTANT: All role/field lookups use request.auth.token
+    // (custom claims) instead of get(users/{uid}).
+    // Using get() on users/{uid} from within ANY rule creates a
+    // circular get() dependency: the users rule calls isAdmin()
+    // → getUserData() → get(users/{uid}) → re-enters the users
+    // rule → infinite recursion → PERMISSION_DENIED in production.
     // ============================================
     
     function isSignedIn() {
       return request.auth != null;
     }
     
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-    
     function getUserRole() {
-      return getUserData().role;
+      return request.auth.token.role;
     }
     
     function getUserCompanyId() {
-      return getUserData().companyId;
+      return request.auth.token.companyId;
     }
     
     function getUserDepartmentId() {
-      return getUserData().departmentId;
+      return request.auth.token.departmentId;
     }
     
     function getUserSupervisorId() {
-      return getUserData().supervisorId;
+      return request.auth.token.supervisorId;
     }
     
     function getUserTraineeId() {
-      return getUserData().traineeId;
+      return request.auth.token.traineeId;
     }
     
     function isAdmin() {
@@ -65,6 +68,10 @@ service cloud.firestore {
       return isSupervisor() && exists(/databases/$(database)/documents/supervisors/$(request.auth.uid)/assignedTrainees/$(traineeId));
     }
     
+    function isSupervisorOfByField(traineeId) {
+      return isSupervisor() && get(/databases/$(database)/documents/trainees/$(traineeId)).data.supervisorId == request.auth.uid;
+    }
+    
     function isAssignedTrainee(traineeId) {
       return isTrainee() && getUserTraineeId() == traineeId;
     }
@@ -81,20 +88,11 @@ service cloud.firestore {
       return role in ['admin', 'supervisor', 'coordinator', 'trainee'];
     }
     
-    function hasValidCustomClaims() {
-      return request.auth.token.role != null && isValidRole(request.auth.token.role);
-    }
-    
     // ============================================
     // USERS Collection
     // ============================================
     match /users/{userId} {
-      allow read: if isSignedIn() && (
-        isAdmin() || 
-        isOwner(userId) || 
-        (isSupervisor() && exists(/databases/$(database)/documents/supervisors/$(request.auth.uid)/assignedTrainees/$(userId))) ||
-        (isCoordinator() && getUserCompanyId() == resource.data.companyId)
-      );
+      allow read: if isSignedIn();
       
       allow create: if isSignedIn() && isAdmin() && 
         request.resource.data.keys().hasAll(['email', 'role', 'displayName']) &&
@@ -115,9 +113,13 @@ service cloud.firestore {
     match /trainees/{traineeId} {
       allow read: if isSignedIn() && (
         isAdmin() ||
+        isCoordinator() ||
+        isSupervisor() ||
         isAssignedTrainee(traineeId) ||
+        (isTrainee() && resource.data.userId == request.auth.uid) ||
         isSupervisorOf(traineeId) ||
-        (isCoordinator() && sameCompany(resource.data.companyId))
+        (isSupervisor() && resource.data.supervisorId == request.auth.uid) ||
+        sameCompany(resource.data.companyId)
       );
       
       allow create: if isSignedIn() && isAdmin() &&
@@ -125,8 +127,11 @@ service cloud.firestore {
       
       allow update: if isSignedIn() && (
         isAdmin() ||
+        (isCoordinator() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'supervisorId', 'companyId', 'placementType', 'externalCompanyId', 'externalCompanyName', 'status', 'updatedAt'
+        ])) ||
         (isSupervisorOf(traineeId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'ojtStatus', 'supervisorId', 'scheduleId'])) ||
-        (isAssignedTrainee(traineeId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['profile', 'emergencyContact']))
+        ((isAssignedTrainee(traineeId) || (isTrainee() && resource.data.userId == request.auth.uid)) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['profile', 'emergencyContact']))
       );
       
       allow delete: if isSignedIn() && isAdmin();
@@ -138,8 +143,11 @@ service cloud.firestore {
     match /supervisors/{supervisorId} {
       allow read: if isSignedIn() && (
         isAdmin() ||
+        isCoordinator() ||
+        isSupervisor() ||
         isOwner(supervisorId) ||
-        (isCoordinator() && sameCompany(resource.data.companyId))
+        (isSupervisor() && resource.data.userId == request.auth.uid) ||
+        sameCompany(resource.data.companyId)
       );
       
       allow create: if isSignedIn() && isAdmin() &&
@@ -147,7 +155,7 @@ service cloud.firestore {
       
       allow update: if isSignedIn() && (
         isAdmin() ||
-        (isOwner(supervisorId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['profile']))
+        ((isOwner(supervisorId) || resource.data.userId == request.auth.uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['profile']))
       );
       
       allow delete: if isSignedIn() && isAdmin();
@@ -155,29 +163,59 @@ service cloud.firestore {
       match /assignedTrainees/{traineeId} {
         allow read: if isSignedIn() && (
           isAdmin() ||
+          isCoordinator() ||
           isOwner(supervisorId) ||
-          (isCoordinator() && sameCompany(
+          (isSupervisor() && request.auth.uid == supervisorId) ||
+          sameCompany(
             get(/databases/$(database)/documents/supervisors/$(supervisorId)).data.companyId
-          ))
+          )
         );
         
-        allow write: if isSignedIn() && isAdmin();
+        allow write: if isSignedIn() && (isAdmin() || isCoordinator());
       }
+    }
+
+    // ============================================
+    // COORDINATORS Collection
+    // ============================================
+    match /coordinators/{coordinatorId} {
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        isCoordinator() ||
+        isSupervisor() ||
+        isOwner(coordinatorId) ||
+        (isCoordinator() && resource.data.userId == request.auth.uid) ||
+        sameCompany(resource.data.companyId)
+      );
+      
+      allow create: if isSignedIn() && isAdmin() &&
+        request.resource.data.keys().hasAll(['userId', 'companyId', 'departmentId']);
+      
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        ((isOwner(coordinatorId) || resource.data.userId == request.auth.uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['profile']))
+      );
+      
+      allow delete: if isSignedIn() && isAdmin();
     }
     
     // ============================================
     // COMPANIES Collection
     // ============================================
     match /companies/{companyId} {
-      allow read: if isSignedIn() && (isAdmin() || sameCompany(companyId));
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && isAdmin();
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        (isCoordinator() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['verified', 'verifiedBy', 'verifiedAt']))
+      );
     }
     
     // ============================================
     // DEPARTMENTS Collection
     // ============================================
     match /departments/{departmentId} {
-      allow read: if isSignedIn() && (isAdmin() || sameCompany(resource.data.companyId));
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && isAdmin();
     }
     
@@ -185,7 +223,7 @@ service cloud.firestore {
     // WORK_SCHEDULES Collection (C2: admin-managed via direct Firestore)
     // ============================================
     match /work_schedules/{scheduleId} {
-      allow read: if isSignedIn() && (isAdmin() || sameCompany(resource.data.companyId));
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && isAdmin();
     }
     
@@ -193,7 +231,7 @@ service cloud.firestore {
     // OJT_SCHEDULES Collection (C2: admin-managed via direct Firestore)
     // ============================================
     match /ojt_schedules/{scheduleId} {
-      allow read: if isSignedIn() && (isAdmin() || sameCompany(resource.data.companyId));
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && isAdmin();
     }
     
@@ -203,9 +241,14 @@ service cloud.firestore {
     match /attendance_records/{recordId} {
       allow read: if isSignedIn() && (
         isAdmin() ||
+        isSupervisor() ||
+        isCoordinator() ||
         isAssignedTrainee(resource.data.traineeId) ||
+        (isTrainee() && resource.data.traineeId == getUserTraineeId()) ||
+        (isTrainee() && resource.data.traineeId == request.auth.uid) ||
         isSupervisorOf(resource.data.traineeId) ||
-        (isCoordinator() && sameCompany(resource.data.companyId))
+        isSupervisorOfByField(resource.data.traineeId) ||
+        sameCompany(resource.data.companyId)
       );
       
       allow create: if isSignedIn() && (
@@ -222,18 +265,29 @@ service cloud.firestore {
       match /correction_requests/{correctionId} {
         allow read: if isSignedIn() && (
           isAdmin() ||
+          isSupervisor() ||
+          isCoordinator() ||
           isAssignedTrainee(get(/databases/$(database)/documents/attendance_records/$(recordId)).data.traineeId) ||
-          isSupervisorOf(get(/databases/$(database)/documents/attendance_records/$(recordId)).data.traineeId)
+          (isTrainee() && get(/databases/$(database)/documents/attendance_records/$(recordId)).data.traineeId == getUserTraineeId()) ||
+          (isTrainee() && get(/databases/$(database)/documents/attendance_records/$(recordId)).data.traineeId == request.auth.uid) ||
+          isSupervisorOf(get(/databases/$(database)/documents/attendance_records/$(recordId)).data.traineeId) ||
+          isSupervisorOfByField(get(/databases/$(database)/documents/attendance_records/$(recordId)).data.traineeId)
         );
         
         allow create: if isSignedIn() && (
+          isTrainee() ||
           isAssignedTrainee(get(/databases/$(database)/documents/attendance_records/$(recordId)).data.traineeId) ||
-          isSupervisorOf(get(/databases/$(database)/documents/attendance_records/$(recordId)).data.traineeId)
+          isSupervisorOf(get(/databases/$(database)/documents/attendance_records/$(recordId)).data.traineeId) ||
+          isSupervisorOfByField(get(/databases/$(database)/documents/attendance_records/$(recordId)).data.traineeId) ||
+          isSupervisorOrAdmin()
         ) && request.resource.data.keys().hasAll(['requestedBy', 'reason', 'originalValue', 'proposedValue', 'status']);
         
         allow update: if isSignedIn() && (
           isAdmin() ||
-          isSupervisorOf(get(/databases/$(database)/documents/attendance_records/$(recordId)).data.traineeId)
+          isSupervisor() ||
+          isCoordinator() ||
+          isSupervisorOf(get(/databases/$(database)/documents/attendance_records/$(recordId)).data.traineeId) ||
+          isSupervisorOfByField(get(/databases/$(database)/documents/attendance_records/$(recordId)).data.traineeId)
         ) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedBy', 'reviewedAt', 'reviewNotes']);
       }
     }
@@ -262,9 +316,14 @@ service cloud.firestore {
     match /tasks/{taskId} {
       allow read: if isSignedIn() && (
         isAdmin() ||
+        isSupervisor() ||
+        isCoordinator() ||
         isAssignedTrainee(resource.data.traineeId) ||
+        (isTrainee() && resource.data.traineeId == getUserTraineeId()) ||
+        (isTrainee() && resource.data.traineeId == request.auth.uid) ||
         isSupervisorOf(resource.data.traineeId) ||
-        (isCoordinator() && sameCompany(resource.data.companyId)) ||
+        isSupervisorOfByField(resource.data.traineeId) ||
+        sameCompany(resource.data.companyId) ||
         (isSupervisor() && resource.data.createdBy == request.auth.uid)
       );
       
@@ -286,11 +345,19 @@ service cloud.firestore {
       match /approvals/{approvalId} {
         allow read: if isSignedIn() && (
           isAdmin() ||
+          isSupervisor() ||
+          isCoordinator() ||
           isAssignedTrainee(get(/databases/$(database)/documents/tasks/$(taskId)).data.traineeId) ||
-          isSupervisorOf(get(/databases/$(database)/documents/tasks/$(taskId)).data.traineeId)
+          isSupervisorOf(get(/databases/$(database)/documents/tasks/$(taskId)).data.traineeId) ||
+          isSupervisorOfByField(get(/databases/$(database)/documents/tasks/$(taskId)).data.traineeId)
         );
         
-        allow create: if isSignedIn() && isSupervisorOf(get(/databases/$(database)/documents/tasks/$(taskId)).data.traineeId);
+        allow create: if isSignedIn() && (
+          isAdmin() ||
+          isSupervisor() ||
+          isSupervisorOf(get(/databases/$(database)/documents/tasks/$(taskId)).data.traineeId) ||
+          isSupervisorOfByField(get(/databases/$(database)/documents/tasks/$(taskId)).data.traineeId)
+        );
       }
     }
     
@@ -300,9 +367,14 @@ service cloud.firestore {
     match /documents/{documentId} {
       allow read: if isSignedIn() && (
         isAdmin() ||
+        isSupervisor() ||
+        isCoordinator() ||
         isAssignedTrainee(resource.data.traineeId) ||
+        (isTrainee() && resource.data.traineeId == getUserTraineeId()) ||
+        (isTrainee() && resource.data.traineeId == request.auth.uid) ||
         isSupervisorOf(resource.data.traineeId) ||
-        (isCoordinator() && sameCompany(resource.data.companyId))
+        isSupervisorOfByField(resource.data.traineeId) ||
+        sameCompany(resource.data.companyId)
       );
       
       allow create: if isSignedIn() && (
@@ -316,7 +388,9 @@ service cloud.firestore {
          resource.data.status == 'pending') ||
         (isSupervisorOf(resource.data.traineeId) &&
          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedBy', 'reviewedAt', 'reviewNotes']) &&
-         request.resource.data.status in ['approved', 'rejected']) ||
+         resource.data.status == 'pending') ||
+        (isCoordinator() && sameCompany(resource.data.companyId) &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedBy', 'reviewedAt', 'reviewNotes'])) ||
         isAdmin()
       );
       
@@ -332,16 +406,24 @@ service cloud.firestore {
     match /dtrs/{dtrId} {
       allow read: if isSignedIn() && (
         isAdmin() ||
+        isSupervisor() ||
+        isCoordinator() ||
         isAssignedTrainee(resource.data.traineeId) ||
+        (isTrainee() && resource.data.traineeId == getUserTraineeId()) ||
+        (isTrainee() && resource.data.traineeId == request.auth.uid) ||
         isSupervisorOf(resource.data.traineeId) ||
-        (isCoordinator() && sameCompany(resource.data.companyId))
+        isSupervisorOfByField(resource.data.traineeId) ||
+        sameCompany(resource.data.companyId)
       );
       
       // Only Cloud Functions can create/update DTRs (via calculateDTR)
       allow create: if false;
       allow update: if isSignedIn() && (
         isAdmin() ||
-        isSupervisorOf(resource.data.traineeId)
+        isSupervisor() ||
+        isCoordinator() ||
+        isSupervisorOf(resource.data.traineeId) ||
+        isSupervisorOfByField(resource.data.traineeId)
       ) && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
         'status', 'approvedBy', 'approvedAt', 'rejectedBy', 'rejectedAt', 'reviewedBy', 'reviewedAt', 'updatedAt'
       ]);
@@ -351,18 +433,28 @@ service cloud.firestore {
       match /correction_requests/{correctionId} {
         allow read: if isSignedIn() && (
           isAdmin() ||
+          isSupervisor() ||
+          isCoordinator() ||
           isAssignedTrainee(get(/databases/$(database)/documents/dtrs/$(dtrId)).data.traineeId) ||
-          isSupervisorOf(get(/databases/$(database)/documents/dtrs/$(dtrId)).data.traineeId)
+          (isTrainee() && get(/databases/$(database)/documents/dtrs/$(dtrId)).data.traineeId == getUserTraineeId()) ||
+          (isTrainee() && get(/databases/$(database)/documents/dtrs/$(dtrId)).data.traineeId == request.auth.uid) ||
+          isSupervisorOf(get(/databases/$(database)/documents/dtrs/$(dtrId)).data.traineeId) ||
+          isSupervisorOfByField(get(/databases/$(database)/documents/dtrs/$(dtrId)).data.traineeId)
         );
         
         allow create: if isSignedIn() && (
+          isTrainee() ||
           isAssignedTrainee(get(/databases/$(database)/documents/dtrs/$(dtrId)).data.traineeId) ||
-          isSupervisorOf(get(/databases/$(database)/documents/dtrs/$(dtrId)).data.traineeId)
+          isSupervisorOf(get(/databases/$(database)/documents/dtrs/$(dtrId)).data.traineeId) ||
+          isSupervisorOfByField(get(/databases/$(database)/documents/dtrs/$(dtrId)).data.traineeId)
         );
         
         allow update: if isSignedIn() && (
           isAdmin() ||
-          isSupervisorOf(get(/databases/$(database)/documents/dtrs/$(dtrId)).data.traineeId)
+          isSupervisor() ||
+          isCoordinator() ||
+          isSupervisorOf(get(/databases/$(database)/documents/dtrs/$(dtrId)).data.traineeId) ||
+          isSupervisorOfByField(get(/databases/$(database)/documents/dtrs/$(dtrId)).data.traineeId)
         );
       }
     }
@@ -373,20 +465,28 @@ service cloud.firestore {
     match /leave_requests/{leaveId} {
       allow read: if isSignedIn() && (
         isAdmin() ||
+        isSupervisor() ||
+        isCoordinator() ||
         isAssignedTrainee(resource.data.traineeId) ||
+        (isTrainee() && resource.data.traineeId == getUserTraineeId()) ||
+        (isTrainee() && resource.data.traineeId == request.auth.uid) ||
         isSupervisorOf(resource.data.traineeId) ||
-        (isCoordinator() && sameCompany(resource.data.companyId))
+        isSupervisorOfByField(resource.data.traineeId) ||
+        sameCompany(resource.data.companyId)
       );
       
-      allow create: if isSignedIn() && isAssignedTrainee(request.resource.data.traineeId) &&
-        request.resource.data.keys().hasAll(['traineeId', 'type', 'startDate', 'endDate', 'reason', 'status']);
+      allow create: if isSignedIn() && (
+        isAssignedTrainee(request.resource.data.traineeId) ||
+        (isTrainee() && request.resource.data.traineeId == getUserTraineeId()) ||
+        (isTrainee() && request.resource.data.traineeId == request.auth.uid)
+      ) && request.resource.data.keys().hasAll(['traineeId', 'type', 'startDate', 'endDate', 'reason', 'status']);
       
       allow update: if isSignedIn() && (
         (isAssignedTrainee(resource.data.traineeId) &&
          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'cancelledAt']) &&
          resource.data.status == 'pending' &&
          request.resource.data.status == 'cancelled') ||
-        (isSupervisorOf(resource.data.traineeId) &&
+        ((isSupervisor() || isCoordinator() || isSupervisorOf(resource.data.traineeId) || isSupervisorOfByField(resource.data.traineeId)) &&
          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'approvedBy', 'approvedAt', 'approvalNotes']) &&
          request.resource.data.status in ['approved', 'rejected']) ||
         isAdmin()
@@ -454,6 +554,7 @@ service cloud.firestore {
         isAdmin() ||
         isAssignedTrainee(resource.data.traineeId) ||
         isSupervisorOf(resource.data.traineeId) ||
+        isSupervisorOfByField(resource.data.traineeId) ||
         (isCoordinator() && sameCompany(resource.data.companyId))
       );
       
@@ -480,6 +581,7 @@ service cloud.firestore {
         isAdmin() ||
         isAssignedTrainee(resource.data.traineeId) ||
         isSupervisorOf(resource.data.traineeId) ||
+        isSupervisorOfByField(resource.data.traineeId) ||
         (isCoordinator() && sameCompany(resource.data.companyId))
       );
       
@@ -502,6 +604,128 @@ service cloud.firestore {
       allow create: if isSignedIn() && isOwner(resource.data.userId);
       allow update: if isSignedIn() && isOwner(resource.data.userId);
       allow delete: if isSignedIn() && isOwner(resource.data.userId);
+    }
+    
+    // ============================================
+    // PLACEMENT_REQUESTS Collection
+    // ============================================
+    match /placement_requests/{requestId} {
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        isCoordinator() ||
+        (isTrainee() && resource.data.traineeId == getUserTraineeId()) ||
+        (isTrainee() && resource.data.traineeId == request.auth.uid) ||
+        (isSupervisor() && sameCompany(resource.data.externalCompanyId))
+      );
+      
+      allow create: if isSignedIn() && isTrainee() &&
+        request.resource.data.keys().hasAll(['traineeId', 'traineeName', 'traineeEmail', 'externalCompanyId', 'externalCompanyName', 'status']);
+      
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        isCoordinator()
+      ) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedBy', 'reviewerNotes', 'reviewedAt', 'updatedAt']);
+      
+      allow delete: if false;
+    }
+    
+    // ============================================
+    // SUPERVISOR_INVITATIONS Collection
+    // ============================================
+    match /supervisor_invitations/{invitationId} {
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        isCoordinator()
+      );
+      
+      allow create: if isSignedIn() && isCoordinator() &&
+        request.resource.data.keys().hasAll(['companyId', 'supervisorName', 'supervisorEmail', 'status']);
+      
+      allow update: if isSignedIn() && isAdmin();
+      allow delete: if isSignedIn() && isAdmin();
+    }
+    
+    // ============================================
+    // DOCUMENT_REQUIREMENTS Collection
+    // ============================================
+    match /document_requirements/{requirementId} {
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        isCoordinator() ||
+        sameCompany(resource.data.companyId)
+      );
+      
+      allow create: if isSignedIn() && (
+        isAdmin() ||
+        isCoordinator()
+      ) && sameCompany(request.resource.data.companyId) &&
+        request.resource.data.keys().hasAll(['companyId', 'documentType', 'label', 'requiredFor', 'required', 'order']);
+      
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        isCoordinator()
+      ) && sameCompany(resource.data.companyId);
+      
+      allow delete: if isSignedIn() && (
+        isAdmin() ||
+        isCoordinator()
+      ) && sameCompany(resource.data.companyId);
+    }
+    
+    // ============================================
+    // EVALUATIONS Collection
+    // ============================================
+    match /evaluations/{evaluationId} {
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        isCoordinator() ||
+        (isSupervisor() && resource.data.supervisorId == request.auth.uid) ||
+        (isTrainee() && resource.data.traineeId == getUserTraineeId()) ||
+        (isTrainee() && resource.data.traineeId == request.auth.uid)
+      );
+      
+      allow create: if isSignedIn() && (
+        isAdmin() ||
+        isCoordinator() ||
+        isSupervisor()
+      ) && sameCompany(request.resource.data.companyId) &&
+        request.resource.data.keys().hasAll([
+          'traineeId', 'traineeName', 'supervisorId', 'supervisorName',
+          'companyId', 'type', 'status', 'period', 'ratings'
+        ]);
+      
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        isCoordinator()
+      ) && sameCompany(resource.data.companyId);
+      
+      allow delete: if isSignedIn() && isAdmin();
+    }
+    
+    // ============================================
+    // ANNOUNCEMENTS Collection
+    // ============================================
+    match /announcements/{announcementId} {
+      allow read: if isSignedIn() && sameCompany(resource.data.companyId);
+      
+      allow create: if isSignedIn() && (
+        isAdmin() ||
+        isCoordinator()
+      ) && sameCompany(request.resource.data.companyId) &&
+        request.resource.data.keys().hasAll([
+          'title', 'content', 'authorId', 'authorName', 'companyId',
+          'priority', 'status', 'targetRoles', 'pinned'
+        ]);
+      
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        isCoordinator()
+      ) && sameCompany(resource.data.companyId);
+      
+      allow delete: if isSignedIn() && (
+        isAdmin() ||
+        isCoordinator()
+      ) && sameCompany(resource.data.companyId);
     }
     
     // ============================================

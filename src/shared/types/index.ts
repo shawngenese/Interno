@@ -8,6 +8,10 @@ export type OnlineStatus = 'online' | 'offline' | 'away';
 
 export type AttendanceStatus = 'present' | 'late' | 'absent' | 'on_leave';
 
+export type PlacementType = 'internal' | 'external';
+
+export type PlacementStatus = 'pending' | 'approved' | 'active' | 'completed' | 'rejected';
+
 export interface Timestamp {
   seconds: number;
   nanoseconds: number;

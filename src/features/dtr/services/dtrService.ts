@@ -1,5 +1,5 @@
-import { callEdgeFunction, isSupabaseConfigured } from '@/config/supabase';
-import { getAuthInstancePublic } from '@/config/firebase';
+import { getFunctionsInstancePublic } from '@/config/firebase';
+import { httpsCallable } from 'firebase/functions';
 import type { QueryConstraint } from 'firebase/firestore';
 import type {
   DTREntry,
@@ -13,18 +13,12 @@ import type {
 
 const LIST_FETCH_CAP = 500;
 
-async function getIdToken(): Promise<string> {
-  const auth = getAuthInstancePublic();
-  const currentUser = auth.currentUser;
-  if (!currentUser) throw new Error('Not authenticated');
-  return currentUser.getIdToken(true);
-}
-
-/** Calculate DTR for a trainee over a date range (calls Edge). */
+/** Calculate DTR for a trainee over a date range (calls Cloud Function). */
 export async function calculateDTR(params: CalculateDTRParams): Promise<CalculateDTRResult> {
-  if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
-  const idToken = await getIdToken();
-  return callEdgeFunction<CalculateDTRResult>('calculate_dtr', params as unknown as Record<string, unknown>, { idToken });
+  const functions = getFunctionsInstancePublic();
+  const calculateDTRFn = httpsCallable<CalculateDTRParams, CalculateDTRResult>(functions, 'calculateDTR');
+  const result = await calculateDTRFn(params);
+  return result.data;
 }
 
 /** Get a single DTR entry by ID. */

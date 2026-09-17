@@ -13,9 +13,12 @@ export function CompanyForm({ editingId, onCancel, onSaved }: CompanyFormProps) 
 
   const [formData, setFormData] = useState<CompanyFormData>({
     name: '',
+    type: 'internal',
     address: '',
+    contactPerson: '',
     contactEmail: '',
     contactPhone: '',
+    verified: false,
   });
 
   const [loading, setLoading] = useState(true);
@@ -27,9 +30,12 @@ export function CompanyForm({ editingId, onCancel, onSaved }: CompanyFormProps) 
       const company = await adminService.getCompany(companyId);
       setFormData({
         name: company.name,
+        type: company.type || 'internal',
         address: company.address || '',
+        contactPerson: company.contactPerson || '',
         contactEmail: company.contactEmail || '',
         contactPhone: company.contactPhone || '',
+        verified: company.verified || false,
       });
     } catch (err) {
       setError('Failed to load company');
@@ -114,6 +120,37 @@ export function CompanyForm({ editingId, onCancel, onSaved }: CompanyFormProps) 
           />
         </div>
 
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Company Type <span className="text-red-500">*</span>
+            </label>
+            <select
+              id="type"
+              value={formData.type}
+              onChange={(e) => handleChange('type', e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="internal">Internal</option>
+              <option value="external">External</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="contactPerson" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Contact Person
+            </label>
+            <input
+              type="text"
+              id="contactPerson"
+              value={formData.contactPerson}
+              onChange={(e) => handleChange('contactPerson', e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Contact Person Name"
+            />
+          </div>
+        </div>
+
         <div>
           <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Address
@@ -157,6 +194,21 @@ export function CompanyForm({ editingId, onCancel, onSaved }: CompanyFormProps) 
             />
           </div>
         </div>
+
+        {isEditing && (
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="verified"
+              checked={formData.verified}
+              onChange={(e) => setFormData(prev => ({ ...prev, verified: e.target.checked }))}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="verified" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Verified (External Company)
+            </label>
+          </div>
+        )}
 
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
           <button

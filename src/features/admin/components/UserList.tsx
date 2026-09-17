@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { adminService } from '../services/adminService';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
 import { useAuth } from '@/features/auth';
+import { ActionsMenu } from '@/shared/components/ActionsMenu';
 import type { User, ListUsersParams } from '../types';
 
 interface UserListProps {
@@ -186,41 +187,21 @@ export function UserList({ onEdit, onView }: UserListProps) {
                     {user.createdAt?.seconds ? new Date(user.createdAt.seconds * 1000).toLocaleDateString() : '-'}
                   </td>
                   <td className="px-4 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      {onEdit && currentUser?.uid !== user.id && (
-                        <button
-                          onClick={() => onEdit(user)}
-                          className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                        >
-                          Edit
-                        </button>
-                      )}
-                      {currentUser?.uid !== user.id && (
-                        user.status === 'archived' ? (
-                          <button
-                            onClick={() => handleRestore(user.id)}
-                            className="px-3 py-1.5 text-xs font-medium text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
-                          >
-                            Restore
-                          </button>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => handleArchive(user.id)}
-                              className="px-3 py-1.5 text-xs font-medium text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-300 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-lg transition-colors"
-                            >
-                              Archive
-                            </button>
-                            <button
-                              onClick={() => handleDelete(user.id)}
-                              className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                            >
-                              Delete
-                            </button>
-                          </>
-                        )
-                      )}
-                    </div>
+                    <ActionsMenu
+                      items={[
+                        ...(onEdit && currentUser?.uid !== user.id
+                          ? [{ label: 'Edit', onClick: () => onEdit(user) }]
+                          : []),
+                        ...(currentUser?.uid !== user.id
+                          ? user.status === 'archived'
+                            ? [{ label: 'Restore', onClick: () => handleRestore(user.id) }]
+                            : [
+                                { label: 'Archive', onClick: () => handleArchive(user.id) },
+                                { label: 'Delete', onClick: () => handleDelete(user.id), danger: true },
+                              ]
+                          : []),
+                      ]}
+                    />
                   </td>
                 </tr>
               ))

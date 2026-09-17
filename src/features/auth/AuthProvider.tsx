@@ -51,12 +51,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       // Force ID token refresh so newly-assigned custom claims (e.g. first
       // admin via assign-admin.cjs) are visible without manual sign-out/in.
+      // getIdTokenResult(true) forces a server refresh AND returns the fresh
+      // result in one call — using getIdToken(true) + getIdTokenResult(false)
+      // is wrong because getIdTokenResult(false) returns the old cached result.
+      let tokenResult;
       try {
-        await currentUser.getIdToken(true);
+        tokenResult = await currentUser.getIdTokenResult(true);
       } catch {
-        // Ignore refresh failure and fall through with cached token.
+        // If forced refresh fails (e.g. network error), fall back to cached token.
+        tokenResult = await currentUser.getIdTokenResult(false);
       }
-      const tokenResult = await currentUser.getIdTokenResult(false);
       const claimRole = (tokenResult.claims as { role?: unknown }).role;
       if (isValidRole(claimRole)) {
         if (typeof window !== 'undefined') window.__USER_ROLE__ = claimRole;

@@ -1,10 +1,16 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from '@/features/auth/AuthProvider';
-import { getFirestoreInstancePublic } from '@/config/firebase';
-import { doc, getDoc } from 'firebase/firestore';
 import { getCoordinatorDashboardData } from '../services/coordinatorService';
 import { SkeletonCard } from '@/shared/components/Skeleton';
+import { AnimatedCard } from '@/shared/components/AnimatedCard';
+import { PlacementRequestList } from './PlacementRequestList';
+import { CompanyVerification } from './CompanyVerification';
+import { SupervisorInvite } from './SupervisorInvite';
+import { CoordinatorTraineeList } from './CoordinatorTraineeList';
+import { DocumentReview } from './DocumentReview';
 import type { CoordinatorDashboardData } from '../types';
+
+type TabType = 'overview' | 'placements' | 'companies' | 'invitations' | 'trainees' | 'documents';
 
 export function CoordinatorDashboard() {
   const { user } = useAuth();
@@ -18,16 +24,19 @@ export function CoordinatorDashboard() {
       end: new Date(now.getFullYear(), now.getMonth() + 1, 0).getTime(),
     };
   });
+  const [activeTab, setActiveTab] = useState<TabType>('overview');
 
   const fetchData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     try {
       if (!companyIdRef.current) {
-        const db = getFirestoreInstancePublic();
-        const snap = await getDoc(doc(db, 'users', user.uid));
-        if (!snap.exists()) return;
-        companyIdRef.current = (snap.data() as { companyId?: string }).companyId || '';
+        // Read companyId from ID token custom claims — already set by the
+        // setUserRole Cloud Function, so no Firestore round-trip is needed
+        // and we avoid a permission check on users/{uid} that can fail if
+        // the token hasn't propagated yet.
+        const tokenResult = await user.getIdTokenResult();
+        companyIdRef.current = (tokenResult.claims.companyId as string) || '';
       }
 
       const dashboardData = await getCoordinatorDashboardData(
@@ -114,35 +123,104 @@ export function CoordinatorDashboard() {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+      {/* Tabs */}
+      <div className="border-b border-gray-200 dark:border-gray-700">
+        <nav className="flex gap-4 -mb-px overflow-x-auto">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              activeTab === 'overview'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+            }`}
+          >
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('trainees')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              activeTab === 'trainees'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+            }`}
+          >
+            Trainees
+          </button>
+          <button
+            onClick={() => setActiveTab('placements')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              activeTab === 'placements'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+            }`}
+          >
+            Placement Requests
+          </button>
+          <button
+            onClick={() => setActiveTab('documents')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              activeTab === 'documents'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+            }`}
+          >
+            Documents
+          </button>
+          <button
+            onClick={() => setActiveTab('companies')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              activeTab === 'companies'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+            }`}
+          >
+            Verify Companies
+          </button>
+          <button
+            onClick={() => setActiveTab('invitations')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              activeTab === 'invitations'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+            }`}
+          >
+            Invite Supervisors
+          </button>
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'overview' && (
+        <>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <AnimatedCard delay={0} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
           <p className="text-sm text-gray-500 dark:text-gray-400">Total Trainees</p>
           <p className="text-2xl font-bold text-blue-600">{totalTrainees}</p>
           <p className="text-xs text-gray-400">{activeTrainees} active</p>
-        </div>
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+        </AnimatedCard>
+        <AnimatedCard delay={0.05} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
           <p className="text-sm text-gray-500 dark:text-gray-400">Avg Attendance</p>
           <p className="text-2xl font-bold text-green-600">{avgAttendance}%</p>
-        </div>
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+        </AnimatedCard>
+        <AnimatedCard delay={0.1} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
           <p className="text-sm text-gray-500 dark:text-gray-400">Avg OJT Progress</p>
           <p className="text-2xl font-bold text-purple-600">{avgOJT}%</p>
-        </div>
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+        </AnimatedCard>
+        <AnimatedCard delay={0.15} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
           <p className="text-sm text-gray-500 dark:text-gray-400">Tasks Pending</p>
           <p className="text-2xl font-bold text-yellow-600">
             {totalSubmittedTasks}
           </p>
-        </div>
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+        </AnimatedCard>
+        <AnimatedCard delay={0.2} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
           <p className="text-sm text-gray-500 dark:text-gray-400">Missing Docs</p>
           <p className="text-2xl font-bold text-red-600">{totalMissingDocs}</p>
-        </div>
+        </AnimatedCard>
       </div>
 
       {/* Trainee Overview Table */}
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
+      <AnimatedCard delay={0.25} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
           <h3 className="font-semibold text-gray-900 dark:text-white">Trainee Overview</h3>
         </div>
@@ -220,8 +298,16 @@ export function CoordinatorDashboard() {
               })}
             </tbody>
           </table>
-        </div>
-      </div>
+          </div>
+        </AnimatedCard>
+        </>
+      )}
+
+      {activeTab === 'placements' && <PlacementRequestList />}
+      {activeTab === 'trainees' && <CoordinatorTraineeList />}
+      {activeTab === 'documents' && <DocumentReview />}
+      {activeTab === 'companies' && <CompanyVerification />}
+      {activeTab === 'invitations' && <SupervisorInvite />}
     </div>
   );
 }

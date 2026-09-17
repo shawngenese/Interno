@@ -1,8 +1,6 @@
-import { getAdminAuth, ROLES, type UserRole, type AuditAction } from '../config';
-import { logAction } from '../audit/auditLog';
+import { getAdminAuth, ROLES, type UserRole, type AuditAction, type EntityType, getAdminDb, COLLECTIONS } from '../config';
+import { logAction, deepClean } from '../audit/auditLog';
 import { HttpsError, CallableRequest } from 'firebase-functions/v2/https';
-
-const adminAuth = getAdminAuth();
 
 export interface SetUserRoleRequest {
   uid: string;
@@ -32,43 +30,86 @@ export async function setUserRoleHandler(
   }
 
   const callerClaims = request.auth.token;
-  const callerRole = callerClaims.role as UserRole | undefined;
+  let callerRole = callerClaims.role as UserRole | undefined;
 
-  if (callerRole !== 'admin') {
-    throw new HttpsError('permission-denied', 'Only admins can assign roles');
+  // Fallback: if caller token claims don't have role set yet (e.g. freshly created admin or token not refreshed),
+  // check their Firestore user doc.
+  if (!callerRole) {
+    try {
+      const callerDoc = await getAdminDb().collection(COLLECTIONS.USERS).doc(request.auth.uid).get();
+      if (callerDoc.exists) {
+        callerRole = callerDoc.data()?.role as UserRole | undefined;
+      }
+    } catch (e) {
+      console.warn('Failed to fetch caller role from Firestore:', e);
+    }
   }
+
+  // Allow admins to assign any role. Coordinators can only assign the 'trainee' role.
+  if (callerRole !== 'admin') {
+    if (callerRole === 'coordinator' && role === 'trainee') {
+      console.info('Coordinator assigning trainee role for uid', uid);
+    } else {
+      console.warn('Permission denied: caller role', callerRole, 'attempted to assign', role);
+      throw new HttpsError('permission-denied', `Only admins can assign roles (caller role: ${callerRole || 'none'})`);
+    }
+  }
+
+  const adminAuth = getAdminAuth();
 
   try {
     const userRecord = await adminAuth.getUser(uid);
+    const existingClaims = (userRecord.customClaims || {}) as Record<string, unknown>;
 
     const customClaims: Record<string, unknown> = {
+      ...existingClaims,
       role,
       updatedAt: Date.now(),
     };
 
-    if (companyId) customClaims.companyId = companyId;
-    if (departmentId) customClaims.departmentId = departmentId;
-    if (supervisorId) customClaims.supervisorId = supervisorId;
-    if (traineeId) customClaims.traineeId = traineeId;
+    if (companyId !== undefined) customClaims.companyId = companyId;
+    if (departmentId !== undefined) customClaims.departmentId = departmentId;
+    if (supervisorId !== undefined) customClaims.supervisorId = supervisorId;
+    if (traineeId !== undefined) customClaims.traineeId = traineeId;
 
     await adminAuth.setCustomUserClaims(uid, customClaims);
 
-    await logAction(
-      {
+    // Audit logging is non-fatal: claims are already safely set on the user account.
+    try {
+      const rawPayload = {
         userId: request.auth.uid,
         action: 'role_change' as AuditAction,
-        entityType: 'user',
+        entityType: 'user' as EntityType,
         entityId: uid,
-        originalValue: { role: userRecord.customClaims?.role },
-        newValue: { role, companyId, departmentId, supervisorId, traineeId },
-      },
-      { correlationId: request.rawRequest.headers['x-correlation-id'] as string }
-    );
+        originalValue: userRecord.customClaims && typeof userRecord.customClaims.role !== 'undefined'
+          ? { role: userRecord.customClaims.role }
+          : undefined,
+        newValue: (() => {
+          const obj: Record<string, unknown> = { role };
+          if (companyId !== undefined) obj.companyId = companyId;
+          if (departmentId !== undefined) obj.departmentId = departmentId;
+          if (supervisorId !== undefined) obj.supervisorId = supervisorId;
+          if (traineeId !== undefined) obj.traineeId = traineeId;
+          return obj;
+        })(),
+      };
+
+      const auditPayload = deepClean(rawPayload);
+      if (auditPayload) {
+        await logAction(auditPayload, { correlationId: request.rawRequest.headers['x-correlation-id'] as string });
+      }
+    } catch (auditErr) {
+      console.warn('Audit logging failed (non-fatal, claims were set successfully):', auditErr);
+    }
 
     return { success: true, role };
   } catch (error) {
-    console.error('Error setting user role:', error);
-    throw new HttpsError('internal', 'Failed to set user role');
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('Error in setUserRoleHandler:', msg, (error as any)?.stack);
+    throw new HttpsError('internal', `Failed to set user role: ${msg}`);
   }
 }
 
@@ -89,17 +130,17 @@ export async function getCurrentUserRoleHandler(
 }
 
 export async function revokeUserTokens(uid: string): Promise<void> {
-  await adminAuth.revokeRefreshTokens(uid);
+  await getAdminAuth().revokeRefreshTokens(uid);
 }
 
 export async function deleteUserAccount(uid: string): Promise<void> {
-  await adminAuth.deleteUser(uid);
+  await getAdminAuth().deleteUser(uid);
 }
 
 export async function getUserByEmail(email: string) {
-  return adminAuth.getUserByEmail(email);
+  return getAdminAuth().getUserByEmail(email);
 }
 
 export async function listUsers(maxResults = 1000) {
-  return adminAuth.listUsers(maxResults);
+  return getAdminAuth().listUsers(maxResults);
 }

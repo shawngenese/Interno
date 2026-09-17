@@ -1,21 +1,22 @@
 import { useState, useEffect } from 'react';
 import { adminService } from '../services/adminService';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
-import type { UserFormData, Company, Department, Supervisor } from '../types';
+import type { UserFormData, UserRole, Company, Department, Supervisor } from '../types';
 
 interface UserFormProps {
   editingId?: string;
+  defaultRole?: string;
   onCancel?: () => void;
   onSaved?: () => void;
 }
 
-export function UserForm({ editingId, onCancel, onSaved }: UserFormProps) {
+export function UserForm({ editingId, defaultRole, onCancel, onSaved }: UserFormProps) {
   const isEditing = !!editingId;
 
   const [formData, setFormData] = useState<UserFormData>({
     email: '',
     displayName: '',
-    role: 'trainee',
+    role: (defaultRole as UserRole) || 'trainee',
     companyId: '',
     departmentId: '',
     supervisorId: '',
@@ -150,7 +151,7 @@ export function UserForm({ editingId, onCancel, onSaved }: UserFormProps) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 max-w-2xl mx-auto">
       <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-        {isEditing ? 'Edit User' : 'Create User'}
+        {isEditing ? 'Edit User' : `Create ${formData.role.charAt(0).toUpperCase() + formData.role.slice(1)}`}
       </h2>
 
       {error && (

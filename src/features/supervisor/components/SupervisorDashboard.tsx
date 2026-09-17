@@ -2,12 +2,21 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth';
 import { getSupervisorByUserId, getAssignedTrainees, getPendingDTRs, getTraineeAttendanceSummary } from '../services/supervisorService';
+import { AnimatedCard } from '@/shared/components/AnimatedCard';
+import { AnimatedList, AnimatedListItem, listItemVariants } from '@/shared/components/AnimatedList';
 import type { Trainee } from '@/features/admin/types';
 import type { DTREntry } from '@/features/dtr/types';
+
+interface SupervisorInfo {
+  id: string;
+  userId: string;
+  companyId?: string;
+}
 
 export function SupervisorDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [supervisor, setSupervisor] = useState<SupervisorInfo | null>(null);
   const [trainees, setTrainees] = useState<Trainee[]>([]);
   const [pendingDTRs, setPendingDTRs] = useState<DTREntry[]>([]);
   const [attendance, setAttendance] = useState<Record<string, { hasTimeIn: boolean; hasTimeOut: boolean }>>({});
@@ -22,18 +31,29 @@ export function SupervisorDashboard() {
       setError(null);
       try {
         const sup = await getSupervisorByUserId(user.uid);
-
         if (sup) {
-          const assignedTrainees = await getAssignedTrainees(sup.id);
+          setSupervisor(sup);
+          const assignedTrainees = await getAssignedTrainees(sup.id, sup.companyId);
           setTrainees(assignedTrainees);
 
           const traineeIds = assignedTrainees.map(t => t.id);
-          const [pending, att] = await Promise.all([
-            getPendingDTRs(traineeIds),
-            getTraineeAttendanceSummary(traineeIds),
-          ]);
-          setPendingDTRs(pending);
-          setAttendance(att);
+          if (traineeIds.length > 0) {
+            const [pending, att] = await Promise.all([
+              getPendingDTRs(traineeIds).catch((err) => {
+                console.warn('[SupervisorDashboard] Pending DTRs query notice:', err);
+                return [];
+              }),
+              getTraineeAttendanceSummary(traineeIds).catch((err) => {
+                console.warn('[SupervisorDashboard] Attendance summary query notice (index building):', err);
+                return {};
+              }),
+            ]);
+            setPendingDTRs(pending);
+            setAttendance(att);
+          } else {
+            setPendingDTRs([]);
+            setAttendance({});
+          }
         }
       } catch (err) {
         console.error('Failed to load dashboard:', err);
@@ -45,6 +65,22 @@ export function SupervisorDashboard() {
 
     loadDashboard();
   }, [user?.uid]);
+
+  const { activeTrainees, todayPresent, todayWithTimeout } = useMemo(() => {
+    let present = 0;
+    let withTimeout = 0;
+    for (const t of trainees) {
+      if (attendance[t.id]?.hasTimeIn) present++;
+      if (attendance[t.id]?.hasTimeOut) withTimeout++;
+    }
+    return {
+      activeTrainees: trainees.filter(t => t.ojtStatus === 'active'),
+      todayPresent: present,
+      todayWithTimeout: withTimeout,
+    };
+  }, [trainees, attendance]);
+
+  const isExternal = Boolean(supervisor?.companyId && supervisor.companyId !== '');
 
   if (loading) {
     return (
@@ -65,56 +101,64 @@ export function SupervisorDashboard() {
     );
   }
 
-  const { activeTrainees, todayPresent, todayWithTimeout } = useMemo(() => {
-    let present = 0;
-    let withTimeout = 0;
-    for (const t of trainees) {
-      if (attendance[t.id]?.hasTimeIn) present++;
-      if (attendance[t.id]?.hasTimeOut) withTimeout++;
-    }
-    return {
-      activeTrainees: trainees.filter(t => t.ojtStatus === 'active'),
-      todayPresent: present,
-      todayWithTimeout: withTimeout,
-    };
-  }, [trainees, attendance]);
-
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            {isExternal ? 'External Supervisor Dashboard' : 'Supervisor Dashboard'}
+          </h2>
+          {isExternal && (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Viewing company-scoped trainees only
+            </p>
+          )}
+        </div>
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Assigned Trainees"
-          value={trainees.length}
-          subtitle={`${activeTrainees.length} active`}
-          icon="users"
-          color="blue"
-        />
-        <StatCard
-          title="Present Today"
-          value={todayPresent}
-          subtitle={`of ${trainees.length} trainees`}
-          icon="check"
-          color="green"
-        />
-        <StatCard
-          title="Timed Out"
-          value={todayWithTimeout}
-          subtitle={`of ${todayPresent} present`}
-          icon="clock"
-          color="purple"
-        />
-        <StatCard
-          title="Pending DTR Approvals"
-          value={pendingDTRs.length}
-          subtitle={pendingDTRs.length > 0 ? 'Needs review' : 'All caught up'}
-          icon="clipboard"
-          color={pendingDTRs.length > 0 ? 'yellow' : 'green'}
-        />
+        <AnimatedCard delay={0}>
+          <StatCard
+            title="Assigned Trainees"
+            value={trainees.length}
+            subtitle={`${activeTrainees.length} active`}
+            icon="users"
+            color="blue"
+          />
+        </AnimatedCard>
+        <AnimatedCard delay={0.05}>
+          <StatCard
+            title="Present Today"
+            value={todayPresent}
+            subtitle={`of ${trainees.length} trainees`}
+            icon="check"
+            color="green"
+          />
+        </AnimatedCard>
+        <AnimatedCard delay={0.1}>
+          <StatCard
+            title="Timed Out"
+            value={todayWithTimeout}
+            subtitle={`of ${todayPresent} present`}
+            icon="clock"
+            color="purple"
+          />
+        </AnimatedCard>
+        <AnimatedCard delay={0.15}>
+          <StatCard
+            title="Pending DTR Approvals"
+            value={pendingDTRs.length}
+            subtitle={pendingDTRs.length > 0 ? 'Needs review' : 'All caught up'}
+            icon="clipboard"
+            color={pendingDTRs.length > 0 ? 'yellow' : 'green'}
+          />
+        </AnimatedCard>
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <AnimatedCard delay={0.2} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <button
@@ -163,7 +207,7 @@ export function SupervisorDashboard() {
             </div>
           </button>
         </div>
-      </div>
+      </AnimatedCard>
 
       {/* Pending DTR Approvals */}
       {pendingDTRs.length > 0 && (
@@ -211,7 +255,7 @@ export function SupervisorDashboard() {
       )}
 
       {/* Assigned Trainees */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <AnimatedCard delay={0.25} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Assigned Trainees</h3>
           <button
@@ -224,45 +268,44 @@ export function SupervisorDashboard() {
         {trainees.length === 0 ? (
           <p className="text-gray-500 dark:text-gray-400 text-sm">No trainees assigned yet.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {trainees.slice(0, 6).map(trainee => {
               const att = attendance[trainee.id];
               return (
-                <div
-                  key={trainee.id}
-                  className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">
-                      {trainee.profile?.studentId || trainee.userId}
-                    </span>
-                    <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                      trainee.ojtStatus === 'active'
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                        : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                    }`}>
-                      {trainee.ojtStatus}
-                    </span>
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                    <div>{trainee.profile?.course || 'No course'}</div>
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${att?.hasTimeIn ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
-                      <span>{att?.hasTimeIn ? 'Time In' : 'Not yet'}</span>
-                      {att?.hasTimeOut && (
-                        <>
-                          <span className="w-2 h-2 rounded-full bg-blue-500" />
-                          <span>Timed Out</span>
-                        </>
-                      )}
+                <AnimatedListItem key={trainee.id} variants={listItemVariants}>
+                  <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        {trainee.profile?.studentId || trainee.userId}
+                      </span>
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                        trainee.ojtStatus === 'active'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                          : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                      }`}>
+                        {trainee.ojtStatus}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                      <div>{trainee.profile?.course || 'No course'}</div>
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${att?.hasTimeIn ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                        <span>{att?.hasTimeIn ? 'Time In' : 'Not yet'}</span>
+                        {att?.hasTimeOut && (
+                          <>
+                            <span className="w-2 h-2 rounded-full bg-blue-500" />
+                            <span>Timed Out</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
+                </AnimatedListItem>
               );
             })}
-          </div>
+          </AnimatedList>
         )}
-      </div>
+      </AnimatedCard>
     </div>
   );
 }

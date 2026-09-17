@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { listDocuments, updateDocumentStatus, deleteDocument } from '../services/documentService';
 import { DocumentUploader } from './DocumentUploader';
+import { DocumentChecklist } from './DocumentChecklist';
 import { useToast } from '@/shared/components/Toast';
 import { useAuth } from '@/features/auth';
+import { getFirestoreInstancePublic } from '@/config/firebase';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import type { Document, DocumentType, DocumentStatus, ListDocumentsParams } from '../types';
 
 function formatDate(ms: number): string {
@@ -48,7 +51,30 @@ interface DocumentListProps {
 export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, companyId }: DocumentListProps) {
   const { addToast } = useToast();
   const { user, role } = useAuth();
-  const traineeId = propTraineeId || (role === 'trainee' ? user?.uid : undefined);
+  const [resolvedTraineeId, setResolvedTraineeId] = useState<string | undefined>(undefined);
+
+  // Resolve trainee doc ID from auth UID for trainee role
+  useEffect(() => {
+    if (role !== 'trainee' || !user?.uid) {
+      setResolvedTraineeId(undefined);
+      return;
+    }
+    const resolveId = async () => {
+      try {
+        const db = getFirestoreInstancePublic();
+        const q = query(collection(db, 'trainees'), where('userId', '==', user.uid), limit(1));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          setResolvedTraineeId(snap.docs[0].id);
+        }
+      } catch (err) {
+        console.error('Failed to resolve trainee ID:', err);
+      }
+    };
+    resolveId();
+  }, [role, user?.uid]);
+
+  const traineeId = propTraineeId || resolvedTraineeId;
   const canApproveReject = role === 'supervisor' || role === 'admin' || role === 'coordinator';
   const canDelete = role === 'admin';
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -119,6 +145,10 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
 
   return (
     <div className="space-y-6">
+      {traineeId && role === 'trainee' && (
+        <DocumentChecklist traineeId={traineeId} />
+      )}
+
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">

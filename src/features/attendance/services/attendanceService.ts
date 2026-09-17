@@ -1,5 +1,5 @@
-import { callEdgeFunction, isSupabaseConfigured } from '@/config/supabase';
-import { getAuthInstancePublic } from '@/config/firebase';
+import { getFunctionsInstancePublic } from '@/config/firebase';
+import { httpsCallable } from 'firebase/functions';
 import type { QueryConstraint } from 'firebase/firestore';
 
 export interface AttendanceRecord {
@@ -49,21 +49,15 @@ export interface TodayAttendanceStatus {
 
 const LIST_FETCH_CAP = 500;
 
-async function getIdToken(): Promise<string> {
-  const auth = getAuthInstancePublic();
-  const currentUser = auth.currentUser;
-  if (!currentUser) throw new Error('Not authenticated');
-  return currentUser.getIdToken(true);
-}
-
 /** Generate QR token for supervisor display (time_in/time_out). */
 export async function generateQRToken(
   action: 'time_in' | 'time_out',
   expirationSeconds: 30 | 60 | 120 | 300 = 60,
 ): Promise<GenerateQRResult> {
-  if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
-  const idToken = await getIdToken();
-  return callEdgeFunction<GenerateQRResult>('generate_qr_token', { action, expirationSeconds }, { idToken });
+  const functions = getFunctionsInstancePublic();
+  const generateQRTokenFn = httpsCallable<{ action: string; expirationSeconds: number }, GenerateQRResult>(functions, 'generateQRToken');
+  const result = await generateQRTokenFn({ action, expirationSeconds });
+  return result.data;
 }
 
 /** Validate scanned QR token and record attendance (trainee mobile). */
@@ -72,21 +66,14 @@ export async function validateQRScan(
   deviceInfo?: Record<string, unknown>,
   location?: { latitude: number; longitude: number; accuracy?: number },
 ): Promise<ValidateQRResult> {
-  if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
-  const idToken = await getIdToken();
-  return callEdgeFunction<ValidateQRResult>(
-    'validate_qr_scan',
-    { token, deviceInfo, location },
-    { idToken },
-  );
+  const functions = getFunctionsInstancePublic();
+  const validateQRScanFn = httpsCallable<{ token: string; deviceInfo?: Record<string, unknown>; location?: { latitude: number; longitude: number; accuracy?: number } }, ValidateQRResult>(functions, 'validateQRScan');
+  const result = await validateQRScanFn({ token, deviceInfo, location });
+  return result.data;
 }
 
 /** Get today's attendance status for a trainee. */
 export async function getTodayAttendance(traineeId: string): Promise<TodayAttendanceStatus> {
-  if (!isSupabaseConfigured()) {
-    // Fallback: direct Firestore read (for offline/preview)
-    return { hasTimeIn: false, hasTimeOut: false };
-  }
   const { getFirestoreInstancePublic } = await import('@/config/firebase');
   const { collection, query, where, getDocs } = await import('firebase/firestore');
   const db = getFirestoreInstancePublic();
@@ -121,7 +108,6 @@ export async function listAttendance(
   traineeId: string,
   options: { page?: number; limit?: number; startDate?: number; endDate?: number } = {},
 ): Promise<{ data: AttendanceRecord[]; total: number }> {
-  if (!isSupabaseConfigured()) return { data: [], total: 0 };
   const { getFirestoreInstancePublic } = await import('@/config/firebase');
   const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
   const db = getFirestoreInstancePublic();

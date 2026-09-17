@@ -5,6 +5,8 @@ import {
 } from 'recharts';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, getDocs, query, where, limit as firestoreLimit } from 'firebase/firestore';
+import { AnimatedCard } from '@/shared/components/AnimatedCard';
+import { AnimatedList, AnimatedListItem, listItemVariants } from '@/shared/components/AnimatedList';
 
 interface OverviewData {
   totalUsers: number;
@@ -175,28 +177,28 @@ export function AdminOverview() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {statCards.map((card) => (
-          <div key={card.label} className={`rounded-xl ${card.bg} border border-gray-200 dark:border-gray-700 p-4`}>
+        {statCards.map((card, i) => (
+          <AnimatedCard key={card.label} delay={i * 0.05} className={`rounded-xl ${card.bg} border border-gray-200 dark:border-gray-700 p-4`}>
             <p className="text-sm text-gray-500 dark:text-gray-400">{card.label}</p>
             <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
-          </div>
+          </AnimatedCard>
         ))}
       </div>
 
       {/* OJT Summary */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {ojtCards.map((card) => (
-          <div key={card.label} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+        {ojtCards.map((card, i) => (
+          <AnimatedCard key={card.label} delay={i * 0.05} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
             <p className="text-sm text-gray-500 dark:text-gray-400">{card.label}</p>
             <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
-          </div>
+          </AnimatedCard>
         ))}
       </div>
 
       {/* Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Users by Role */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+        <AnimatedCard delay={0.15} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
           <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Users by Role</h3>
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
@@ -218,10 +220,10 @@ export function AdminOverview() {
               <Legend />
             </PieChart>
           </ResponsiveContainer>
-        </div>
+        </AnimatedCard>
 
         {/* Trainees by OJT Status */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+        <AnimatedCard delay={0.2} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
           <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Trainees by OJT Status</h3>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={data.traineesByStatus}>
@@ -232,18 +234,18 @@ export function AdminOverview() {
               <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </div>
+        </AnimatedCard>
       </div>
 
       {/* Recent Activity */}
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+      <AnimatedCard delay={0.25} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
         <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Recent Activity (Last 7 Days)</h3>
         {data.recentActivity.length === 0 ? (
           <p className="text-sm text-gray-500 dark:text-gray-400">No recent activity</p>
         ) : (
-          <div className="space-y-3">
+          <AnimatedList className="space-y-3">
             {data.recentActivity.map((item, i) => (
-              <div key={i} className="flex items-center justify-between text-sm">
+              <AnimatedListItem key={i} variants={listItemVariants} className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
                   <span className={`px-2 py-0.5 text-xs font-medium rounded ${
                     item.action === 'create' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
@@ -256,11 +258,11 @@ export function AdminOverview() {
                   <span className="text-gray-700 dark:text-gray-300">{item.entity}</span>
                 </div>
                 <span className="text-gray-500 dark:text-gray-400">{item.time}</span>
-              </div>
+              </AnimatedListItem>
             ))}
-          </div>
+          </AnimatedList>
         )}
-      </div>
+      </AnimatedCard>
     </div>
   );
 }

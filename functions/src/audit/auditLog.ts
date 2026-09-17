@@ -24,41 +24,72 @@ export interface AuditLogContext {
   correlationId?: string;
 }
 
-const db = getAdminDb();
+export function deepClean<T>(obj?: T): T | undefined {
+  if (obj == null) return undefined;
+  if (Array.isArray(obj)) {
+    const cleaned = (obj as any).map((v: any) => deepClean(v)).filter((v: any) => v !== undefined);
+    return (cleaned.length ? cleaned : undefined) as any;
+  }
+  if (typeof obj === 'object') {
+    const cleaned: any = {};
+    for (const [k, v] of Object.entries(obj as any)) {
+      const val = deepClean(v as any);
+      if (val !== undefined) cleaned[k] = val;
+    }
+    return Object.keys(cleaned).length ? (cleaned as T) : undefined;
+  }
+  return obj === undefined ? undefined : obj;
+}
 
 export async function logAction(
   entry: Omit<AuditLogEntry, 'timestamp'>,
   context?: AuditLogContext
 ): Promise<void> {
-  const auditEntry: AuditLogEntry = {
+  // Build the raw entry with all fields, then deep clean to remove any undefined values
+  const rawEntry = {
     ...entry,
     timestamp: Timestamp.now(),
-    metadata: {
-      ...entry.metadata,
-      ...context,
-    },
+    ...context,
   };
-
-  await db.collection(COLLECTIONS.AUDIT_LOGS).add(auditEntry);
+  const auditEntry = deepClean(rawEntry);
+  if (!auditEntry) {
+    throw new Error('Audit entry resolved to undefined after cleaning');
+  }
+  await getAdminDb().collection(COLLECTIONS.AUDIT_LOGS).add(auditEntry as any);
 }
+
 
 export async function logActionBatch(
   entries: Omit<AuditLogEntry, 'timestamp'>[],
   context?: AuditLogContext
 ): Promise<void> {
-  const batch = db.batch();
+  const adminDb = getAdminDb();
+  const batch = adminDb.batch();
   const now = Timestamp.now();
 
   for (const entry of entries) {
-    const docRef = db.collection(COLLECTIONS.AUDIT_LOGS).doc();
-    batch.set(docRef, {
-      ...entry,
+    const docRef = adminDb.collection(COLLECTIONS.AUDIT_LOGS).doc();
+    const cleanedEntry: any = {
+      userId: entry.userId,
+      action: entry.action,
+      entityType: entry.entityType,
+      entityId: entry.entityId,
       timestamp: now,
-      metadata: {
-        ...entry.metadata,
-        ...context,
-      },
+    };
+    if (entry.originalValue) {
+      const orig = deepClean(entry.originalValue);
+      if (orig) cleanedEntry.originalValue = orig;
+    }
+    if (entry.newValue) {
+      const newV = deepClean(entry.newValue);
+      if (newV) cleanedEntry.newValue = newV;
+    }
+    const mergedMeta = deepClean({
+      ...entry.metadata,
+      ...context,
     });
+    if (mergedMeta) cleanedEntry.metadata = mergedMeta;
+    batch.set(docRef, cleanedEntry);
   }
 
   await batch.commit();
@@ -69,15 +100,28 @@ export async function logActionInTransaction(
   transaction: FirebaseFirestore.Transaction,
   context?: AuditLogContext
 ): Promise<void> {
-  const docRef = db.collection(COLLECTIONS.AUDIT_LOGS).doc();
-  transaction.set(docRef, {
-    ...entry,
+  const docRef = getAdminDb().collection(COLLECTIONS.AUDIT_LOGS).doc();
+  const cleanedEntryTx: any = {
+    userId: entry.userId,
+    action: entry.action,
+    entityType: entry.entityType,
+    entityId: entry.entityId,
     timestamp: Timestamp.now(),
-    metadata: {
-      ...entry.metadata,
-      ...context,
-    },
+  };
+  if (entry.originalValue) {
+    const orig = deepClean(entry.originalValue);
+    if (orig) cleanedEntryTx.originalValue = orig;
+  }
+  if (entry.newValue) {
+    const newV = deepClean(entry.newValue);
+    if (newV) cleanedEntryTx.newValue = newV;
+  }
+  const mergedMetaTx = deepClean({
+    ...entry.metadata,
+    ...context,
   });
+  if (mergedMetaTx) cleanedEntryTx.metadata = mergedMetaTx;
+  transaction.set(docRef, cleanedEntryTx);
 }
 
 export function createAuditEntry(
@@ -105,7 +149,7 @@ export async function getAuditLogs(
   entityId: string,
   limit = 50
 ): Promise<AuditLogEntry[]> {
-  const snapshot = await db
+  const snapshot = await getAdminDb()
     .collection(COLLECTIONS.AUDIT_LOGS)
     .where('entityType', '==', entityType)
     .where('entityId', '==', entityId)
@@ -123,7 +167,7 @@ export async function getUserAuditLogs(
   userId: string,
   limit = 50
 ): Promise<AuditLogEntry[]> {
-  const snapshot = await db
+  const snapshot = await getAdminDb()
     .collection(COLLECTIONS.AUDIT_LOGS)
     .where('userId', '==', userId)
     .orderBy('timestamp', 'desc')

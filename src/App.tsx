@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/features/auth';
 import { LoginPage, UnauthorizedPage } from '@/features/auth';
-import { AdminRoute, CoordinatorRoute, TraineeRoute } from '@/features/auth';
+import { AdminRoute, SupervisorRoute, CoordinatorRoute, TraineeRoute } from '@/features/auth';
+import { LogoutButton } from '@/features/auth';
 import { AdminLayout } from '@/features/admin/components/AdminLayout';
 import { AdminDashboard } from '@/features/admin/components/AdminDashboard';
 import { SupervisorLayout, SupervisorDashboard, SupervisorTraineeList } from '@/features/supervisor';
@@ -18,11 +19,15 @@ import { DocumentList } from '@/features/documents/components/DocumentList';
 import { CoordinatorDashboard } from '@/features/coordinator/components/CoordinatorDashboard';
 import { CoordinatorLayout } from '@/features/coordinator/components/CoordinatorLayout';
 import { AuditLogViewer } from '@/features/admin/components/AuditLogViewer';
+import { CompanyBrowser } from '@/features/trainee/components/CompanyBrowser';
+import { ExternalPlacementRequest } from '@/features/trainee/components/ExternalPlacementRequest';
 import { NetworkStatusIndicator } from '@/shared/components/NetworkStatus';
 import { SkipToContent } from '@/shared/components/SkipToContent';
 import { BottomNav } from '@/shared/components/BottomNav';
 import { DashboardRedirect } from '@/shared/components/DashboardRedirect';
 import { FirestoreHealthCheck } from '@/shared/components/FirestoreHealthCheck';
+import { ThemeToggle } from '@/shared/components/ThemeToggle';
+import { PageTransition } from '@/shared/components/PageTransition';
 
 function App() {
   return (
@@ -38,7 +43,9 @@ function App() {
           <Route path="/admin" element={
             <AdminRoute>
               <AdminLayout>
-                <AdminDashboard />
+                <PageTransition>
+                  <AdminDashboard />
+                </PageTransition>
               </AdminLayout>
             </AdminRoute>
           } />
@@ -46,7 +53,9 @@ function App() {
           <Route path="/admin/audit-logs" element={
             <AdminRoute>
               <AdminLayout>
-                <AuditLogViewer />
+                <PageTransition>
+                  <AuditLogViewer />
+                </PageTransition>
               </AdminLayout>
             </AdminRoute>
           } />
@@ -54,57 +63,89 @@ function App() {
           <Route path="/admin/*" element={  
             <AdminRoute>
               <AdminLayout>
-                <AdminDashboard />
+                <PageTransition>
+                  <AdminDashboard />
+                </PageTransition>
               </AdminLayout>
             </AdminRoute>
           } />
 
           <Route path="/supervisor" element={
-            <SupervisorLayout>
-              <SupervisorDashboard />
-            </SupervisorLayout>
+            <SupervisorRoute>
+              <SupervisorLayout>
+                <PageTransition>
+                  <SupervisorDashboard />
+                </PageTransition>
+              </SupervisorLayout>
+            </SupervisorRoute>
           } />
 
           <Route path="/supervisor/trainees" element={
-            <SupervisorLayout>
-              <SupervisorTraineeList />
-            </SupervisorLayout>
+            <SupervisorRoute>
+              <SupervisorLayout>
+                <PageTransition>
+                  <SupervisorTraineeList />
+                </PageTransition>
+              </SupervisorLayout>
+            </SupervisorRoute>
           } />
 
           <Route path="/supervisor/qr" element={
-            <SupervisorLayout>
-              <SupervisorQRPage />
-            </SupervisorLayout>
+            <SupervisorRoute>
+              <SupervisorLayout>
+                <PageTransition>
+                  <SupervisorQRPage />
+                </PageTransition>
+              </SupervisorLayout>
+            </SupervisorRoute>
           } />
 
           <Route path="/supervisor/attendance" element={
-            <SupervisorLayout>
-              <SupervisorAttendanceMonitor />
-            </SupervisorLayout>
+            <SupervisorRoute>
+              <SupervisorLayout>
+                <PageTransition>
+                  <SupervisorAttendanceMonitor />
+                </PageTransition>
+              </SupervisorLayout>
+            </SupervisorRoute>
           } />
 
           <Route path="/supervisor/dtr" element={
-            <SupervisorLayout>
-              <SupervisorDTRList />
-            </SupervisorLayout>
+            <SupervisorRoute>
+              <SupervisorLayout>
+                <PageTransition>
+                  <SupervisorDTRList />
+                </PageTransition>
+              </SupervisorLayout>
+            </SupervisorRoute>
           } />
 
           <Route path="/supervisor/tasks" element={
-            <SupervisorLayout>
-              <TaskList />
-            </SupervisorLayout>
+            <SupervisorRoute>
+              <SupervisorLayout>
+                <PageTransition>
+                  <TaskList />
+                </PageTransition>
+              </SupervisorLayout>
+            </SupervisorRoute>
           } />
 
           <Route path="/supervisor/leave" element={
-            <SupervisorLayout>
-              <SupervisorLeaveList />
-            </SupervisorLayout>
+            <SupervisorRoute>
+              <SupervisorLayout>
+                <PageTransition>
+                  <SupervisorLeaveList />
+                </PageTransition>
+              </SupervisorLayout>
+            </SupervisorRoute>
           } />
           
           <Route path="/coordinator" element={
             <CoordinatorRoute>
               <CoordinatorLayout>
-                <CoordinatorDashboard />
+                <PageTransition>
+                  <CoordinatorDashboard />
+                </PageTransition>
               </CoordinatorLayout>
             </CoordinatorRoute>
           } />
@@ -112,7 +153,9 @@ function App() {
           <Route path="/coordinator/*" element={
             <CoordinatorRoute>
               <CoordinatorLayout>
-                <CoordinatorDashboard />
+                <PageTransition>
+                  <CoordinatorDashboard />
+                </PageTransition>
               </CoordinatorLayout>
             </CoordinatorRoute>
           } />
@@ -163,6 +206,22 @@ function App() {
             </TraineeRoute>
           } />
 
+          <Route path="/trainee/companies" element={
+            <TraineeRoute>
+              <PrivateLayout>
+                <CompanyBrowser />
+              </PrivateLayout>
+            </TraineeRoute>
+          } />
+
+          <Route path="/trainee/placement" element={
+            <TraineeRoute>
+              <PrivateLayout>
+                <ExternalPlacementRequest />
+              </PrivateLayout>
+            </TraineeRoute>
+          } />
+
           <Route path="/dashboard" element={<DashboardRedirect />} />
 
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
@@ -179,6 +238,8 @@ const PAGE_NAMES: Record<string, string> = {
   '/trainee/dtr': 'DTR',
   '/trainee/documents': 'Documents',
   '/trainee/leave': 'Leave',
+  '/trainee/companies': 'Companies',
+  '/trainee/placement': 'Placement',
 };
 
 function PrivateLayout({ children }: { children: React.ReactNode }) {
@@ -192,17 +253,19 @@ function PrivateLayout({ children }: { children: React.ReactNode }) {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">Interno</h1>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               <NetworkStatusIndicator />
-              <nav className="flex items-center gap-4">
-                <span className="text-sm text-gray-600 dark:text-gray-400">{pageName}</span>
-              </nav>
+              <ThemeToggle />
+              <span className="text-sm text-gray-600 dark:text-gray-400 hidden sm:inline">{pageName}</span>
+              <LogoutButton />
             </div>
           </div>
         </div>
       </header>
-      <main id="main-content" className="container mx-auto px-4 py-6" role="main">
-        {children}
+      <main id="main-content" className="container mx-auto px-4 py-6 pb-24 lg:pb-6" role="main">
+        <PageTransition>
+          {children}
+        </PageTransition>
       </main>
       <div className="lg:hidden">
         <BottomNav />
@@ -275,6 +338,36 @@ function TraineeDashboard() {
       hoverColor: 'hover:bg-yellow-100 dark:hover:bg-yellow-900/30',
       iconBg: 'bg-yellow-100 dark:bg-yellow-800/40',
       iconColor: 'text-yellow-600 dark:text-yellow-400',
+    },
+    {
+      title: 'Browse Companies',
+      description: 'Find external companies for placement',
+      route: '/trainee/companies',
+      color: 'indigo',
+      icon: (
+        <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+        </svg>
+      ),
+      bgColor: 'bg-indigo-50 dark:bg-indigo-900/20',
+      hoverColor: 'hover:bg-indigo-100 dark:hover:bg-indigo-900/30',
+      iconBg: 'bg-indigo-100 dark:bg-indigo-800/40',
+      iconColor: 'text-indigo-600 dark:text-indigo-400',
+    },
+    {
+      title: 'My Placement',
+      description: 'View your placement request status',
+      route: '/trainee/placement',
+      color: 'teal',
+      icon: (
+        <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
+        </svg>
+      ),
+      bgColor: 'bg-teal-50 dark:bg-teal-900/20',
+      hoverColor: 'hover:bg-teal-100 dark:hover:bg-teal-900/30',
+      iconBg: 'bg-teal-100 dark:bg-teal-800/40',
+      iconColor: 'text-teal-600 dark:text-teal-400',
     },
   ];
 

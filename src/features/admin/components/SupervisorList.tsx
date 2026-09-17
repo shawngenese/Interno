@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { adminService } from '../services/adminService';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
+import { ActionsMenu } from '@/shared/components/ActionsMenu';
 import type { Supervisor, ListSupervisorsParams } from '../types';
 
 interface SupervisorListProps {
@@ -143,14 +144,11 @@ export function SupervisorList({ onEdit, onAssignTrainees }: SupervisorListProps
                           Assign Trainees
                         </button>
                       )}
-                      {onEdit && (
-                        <button
-                          onClick={() => onEdit(supervisor)}
-                          className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-                        >
-                          Edit
-                        </button>
-                      )}
+                      <ActionsMenu
+                        items={[
+                          ...(onEdit ? [{ label: 'Edit', onClick: () => onEdit(supervisor) }] : []),
+                        ]}
+                      />
                     </div>
                   </td>
                 </tr>

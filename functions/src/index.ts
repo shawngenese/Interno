@@ -1,19 +1,15 @@
-/**
- * REFERENCE / EMULATOR ONLY — NEVER DEPLOYED ON SPARK (C2 free-only).
- *
- * Cloud Functions (any gen) require Blaze billing, so this codebase is kept
- * for logic reference and `firebase emulators:start` local runs only.
- * Production trusted logic lives in `supabase/functions/*` (Edge, Singapore).
- * Do NOT run `firebase deploy --only functions` on the Spark plan.
- */
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { setUserRoleHandler, getCurrentUserRoleHandler } from './auth/customClaims';
 import { logAction, getAuditLogs, getUserAuditLogs } from './audit/auditLog';
-import { getAdminDb, COLLECTIONS, type AuditAction, type EntityType } from './config';
+import { getAdminDb, getAdminAuth, COLLECTIONS, type AuditAction, type EntityType } from './config';
+import { generateQRTokenHandler } from './qr/generateQRToken';
+import { validateQRScanHandler } from './qr/validateQRScan';
+import { calculateDTRHandler } from './dtr/calculateDTR';
+import { validateUploadHandler } from './storage/validateUpload';
+import { sendFCMNotificationHandler } from './notifications/sendFCM';
+import { sendEmailHandler } from './notifications/sendEmail';
+import { Timestamp } from 'firebase-admin/firestore';
 
-// Client connects with getFunctions(app, 'asia-southeast1').
-// v2 onCall defaults to us-central1, which caused CORS/404 when the client
-// called the asia-southeast1 URL. Pin all callables to asia-southeast1.
 const REGION = 'asia-southeast1';
 
 export const setUserRole = onCall<{
@@ -116,4 +112,72 @@ export const cleanupExpiredQRSessions = onCall({ region: REGION }, async (reques
   await batch.commit();
 
   return { cleaned: count };
+});
+
+export const generateQRToken = onCall<{ action: 'time_in' | 'time_out'; expirationSeconds?: 30 | 60 | 120 | 300 }>(
+  { region: REGION },
+  generateQRTokenHandler
+);
+
+export const validateQRScan = onCall<{ token: string; deviceInfo?: Record<string, unknown>; location?: { latitude: number; longitude: number; accuracy?: number } }>(
+  { region: REGION },
+  validateQRScanHandler
+);
+
+export const calculateDTR = onCall<{ traineeId: string; startDate: number; endDate: number; forceRecalc?: boolean }>(
+  { region: REGION },
+  calculateDTRHandler
+);
+
+export const validateUpload = onCall<{ fileName: string; mimeType: string; fileSize: number; bucket: 'documents' | 'tasks' | 'profiles'; traineeId?: string; taskId?: string; userId?: string }>(
+  { region: REGION },
+  validateUploadHandler
+);
+
+export const sendFCMNotification = onCall<{ tokens?: string[]; topic?: string; title: string; body: string; data?: Record<string, string>; image?: string; priority?: 'high' | 'normal'; ttl?: number }>(
+  { region: REGION },
+  sendFCMNotificationHandler
+);
+
+export const sendEmail = onCall<{ to: string | string[]; subject: string; html: string; text?: string; replyTo?: string }>(
+  { region: REGION },
+  sendEmailHandler
+);
+
+export const deleteUserAccount = onCall<{ uid: string }>({ region: REGION }, async (request) => {
+  if (!request.auth || request.auth.token.role !== 'admin') {
+    throw new HttpsError('permission-denied', 'Admin only');
+  }
+
+  const { uid } = request.data;
+  if (!uid) {
+    throw new HttpsError('invalid-argument', 'uid is required');
+  }
+
+  const db = getAdminDb();
+  const auth = getAdminAuth();
+
+  const userSnap = await db.doc(`${COLLECTIONS.USERS}/${uid}`).get();
+  const userData = userSnap.exists ? userSnap.data() : null;
+
+  await auth.deleteUser(uid);
+
+  if (userSnap.exists) {
+    await db.doc(`${COLLECTIONS.USERS}/${uid}`).update({
+      status: 'archived',
+      archivedAt: Timestamp.now(),
+      archivedBy: request.auth.uid,
+    });
+  }
+
+  await logAction({
+    userId: request.auth.uid,
+    action: 'delete',
+    entityType: 'user',
+    entityId: uid,
+    originalValue: userData ? (userData.role !== undefined ? { email: userData.email, role: userData.role } : { email: userData.email }) : undefined,
+    metadata: { via: 'deleteUserAccount', softDelete: true },
+  });
+
+  return { success: true };
 });

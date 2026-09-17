@@ -3,36 +3,41 @@ import { getAuth, Auth } from 'firebase-admin/auth';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import { getStorage, Storage } from 'firebase-admin/storage';
 
-let adminApp: App;
-let adminAuth: Auth;
-let adminDb: Firestore;
-let adminStorage: Storage;
+let adminApp: App | undefined;
+let adminAuth: Auth | undefined;
+let adminDb: Firestore | undefined;
+let adminStorage: Storage | undefined;
 
 export function initializeAdminApp(): App {
-  if (getApps().length > 0) {
-    adminApp = getApps()[0];
-  } else {
-    adminApp = initializeApp();
+  if (!adminApp) {
+    adminApp = getApps().length > 0 ? getApps()[0] : initializeApp();
   }
-  adminAuth = getAuth(adminApp);
-  adminDb = getFirestore(adminApp);
-  adminStorage = getStorage(adminApp);
+  if (!adminAuth) {
+    adminAuth = getAuth(adminApp);
+  }
+  if (!adminDb) {
+    adminDb = getFirestore(adminApp);
+    adminDb.settings({ ignoreUndefinedProperties: true });
+  }
+  if (!adminStorage) {
+    adminStorage = getStorage(adminApp);
+  }
   return adminApp;
 }
 
 export function getAdminAuth(): Auth {
   if (!adminAuth) initializeAdminApp();
-  return adminAuth;
+  return adminAuth!;
 }
 
 export function getAdminDb(): Firestore {
   if (!adminDb) initializeAdminApp();
-  return adminDb;
+  return adminDb!;
 }
 
 export function getAdminStorage(): Storage {
   if (!adminStorage) initializeAdminApp();
-  return adminStorage;
+  return adminStorage!;
 }
 
 export const ROLES = ['admin', 'supervisor', 'coordinator', 'trainee'] as const;
@@ -81,6 +86,7 @@ export const ENTITY_TYPES = [
   'dtr',
   'leave_request',
   'audit_log',
+  'notification',
 ] as const;
 export type EntityType = (typeof ENTITY_TYPES)[number];
 
@@ -111,6 +117,16 @@ export const COLLECTIONS = {
   LEAVE_REQUESTS: 'leave_requests',
   AUDIT_LOGS: 'audit_logs',
   SETTINGS: 'settings',
+  WORK_SCHEDULES: 'work_schedules',
+  OJT_SCHEDULES: 'ojt_schedules',
+  FCM_TOKENS: 'fcm_tokens',
+  NOTIFICATIONS: 'notifications',
+  NOTIFICATION_PREFERENCES: 'notification_preferences',
+  TASK_COMMENTS: 'task_comments',
+  TASK_DOCUMENTS: 'task_documents',
+  TASK_APPROVALS: 'task_approvals',
+  DTR_CORRECTION_REQUESTS: 'dtr_correction_requests',
+  PROFILE_IMAGES: 'profile_images',
 } as const;
 
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];

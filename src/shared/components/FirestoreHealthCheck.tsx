@@ -1,51 +1,59 @@
 import { useEffect, useState } from 'react';
-import { getFirestoreInstancePublic } from '@/config/firebase';
+import { getFirestoreInstancePublic, getAuthInstancePublic } from '@/config/firebase';
 import { onSnapshot, collection, query, limit } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 
 /**
  * Detects Firestore connectivity by listening to a lightweight query.
  * Shows a dismissable banner if Firestore is unreachable.
- *
- * We listen to the `users` collection with a limit(1) — the rules already
- * enforce auth, so a "permission denied" error means Firestore IS connected
- * (just not authorized), while a network error means it's truly unreachable.
  */
 export function FirestoreHealthCheck() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
+    let unsubscribeSnapshot: (() => void) | undefined;
 
     try {
-      const db = getFirestoreInstancePublic();
-      const q = query(collection(db, 'users'), limit(1));
+      const auth = getAuthInstancePublic();
+      const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+        unsubscribeSnapshot?.();
+        unsubscribeSnapshot = undefined;
 
-      unsubscribe = onSnapshot(
-        q,
-        () => {
-          // Firestore is reachable — clear any banner.
+        if (!user) {
           setError(null);
-        },
-        (err) => {
-          // Distinguish network errors from permission errors.
-          // Permission errors mean Firestore IS connected (rules are working).
-          const code = (err as { code?: string }).code ?? '';
-          if (code === 'permission-denied' || code === 'unauthenticated') {
-            // Connected, just not authorized — not a connectivity issue.
-            setError(null);
-          } else {
-            // Network / unavailable / not-found — Firestore is unreachable.
-            setError(err.message || 'Firestore is unreachable');
-          }
-        },
-      );
-    } catch {
-      setError('Firestore failed to initialize');
-    }
+          return;
+        }
 
-    return () => {
-      unsubscribe?.();
-    };
+        try {
+          const db = getFirestoreInstancePublic();
+          const q = query(collection(db, 'users'), limit(1));
+
+          unsubscribeSnapshot = onSnapshot(
+            q,
+            () => {
+              setError(null);
+            },
+            (err) => {
+              const code = (err as { code?: string }).code ?? '';
+              if (code === 'permission-denied' || code === 'unauthenticated') {
+                setError(null);
+              } else {
+                setError(err.message || 'Firestore is unreachable');
+              }
+            },
+          );
+        } catch {
+          setError('Firestore failed to initialize');
+        }
+      });
+
+      return () => {
+        unsubscribeAuth();
+        unsubscribeSnapshot?.();
+      };
+    } catch {
+      return () => {};
+    }
   }, []);
 
   if (!error) return null;

@@ -1,4 +1,7 @@
 import type { Timestamp } from '@/shared/types';
+import type { PlacementType, PlacementStatus } from '@/shared/types';
+
+export type { PlacementType, PlacementStatus } from '@/shared/types';
 
 export type UserRole = 'admin' | 'supervisor' | 'coordinator' | 'trainee';
 
@@ -23,9 +26,14 @@ export interface User {
 export interface Company {
   id: string;
   name: string;
-  address?: string;
+  type: 'internal' | 'external';
+  verified: boolean;
+  verifiedBy?: string;
+  verifiedAt?: Timestamp;
+  contactPerson?: string;
   contactEmail?: string;
   contactPhone?: string;
+  address?: string;
   settings?: {
     qrExpirationSeconds?: number;
     workHoursPerDay?: number;
@@ -55,6 +63,15 @@ export interface Supervisor {
   updatedAt: Timestamp;
 }
 
+export interface Coordinator {
+  id: string;
+  userId: string;
+  companyId: string;
+  departmentId: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
 export interface Trainee {
   id: string;
   userId: string;
@@ -64,6 +81,14 @@ export interface Trainee {
   scheduleId?: string;
   status: AccountStatus;
   ojtStatus: 'pending' | 'active' | 'on_leave' | 'completed' | 'terminated' | 'archived';
+  placementType: PlacementType;
+  externalCompanyId?: string;
+  externalSupervisorId?: string;
+  placementStatus?: PlacementStatus;
+  placementRequestedAt?: Timestamp;
+  placementApprovedBy?: string;
+  placementApprovedAt?: Timestamp;
+  placementNotes?: string;
   profile?: {
     studentId?: string;
     course?: string;
@@ -116,9 +141,12 @@ export interface UserFormData {
 
 export interface CompanyFormData {
   name: string;
+  type: 'internal' | 'external';
   address?: string;
+  contactPerson?: string;
   contactEmail?: string;
   contactPhone?: string;
+  verified?: boolean;
 }
 
 export interface DepartmentFormData {
@@ -155,6 +183,10 @@ export interface TraineeFormData {
   scheduleId?: string;
   status: AccountStatus;
   ojtStatus: Trainee['ojtStatus'];
+  placementType: PlacementType;
+  externalCompanyId?: string;
+  externalSupervisorId?: string;
+  placementNotes?: string;
   profile?: {
     studentId?: string;
     course?: string;
@@ -203,6 +235,8 @@ export interface ListTraineesParams {
   companyId?: string;
   departmentId?: string;
   supervisorId?: string;
+  placementType?: PlacementType;
+  placementStatus?: PlacementStatus;
   search?: string;
 }
 
@@ -226,4 +260,20 @@ export interface ListOJTSchedulesParams {
   limit?: number;
   companyId?: string;
   search?: string;
+}
+
+export interface PlacementRequest {
+  id: string;
+  traineeId: string;
+  traineeName: string;
+  traineeEmail: string;
+  externalCompanyId: string;
+  externalCompanyName: string;
+  requestNotes?: string;
+  status: PlacementStatus;
+  reviewedBy?: string;
+  reviewerNotes?: string;
+  reviewedAt?: Timestamp;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }

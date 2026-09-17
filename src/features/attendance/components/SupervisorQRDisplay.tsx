@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '@/features/auth/AuthProvider';
-import { callEdgeFunction, isSupabaseConfigured } from '@/config/supabase';
-import { getFirestoreInstancePublic } from '@/config/firebase';
+import { getFunctionsInstancePublic, getFirestoreInstancePublic } from '@/config/firebase';
+import { httpsCallable } from 'firebase/functions';
 import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { formatTime12 } from '@/shared/utils/dateUtils';
 
@@ -52,38 +52,29 @@ export function SupervisorQRDisplay({
     }
 
     try {
-      if (!isSupabaseConfigured()) {
-        throw new Error('Supabase not configured. QR generation unavailable.');
-      }
-
-      const auth = (await import('@/config/firebase')).getAuthInstancePublic();
-      const currentUser = auth.currentUser;
-      if (!currentUser) throw new Error('Not authenticated');
-
-      const idToken = await currentUser.getIdToken(true);
-      const result = await callEdgeFunction<{
+      const functions = getFunctionsInstancePublic();
+      const generateQRToken = httpsCallable<{ action: string; expirationSeconds: number }, {
         token: string;
         qrDataUrl: string;
         expiresAt: number;
         sessionId: string;
-      }>(
-        'generate_qr_token',
-        { action, expirationSeconds },
-        { idToken }
-      );
+      }>(functions, 'generateQRToken');
 
-      setToken(result.token);
-      setQrDataUrl(result.qrDataUrl);
-      setExpiresAt(result.expiresAt);
-      setSessionId(result.sessionId);
+      const result = await generateQRToken({ action, expirationSeconds });
+      const data = result.data;
+
+      setToken(data.token);
+      setQrDataUrl(data.qrDataUrl);
+      setExpiresAt(data.expiresAt);
+      setSessionId(data.sessionId);
       setTimeLeft(expirationSeconds);
-      onGenerated?.({ token: result.token, expiresAt: result.expiresAt, sessionId: result.sessionId });
+      onGenerated?.({ token: data.token, expiresAt: data.expiresAt, sessionId: data.sessionId });
 
       // Subscribe to real-time scans for this session
       const db = getFirestoreInstancePublic();
       const scansQuery = query(
         collection(db, 'attendance_records'),
-        where('qrSessionId', '==', result.sessionId),
+        where('qrSessionId', '==', data.sessionId),
         orderBy('timestamp', 'desc'),
         limit(10),
       );

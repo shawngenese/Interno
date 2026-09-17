@@ -1,7 +1,4 @@
 rules_version = '2';
-// REFERENCE / EMULATOR ONLY (C2 free-only): the Firebase Storage bucket is
-// NOT deployed (requires Blaze). Files live in Supabase Storage buckets
-// (documents/tasks/profiles); this file is kept for emulator reference only.
 service firebase.storage {
   match /b/{bucket}/o {
     // ============================================

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { adminService } from '../services/adminService';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
+import { ActionsMenu } from '@/shared/components/ActionsMenu';
 import type { OJTSchedule, ListOJTSchedulesParams } from '../types';
 
 interface OJTScheduleListProps {
@@ -58,9 +59,17 @@ export function OJTScheduleList({ onEdit, onView }: OJTScheduleListProps) {
 
   const totalPages = Math.ceil(total / (filters.limit || 10));
 
-  const formatDate = (timestamp: { seconds: number; nanoseconds: number } | Date) => {
-    const date = timestamp instanceof Date ? timestamp : new Date(timestamp.seconds * 1000);
-    return date.toLocaleDateString();
+  const formatDate = (timestamp: { seconds: number; nanoseconds: number } | Date | string | undefined) => {
+    if (!timestamp) return '—';
+    if (timestamp instanceof Date) return timestamp.toLocaleDateString();
+    if (typeof timestamp === 'string') {
+      const d = new Date(timestamp);
+      return isNaN(d.getTime()) ? '—' : d.toLocaleDateString();
+    }
+    if (typeof timestamp === 'object' && 'seconds' in timestamp) {
+      return new Date(timestamp.seconds * 1000).toLocaleDateString();
+    }
+    return '—';
   };
 
   if (loading) {
@@ -139,24 +148,12 @@ export function OJTScheduleList({ onEdit, onView }: OJTScheduleListProps) {
                     {schedule.workScheduleName || '—'}
                   </td>
                   <td className="px-4 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      {onView && (
-                        <button
-                          onClick={() => onView(schedule)}
-                          className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
-                        >
-                          View
-                        </button>
-                      )}
-                      {onEdit && (
-                        <button
-                          onClick={() => onEdit(schedule)}
-                          className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-                        >
-                          Edit
-                        </button>
-                      )}
-                    </div>
+                    <ActionsMenu
+                      items={[
+                        ...(onView ? [{ label: 'View', onClick: () => onView(schedule) }] : []),
+                        ...(onEdit ? [{ label: 'Edit', onClick: () => onEdit(schedule) }] : []),
+                      ]}
+                    />
                   </td>
                 </tr>
               ))

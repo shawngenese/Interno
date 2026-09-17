@@ -54,7 +54,7 @@ export function DocumentUploader({
 
     let progressInterval: ReturnType<typeof setInterval> | null = null;
     try {
-      // Simulate progress (real progress would need Supabase JS SDK with onUploadProgress)
+      // Simulate progress (Firebase Storage doesn't expose streaming progress on web)
       progressInterval = setInterval(() => {
         setProgress(p => Math.min(p + 10, 90));
       }, 100);

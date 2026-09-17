@@ -7,6 +7,8 @@ import {
   DepartmentForm,
   SupervisorList,
   SupervisorForm,
+  CoordinatorList,
+  CoordinatorForm,
   TraineeList,
   TraineeForm,
   DocumentRequirements,
@@ -21,12 +23,13 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import type { User, Company, Department, Supervisor, Trainee, WorkSchedule, OJTSchedule } from '../types';
 
-type Tab = 'dashboard' | 'users' | 'companies' | 'departments' | 'supervisors' | 'trainees' | 'work-schedules' | 'ojt-schedules';
+type Tab = 'dashboard' | 'users' | 'companies' | 'departments' | 'supervisors' | 'coordinators' | 'trainees' | 'work-schedules' | 'ojt-schedules';
 
 const TAB_LABELS: Record<string, string> = {
   'dashboard': 'Dashboard',
   'users': 'Users',
   'supervisors': 'Supervisors',
+  'coordinators': 'Coordinators',
   'trainees': 'Trainees',
   'companies': 'Companies',
   'departments': 'Departments',
@@ -41,6 +44,7 @@ const TAB_FROM_PATH: Record<string, Tab> = {
   '/admin/companies': 'companies',
   '/admin/departments': 'departments',
   '/admin/supervisors': 'supervisors',
+  '/admin/coordinators': 'coordinators',
   '/admin/trainees': 'trainees',
   '/admin/work-schedules': 'work-schedules',
   '/admin/ojt-schedules': 'ojt-schedules',
@@ -81,6 +85,7 @@ export function AdminDashboard() {
   const [editingOJTScheduleId, setEditingOJTScheduleId] = useState<string | null>(null);
   const [assigningSupervisor, setAssigningSupervisor] = useState<Supervisor | null>(null);
   const [editingSupervisorId, setEditingSupervisorId] = useState<string | null>(null);
+  const [editingCoordinatorId, setEditingCoordinatorId] = useState<string | null>(null);
   const [viewingTraineeCompanyId, setViewingTraineeCompanyId] = useState<string | null>(null);
 
   const handleEditUser = (user: User) => {
@@ -91,6 +96,7 @@ export function AdminDashboard() {
     setEditingWorkScheduleId(null);
     setEditingOJTScheduleId(null);
     setAssigningSupervisor(null);
+    setEditingCoordinatorId(null);
     setView('edit');
   };
 
@@ -102,6 +108,7 @@ export function AdminDashboard() {
     setEditingWorkScheduleId(null);
     setEditingOJTScheduleId(null);
     setAssigningSupervisor(null);
+    setEditingCoordinatorId(null);
     setView('edit');
   };
 
@@ -136,6 +143,19 @@ export function AdminDashboard() {
     setEditingWorkScheduleId(null);
     setEditingOJTScheduleId(null);
     setAssigningSupervisor(null);
+    setEditingCoordinatorId(null);
+    setView('edit');
+  };
+
+  const handleEditCoordinator = (user: User) => {
+    setEditingCoordinatorId(user.id);
+    setEditingUserId(user.id);
+    setEditingCompanyId(null);
+    setEditingDepartmentId(null);
+    setEditingTraineeId(null);
+    setEditingWorkScheduleId(null);
+    setEditingOJTScheduleId(null);
+    setAssigningSupervisor(null);
     setView('edit');
   };
 
@@ -147,6 +167,7 @@ export function AdminDashboard() {
     setEditingTraineeId(null);
     setEditingWorkScheduleId(null);
     setEditingOJTScheduleId(null);
+    setEditingCoordinatorId(null);
     setView('assign');
   };
 
@@ -414,6 +435,31 @@ export function AdminDashboard() {
               onSuccess={handleAssignmentSuccess}
             />
           )}
+        </>
+      )}
+
+      {activeTab === 'coordinators' && (
+        <>
+          {view === 'list' && (
+            <>
+              <div className="mb-6 flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Coordinator Management</h1>
+                  <p className="text-gray-600 dark:text-gray-400 mt-1">Manage coordinators in your department</p>
+                </div>
+                <button
+                  onClick={() => { setView('create'); setEditingCoordinatorId(null); }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+                >
+                  Add Coordinator
+                </button>
+              </div>
+              <CoordinatorList onEdit={handleEditCoordinator} />
+            </>
+          )}
+
+          {view === 'create' && <CoordinatorForm onCancel={handleBackToList} onSaved={handleBackToList} />}
+          {view === 'edit' && editingCoordinatorId && <CoordinatorForm editingCoordinatorId={editingCoordinatorId} editingId={editingUserId ?? undefined} onCancel={handleBackToList} onSaved={handleBackToList} />}
         </>
       )}
 

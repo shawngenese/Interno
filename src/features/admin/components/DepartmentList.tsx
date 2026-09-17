@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { adminService } from '../services/adminService';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
+import { ActionsMenu } from '@/shared/components/ActionsMenu';
 import type { Department, ListDepartmentsParams } from '../types';
 
 interface DepartmentListProps {
@@ -143,22 +144,12 @@ export function DepartmentList({ onEdit, companyId: propCompanyId }: DepartmentL
                     {department.createdAt?.seconds ? new Date(department.createdAt.seconds * 1000).toLocaleDateString() : '-'}
                   </td>
                   <td className="px-4 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      {onEdit && (
-                        <button
-                          onClick={() => onEdit(department)}
-                          className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                        >
-                          Edit
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleDelete(department.id)}
-                        className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                      >
-                        Delete
-                      </button>
-                    </div>
+                    <ActionsMenu
+                      items={[
+                        ...(onEdit ? [{ label: 'Edit', onClick: () => onEdit(department) }] : []),
+                        { label: 'Delete', onClick: () => handleDelete(department.id), danger: true },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))

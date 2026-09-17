@@ -1,5 +1,5 @@
-import { callEdgeFunction, isSupabaseConfigured, getSupabase } from '@/config/supabase';
-import { getAuthInstancePublic } from '@/config/firebase';
+import { getFunctionsInstancePublic, getStorageInstancePublic } from '@/config/firebase';
+import { httpsCallable } from 'firebase/functions';
 import type { QueryConstraint } from 'firebase/firestore';
 import type {
   Document,
@@ -15,40 +15,28 @@ import type {
 
 const LIST_FETCH_CAP = 500;
 
-async function getIdToken(): Promise<string> {
-  const auth = getAuthInstancePublic();
-  const currentUser = auth.currentUser;
-  if (!currentUser) throw new Error('Not authenticated');
-  return currentUser.getIdToken(true);
-}
-
-/** Get signed upload URL from Edge validate_upload. */
+/** Validate upload via Cloud Function and get storage path. */
 export async function getUploadUrl(params: UploadParams): Promise<UploadValidationResult> {
-  if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
-  const idToken = await getIdToken();
-  return callEdgeFunction<UploadValidationResult>('validate_upload', params as unknown as Record<string, unknown>, { idToken });
+  const functions = getFunctionsInstancePublic();
+  const validateUpload = httpsCallable<UploadParams, UploadValidationResult>(functions, 'validateUpload');
+  const result = await validateUpload(params);
+  return result.data;
 }
 
-/** Upload file to Supabase Storage using Supabase JS SDK. */
-export async function uploadToStorage(bucket: string, path: string, file: File): Promise<void> {
-  const supabase = getSupabase();
-  const { error } = await supabase.storage.from(bucket).upload(path, file, {
-    contentType: file.type,
-    upsert: true,
-  });
-  if (error) {
-    throw new Error(`Upload failed: ${error.message}`);
-  }
+/** Upload file to Firebase Storage. */
+export async function uploadToStorage(_bucket: string, path: string, file: File): Promise<void> {
+  const storage = getStorageInstancePublic();
+  const { ref, uploadBytes } = await import('firebase/storage');
+  const storageRef = ref(storage, path);
+  await uploadBytes(storageRef, file, { contentType: file.type });
 }
 
-/** Get signed download URL for a storage path (valid for 1 hour). */
-export async function getDownloadUrl(bucket: string, path: string): Promise<string> {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
-  if (error) {
-    throw new Error(`Failed to create signed URL: ${error.message}`);
-  }
-  return data.signedUrl;
+/** Get download URL for a storage path. */
+export async function getDownloadUrl(_bucket: string, path: string): Promise<string> {
+  const storage = getStorageInstancePublic();
+  const { ref, getDownloadURL } = await import('firebase/storage');
+  const storageRef = ref(storage, path);
+  return getDownloadURL(storageRef);
 }
 
 /** Create document metadata in Firestore after upload. */
@@ -165,12 +153,14 @@ export async function deleteDocument(id: string): Promise<void> {
     if (callerRole !== 'admin') throw new Error('Not authorized to delete this document');
   }
 
-  // Delete from Supabase Storage
-  if (isSupabaseConfigured()) {
-    const supabase = getSupabase();
-    const bucket = data.storagePath.split('/')[0];
-    const path = data.storagePath.split('/').slice(1).join('/');
-    await supabase.storage.from(bucket).remove([path]);
+  // Delete from Firebase Storage
+  try {
+    const storage = getStorageInstancePublic();
+    const { ref, deleteObject } = await import('firebase/storage');
+    const storageRef = ref(storage, data.storagePath);
+    await deleteObject(storageRef);
+  } catch (err) {
+    console.warn('Failed to delete file from storage (metadata still deleted):', err);
   }
 
   // Delete metadata
@@ -219,7 +209,7 @@ export async function uploadAndCreateDocument(
     ...metadata,
   } as UploadParams);
 
-  // 2. Upload to Supabase Storage using SDK
+  // 2. Upload to Firebase Storage
   await uploadToStorage(metadata.bucket, validation.path, file);
 
   // 3. Create metadata in Firestore with uploadedBy from current user

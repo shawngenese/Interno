@@ -3,6 +3,7 @@ import { adminService } from '../services/adminService';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { ActionsMenu } from '@/shared/components/ActionsMenu';
 import type { Trainee, ListTraineesParams } from '../types';
 
 interface TraineeListProps {
@@ -96,6 +97,10 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
 
   const handleOJTStatusChange = (ojtStatus: Trainee['ojtStatus'] | undefined) => {
     setFilters(p => ({ ...p, ojtStatus, page: 1 }));
+  };
+
+  const handlePlacementTypeChange = (placementType: Trainee['placementType'] | undefined) => {
+    setFilters(p => ({ ...p, placementType, page: 1 }));
   };
 
   const handleOJTStatusUpdate = async (traineeId: string, newStatus: Trainee['ojtStatus']) => {
@@ -197,6 +202,17 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
             <option value="terminated">Terminated</option>
             <option value="archived">Archived</option>
           </select>
+
+          <select
+            value={filters.placementType || ''}
+            onChange={(e) => handlePlacementTypeChange((e.target.value as Trainee['placementType']) || undefined)}
+            aria-label="Filter by placement type"
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">All Placement Types</option>
+            <option value="internal">Internal</option>
+            <option value="external">External</option>
+          </select>
         </div>
       </div>
 
@@ -216,6 +232,7 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
               <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
               <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Department</th>
               <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Supervisor</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">OJT Status</th>
               <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
@@ -250,6 +267,11 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
                     {trainee.supervisorName || '-'}
                   </td>
                   <td className="px-4 py-4">
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${trainee.placementType === 'external' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'}`}>
+                      {trainee.placementType === 'external' ? 'External' : 'Internal'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-4">
                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(trainee.status)}`}>
                       {trainee.status.charAt(0).toUpperCase() + trainee.status.slice(1)}
                     </span>
@@ -260,31 +282,7 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
                     </span>
                   </td>
                   <td className="px-4 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2 relative">
-                      {onView && (
-                        <button
-                          onClick={() => onView(trainee)}
-                          className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
-                        >
-                          View
-                        </button>
-                      )}
-                      {onEdit && (
-                        <button
-                          onClick={() => onEdit(trainee)}
-                          className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-                        >
-                          Edit
-                        </button>
-                      )}
-                      {onViewDocuments && (
-                        <button
-                          onClick={() => onViewDocuments(trainee)}
-                          className="px-3 py-1.5 text-xs font-medium text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 transition-colors"
-                        >
-                          Docs
-                        </button>
-                      )}
+                    <div className="flex items-center justify-end gap-2">
                       <div className="relative">
                         <button
                           onClick={(e) => { e.stopPropagation(); setStatusDropdownId(statusDropdownId === trainee.id ? null : trainee.id); }}
@@ -312,6 +310,13 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
                           </div>
                         )}
                       </div>
+                      <ActionsMenu
+                        items={[
+                          ...(onView ? [{ label: 'View', onClick: () => onView(trainee) }] : []),
+                          ...(onEdit ? [{ label: 'Edit', onClick: () => onEdit(trainee) }] : []),
+                          ...(onViewDocuments ? [{ label: 'Documents', onClick: () => onViewDocuments(trainee) }] : []),
+                        ]}
+                      />
                     </div>
                   </td>
                 </tr>

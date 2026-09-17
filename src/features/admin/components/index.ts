@@ -8,6 +8,8 @@ export { DepartmentList } from './DepartmentList';
 export { DepartmentForm } from './DepartmentForm';
 export { SupervisorList } from './SupervisorList';
 export { SupervisorForm } from './SupervisorForm';
+export { CoordinatorList } from './CoordinatorList';
+export { CoordinatorForm } from './CoordinatorForm';
 export { TraineeList } from './TraineeList';
 export { TraineeForm } from './TraineeForm';
 export { DocumentRequirements } from './DocumentRequirements';

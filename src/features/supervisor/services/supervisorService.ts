@@ -23,20 +23,56 @@ export async function getSupervisorByUserId(userId: string): Promise<Supervisor 
     limit(1),
   );
   const snap = await getDocs(q);
-  if (snap.empty) return null;
-  const docSnap = snap.docs[0];
-  return toEntity<Supervisor>(docSnap.id, docSnap.data() as Record<string, unknown>);
+  if (!snap.empty) {
+    const docSnap = snap.docs[0];
+    return toEntity<Supervisor>(docSnap.id, docSnap.data() as Record<string, unknown>);
+  }
+
+  // Direct doc lookup fallback (supervisors doc ID often equals userId)
+  const { doc, getDoc } = await import('firebase/firestore');
+  const directSnap = await getDoc(doc(db, COLLECTIONS.SUPERVISORS, userId));
+  if (directSnap.exists()) {
+    return toEntity<Supervisor>(directSnap.id, directSnap.data() as Record<string, unknown>);
+  }
+
+  return null;
 }
 
-/** Get trainees assigned to a supervisor. */
-export async function getAssignedTrainees(supervisorId: string): Promise<Trainee[]> {
+/** Get trainees assigned to a supervisor. Queries both internal (supervisorId) and external (externalCompanyId) paths. */
+export async function getAssignedTrainees(supervisorId: string, companyId?: string): Promise<Trainee[]> {
   const db = getFirestoreInstancePublic();
-  const q = query(
+  const results: Trainee[] = [];
+
+  // Internal path: trainees where supervisorId matches
+  const internalQ = query(
     collection(db, COLLECTIONS.TRAINEES),
     where('supervisorId', '==', supervisorId),
   );
-  const snap = await getDocs(q);
-  return snap.docs.map(d => toEntity<Trainee>(d.id, d.data() as Record<string, unknown>));
+  const internalSnap = await getDocs(internalQ);
+  results.push(...internalSnap.docs.map(d => toEntity<Trainee>(d.id, d.data() as Record<string, unknown>)));
+
+  // External path: trainees at the supervisor's company with external placement
+  if (companyId) {
+    try {
+      const externalQ = query(
+        collection(db, COLLECTIONS.TRAINEES),
+        where('externalCompanyId', '==', companyId),
+        where('placementType', '==', 'external'),
+      );
+      const externalSnap = await getDocs(externalQ);
+      // Deduplicate (in case a trainee somehow matches both)
+      const existingIds = new Set(results.map(t => t.id));
+      for (const d of externalSnap.docs) {
+        if (!existingIds.has(d.id)) {
+          results.push(toEntity<Trainee>(d.id, d.data() as Record<string, unknown>));
+        }
+      }
+    } catch (e) {
+      console.warn('External trainees query note:', e);
+    }
+  }
+
+  return results;
 }
 
 function chunkArray<T>(arr: T[], size: number): T[][] {

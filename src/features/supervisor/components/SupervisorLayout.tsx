@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation, NavLink } from 'react-router-dom';
 import { LogoutButton } from '@/features/auth';
+import { ThemeToggle } from '@/shared/components/ThemeToggle';
 
 const navigation = [
   { name: 'Dashboard', href: '/supervisor', icon: HomeIcon },
@@ -92,16 +93,19 @@ export function SupervisorLayout({ children }: { children: ReactNode }) {
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-700">
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">Interno</h1>
-              <button
-                type="button"
-                className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 lg:hidden"
-                onClick={() => setSidebarOpen(false)}
-                aria-label="Close navigation menu"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+              <div className="flex items-center gap-1">
+                <ThemeToggle />
+                <button
+                  type="button"
+                  className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 lg:hidden"
+                  onClick={() => setSidebarOpen(false)}
+                  aria-label="Close navigation menu"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
             <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
               {navigation.map((item) => (

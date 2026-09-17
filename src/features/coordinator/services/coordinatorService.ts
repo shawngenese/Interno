@@ -1,5 +1,5 @@
 import { getFirestoreInstancePublic } from '@/config/firebase';
-import { collection, query, where, getDocs, documentId } from 'firebase/firestore';
+import { collection, query, where, getDocs, documentId, doc, getDoc, updateDoc, serverTimestamp, writeBatch, arrayUnion, arrayRemove } from 'firebase/firestore';
 import type {
   CoordinatorTrainee,
   CoordinatorAttendanceSummary,
@@ -7,6 +7,7 @@ import type {
   CoordinatorDocumentSummary,
   CoordinatorDashboardData,
 } from '../types';
+import type { Trainee } from '@/features/admin/types';
 
 const FIRESTORE_IN_MAX = 30;
 
@@ -267,4 +268,93 @@ export async function getCoordinatorDashboardData(
   ]);
 
   return { trainees, attendance, tasks, documents, ojtProgress };
+}
+
+/** Get a single trainee by ID. */
+export async function getTrainee(traineeId: string): Promise<Trainee | null> {
+  const db = getFirestoreInstancePublic();
+  const docRef = doc(db, 'trainees', traineeId);
+  const snap = await getDoc(docRef);
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...snap.data() } as Trainee;
+}
+
+/** Update trainee assignment (supervisor, company, placement type). */
+export async function updateTraineeAssignment(
+  traineeId: string,
+  updates: {
+    supervisorId?: string;
+    companyId?: string;
+    placementType?: string;
+    externalCompanyId?: string;
+    externalCompanyName?: string;
+  },
+): Promise<void> {
+  const db = getFirestoreInstancePublic();
+  const docRef = doc(db, 'trainees', traineeId);
+
+  // If supervisorId changed, sync the assignedTrainees subcollection
+  if (updates.supervisorId !== undefined) {
+    const currentSnap = await getDoc(docRef);
+    const currentData = currentSnap.exists() ? currentSnap.data() as Record<string, unknown> : null;
+    const oldSupervisorId = (currentData?.supervisorId as string) || '';
+    const newSupervisorId = updates.supervisorId || '';
+
+    if (oldSupervisorId !== newSupervisorId) {
+      const batch = writeBatch(db);
+
+      // Remove from old supervisor's array + subcollection
+      if (oldSupervisorId) {
+        batch.update(doc(db, 'supervisors', oldSupervisorId), {
+          assignedTrainees: arrayRemove(traineeId),
+          updatedAt: serverTimestamp(),
+        });
+        batch.delete(doc(db, 'supervisors', oldSupervisorId, 'assignedTrainees', traineeId));
+      }
+
+      // Add to new supervisor's array + subcollection
+      if (newSupervisorId) {
+        batch.update(doc(db, 'supervisors', newSupervisorId), {
+          assignedTrainees: arrayUnion(traineeId),
+          updatedAt: serverTimestamp(),
+        });
+        batch.set(
+          doc(db, 'supervisors', newSupervisorId, 'assignedTrainees', traineeId),
+          { traineeId, assignedAt: serverTimestamp() },
+          { merge: true },
+        );
+      }
+
+      await batch.commit();
+    }
+  }
+
+  await updateDoc(docRef, {
+    ...updates,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/** Get all companies for coordinator management. */
+export async function getCompanies(): Promise<{ id: string; name: string; type?: string; verified?: boolean }[]> {
+  const db = getFirestoreInstancePublic();
+  const snap = await getDocs(collection(db, 'companies'));
+  return snap.docs.map((d) => ({
+    id: d.id,
+    name: d.data().name,
+    type: d.data().type,
+    verified: d.data().verified,
+  }));
+}
+
+/** Get all supervisors for coordinator management. */
+export async function getSupervisors(): Promise<{ id: string; name: string; email: string; companyId?: string }[]> {
+  const db = getFirestoreInstancePublic();
+  const snap = await getDocs(collection(db, 'supervisors'));
+  return snap.docs.map((d) => ({
+    id: d.id,
+    name: d.data().name,
+    email: d.data().email,
+    companyId: d.data().companyId,
+  }));
 }
