@@ -43,7 +43,7 @@ export function AnnouncementCard({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] overflow-hidden">
       {announcement.pinned && (
         <div className="h-1 bg-blue-600" />
       )}
@@ -62,7 +62,7 @@ export function AnnouncementCard({
                 {statusInfo.label}
               </span>
             </div>
-            <h3 className="font-semibold text-gray-900 dark:text-white">
+            <h3 className="font-semibold text-[#121212] dark:text-white">
               {announcement.title}
             </h3>
           </div>
@@ -71,7 +71,7 @@ export function AnnouncementCard({
             <div className="flex items-center gap-1">
               <button
                 onClick={handleTogglePin}
-                className="p-1.5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="p-1.5 text-[#757575] hover:text-[#3A3A3A] dark:hover:text-[#BDBDBD] hover:bg-[#EFEFEF] dark:hover:bg-[#3A3A3A] rounded-lg transition-colors"
                 title={announcement.pinned ? 'Unpin' : 'Pin'}
               >
                 {announcement.pinned ? '📌' : '📎'}
@@ -88,7 +88,7 @@ export function AnnouncementCard({
               {announcement.status === 'published' && (
                 <button
                   onClick={handleArchive}
-                  className="p-1.5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  className="p-1.5 text-[#757575] hover:text-[#3A3A3A] dark:hover:text-[#BDBDBD] hover:bg-[#EFEFEF] dark:hover:bg-[#3A3A3A] rounded-lg transition-colors"
                   title="Archive"
                 >
                   📦
@@ -97,7 +97,7 @@ export function AnnouncementCard({
               {onEdit && (
                 <button
                   onClick={() => onEdit(announcement)}
-                  className="p-1.5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  className="p-1.5 text-[#757575] hover:text-[#3A3A3A] dark:hover:text-[#BDBDBD] hover:bg-[#EFEFEF] dark:hover:bg-[#3A3A3A] rounded-lg transition-colors"
                   title="Edit"
                 >
                   ✏️
@@ -116,11 +116,11 @@ export function AnnouncementCard({
           )}
         </div>
 
-        <p className="text-gray-600 dark:text-gray-400 text-sm mb-3 whitespace-pre-wrap">
+        <p className="text-[#555555] dark:text-[#9E9E9E] text-sm mb-3 whitespace-pre-wrap">
           {announcement.content}
         </p>
 
-        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+        <div className="flex items-center justify-between text-xs text-[#757575] dark:text-[#9E9E9E]">
           <div className="flex items-center gap-3">
             <span>By {announcement.authorName}</span>
             <span>{new Date(announcement.createdAt).toLocaleDateString()}</span>
@@ -132,7 +132,7 @@ export function AnnouncementCard({
               {announcement.targetRoles.map(role => (
                 <span
                   key={role}
-                  className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded"
+                  className="px-1.5 py-0.5 bg-[#EFEFEF] dark:bg-[#3A3A3A] rounded"
                 >
                   {ROLE_LABELS[role]}
                 </span>
@@ -142,7 +142,7 @@ export function AnnouncementCard({
         </div>
 
         {announcement.expiresAt && (
-          <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+          <div className="mt-2 text-xs text-[#757575] dark:text-[#9E9E9E]">
             Expires: {new Date(announcement.expiresAt).toLocaleDateString()}
           </div>
         )}

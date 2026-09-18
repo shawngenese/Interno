@@ -49,7 +49,10 @@ export async function getAssignedTrainees(supervisorId: string, companyId?: stri
     where('supervisorId', '==', supervisorId),
   );
   const internalSnap = await getDocs(internalQ);
-  results.push(...internalSnap.docs.map(d => toEntity<Trainee>(d.id, d.data() as Record<string, unknown>)));
+  results.push(...internalSnap.docs.map(d => {
+    const data = d.data() as Record<string, unknown>;
+    return toEntity<Trainee>(d.id, { ...data, name: data.name as string });
+  }));
 
   // External path: trainees at the supervisor's company with external placement
   if (companyId) {
@@ -64,7 +67,8 @@ export async function getAssignedTrainees(supervisorId: string, companyId?: stri
       const existingIds = new Set(results.map(t => t.id));
       for (const d of externalSnap.docs) {
         if (!existingIds.has(d.id)) {
-          results.push(toEntity<Trainee>(d.id, d.data() as Record<string, unknown>));
+          const data = d.data() as Record<string, unknown>;
+          results.push(toEntity<Trainee>(d.id, { ...data, name: data.name as string }));
         }
       }
     } catch (e) {

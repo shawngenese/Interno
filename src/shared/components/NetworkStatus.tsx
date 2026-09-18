@@ -52,7 +52,7 @@ export const NetworkStatusIndicator = React.memo(function NetworkStatusIndicator
     <div className={`flex items-center gap-2 ${className}`} role="status" aria-live="polite">
       <div className="flex items-center gap-1.5">
         <span className={`w-2 h-2 rounded-full ${online ? 'bg-green-500' : 'bg-red-500'}`} aria-hidden="true" />
-        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+        <span className="text-xs font-medium text-[#555555] dark:text-[#9E9E9E]">
           {online ? 'Online' : 'Offline'}
         </span>
       </div>

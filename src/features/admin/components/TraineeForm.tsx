@@ -247,8 +247,8 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 max-w-2xl mx-auto">
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6 max-w-2xl mx-auto">
+      <h2 className="text-xl font-semibold text-[#121212] dark:text-white mb-6">
         {viewOnly ? 'View Trainee Profile' : isEditing ? 'Edit Trainee Profile' : 'Add Trainee'}
       </h2>
 
@@ -261,13 +261,13 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
       <form onSubmit={handleSubmit} className="space-y-6">
         {!isEditing && (
           <div className="flex items-center gap-3 mb-4">
-            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <label className="flex items-center gap-2 text-sm text-[#3A3A3A] dark:text-[#BDBDBD]">
               <input
                 type="checkbox"
                 checked={useExistingUser}
                 onChange={(e) => setUseExistingUser(e.target.checked)}
                 disabled={viewOnly}
-                className="rounded border-gray-300 dark:border-gray-600"
+                className="rounded border-[#BDBDBD] dark:border-[#555555]"
               />
               Link to existing user account
             </label>
@@ -276,7 +276,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
 
         {!isEditing && (useExistingUser ? (
           <div>
-            <label htmlFor="userId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="userId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               User <span className="text-red-500">*</span>
             </label>
             <select
@@ -285,7 +285,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
               onChange={(e) => handleChange('userId', e.target.value)}
               required
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Select User</option>
               {existingUsers.map(user => (
@@ -296,7 +296,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
         ) : (
           <>
             <div>
-              <label htmlFor="newEmail" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="newEmail" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
                 Email <span className="text-red-500">*</span>
               </label>
               <input
@@ -306,12 +306,12 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
                 onChange={(e) => setNewUserEmail(e.target.value)}
                 required
                 disabled={viewOnly}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="trainee@example.com"
               />
             </div>
             <div>
-              <label htmlFor="newDisplayName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="newDisplayName" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
                 Display Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -321,12 +321,12 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
                 onChange={(e) => setNewUserDisplayName(e.target.value)}
                 required
                 disabled={viewOnly}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Juan Dela Cruz"
               />
             </div>
             <div>
-              <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="newPassword" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
                 Password <span className="text-red-500">*</span>
               </label>
               <input
@@ -337,7 +337,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
                 required
                 minLength={6}
                 disabled={viewOnly}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="At least 6 characters"
               />
             </div>
@@ -346,7 +346,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="companyId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="companyId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Company <span className="text-red-500">*</span>
             </label>
             <select
@@ -355,7 +355,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
               onChange={(e) => handleChange('companyId', e.target.value)}
               required
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Select Company</option>
               {companies.map(company => (
@@ -365,7 +365,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
           </div>
 
           <div>
-            <label htmlFor="placementType" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="placementType" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Placement Type <span className="text-red-500">*</span>
             </label>
             <select
@@ -373,7 +373,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
               value={formData.placementType}
               onChange={(e) => handleChange('placementType', e.target.value)}
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="internal">Internal</option>
               <option value="external">External</option>
@@ -383,7 +383,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
           {formData.placementType === 'external' && (
             <>
               <div>
-                <label htmlFor="externalCompanyId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="externalCompanyId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
                   External Company <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -391,7 +391,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
                   value={formData.externalCompanyId}
                   onChange={(e) => handleChange('externalCompanyId', e.target.value)}
                   disabled={viewOnly}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <option value="">Select External Company</option>
                   {companies.filter(c => c.type === 'external' && c.verified).map(company => (
@@ -401,7 +401,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
               </div>
 
               <div>
-                <label htmlFor="externalSupervisorId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="externalSupervisorId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
                   External Supervisor ID
                 </label>
                 <input
@@ -410,7 +410,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
                   value={formData.externalSupervisorId}
                   onChange={(e) => handleChange('externalSupervisorId', e.target.value)}
                   disabled={viewOnly}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="External supervisor email or ID"
                 />
               </div>
@@ -418,7 +418,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
           )}
 
           <div>
-            <label htmlFor="departmentId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="departmentId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Department <span className="text-red-500">*</span>
             </label>
             <select
@@ -427,7 +427,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
               onChange={(e) => handleChange('departmentId', e.target.value)}
               required
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Select Department</option>
               {departments.map(dept => (
@@ -437,7 +437,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
           </div>
 
           <div>
-            <label htmlFor="supervisorId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="supervisorId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Supervisor
             </label>
             <select
@@ -445,7 +445,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
               value={formData.supervisorId}
               onChange={(e) => handleChange('supervisorId', e.target.value)}
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Select Supervisor</option>
               {supervisors.map(sup => (
@@ -455,7 +455,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
           </div>
 
           <div>
-            <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="status" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Account Status
             </label>
             <select
@@ -463,7 +463,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
               value={formData.status}
               onChange={(e) => handleChange('status', e.target.value)}
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="pending">Pending</option>
               <option value="active">Active</option>
@@ -473,7 +473,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
           </div>
 
           <div>
-            <label htmlFor="ojtStatus" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="ojtStatus" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               OJT Status
             </label>
             <select
@@ -481,7 +481,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
               value={formData.ojtStatus}
               onChange={(e) => handleChange('ojtStatus', e.target.value)}
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="pending">Pending</option>
               <option value="active">Active</option>
@@ -493,11 +493,11 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
           </div>
         </div>
 
-        <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Student Information</h3>
+        <div className="border-t border-[#D5D5D5] dark:border-[#3A3A3A] pt-6">
+          <h3 className="text-lg font-medium text-[#121212] dark:text-white mb-4">Student Information</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="studentId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="studentId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
                 Student ID
               </label>
               <input
@@ -506,13 +506,13 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
                 value={formData.profile?.studentId || ''}
                 onChange={(e) => handleChange('profile.studentId', e.target.value)}
                 disabled={viewOnly}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="e.g., 2024-00123"
               />
             </div>
 
             <div>
-              <label htmlFor="course" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="course" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
                 Course
               </label>
               <input
@@ -521,13 +521,13 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
                 value={formData.profile?.course || ''}
                 onChange={(e) => handleChange('profile.course', e.target.value)}
                 disabled={viewOnly}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="e.g., BS Computer Science"
               />
             </div>
 
             <div>
-              <label htmlFor="school" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="school" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
                 School
               </label>
               <input
@@ -536,13 +536,13 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
                 value={formData.profile?.school || ''}
                 onChange={(e) => handleChange('profile.school', e.target.value)}
                 disabled={viewOnly}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="e.g., University of the Philippines"
               />
             </div>
 
             <div>
-              <label htmlFor="yearLevel" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="yearLevel" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
                 Year Level
               </label>
               <input
@@ -551,18 +551,18 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
                 value={formData.profile?.yearLevel || ''}
                 onChange={(e) => handleChange('profile.yearLevel', e.target.value)}
                 disabled={viewOnly}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="e.g., 3rd Year"
               />
             </div>
           </div>
         </div>
 
-        <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Emergency Contact</h3>
+        <div className="border-t border-[#D5D5D5] dark:border-[#3A3A3A] pt-6">
+          <h3 className="text-lg font-medium text-[#121212] dark:text-white mb-4">Emergency Contact</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label htmlFor="ecName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="ecName" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
                 Name
               </label>
               <input
@@ -571,13 +571,13 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
                 value={formData.profile?.emergencyContact?.name || ''}
                 onChange={(e) => handleChange('emergencyContact.name', e.target.value)}
                 disabled={viewOnly}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Contact name"
               />
             </div>
 
             <div>
-              <label htmlFor="ecRelationship" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="ecRelationship" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
                 Relationship
               </label>
               <input
@@ -586,13 +586,13 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
                 value={formData.profile?.emergencyContact?.relationship || ''}
                 onChange={(e) => handleChange('emergencyContact.relationship', e.target.value)}
                 disabled={viewOnly}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="e.g., Parent"
               />
             </div>
 
             <div>
-              <label htmlFor="ecPhone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="ecPhone" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
                 Phone
               </label>
               <input
@@ -601,18 +601,18 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
                 value={formData.profile?.emergencyContact?.phone || ''}
                 onChange={(e) => handleChange('emergencyContact.phone', e.target.value)}
                 disabled={viewOnly}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="+63 9XX XXX XXXX"
               />
             </div>
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex justify-end gap-3 pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
           <button
             type="button"
             onClick={handleCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#555555] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
           >
             {viewOnly ? 'Close' : 'Cancel'}
           </button>

@@ -9,7 +9,7 @@ interface SkeletonProps {
 }
 
 function SkeletonBase({ className = '', variant = 'text', width, height }: SkeletonProps) {
-  const baseClasses = 'animate-pulse bg-gray-200 dark:bg-gray-700';
+  const baseClasses = 'animate-pulse bg-[#D5D5D5] dark:bg-[#3A3A3A]';
   const variantClasses = {
     text: 'rounded h-4',
     circular: 'rounded-full',
@@ -42,7 +42,7 @@ export const Skeleton = React.memo(function Skeleton({ count = 1, className = ''
 
 export const SkeletonCard = React.memo(function SkeletonCard({ className = '' }: { className?: string }) {
   return (
-    <div className={`rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 space-y-3 ${className}`}>
+    <div className={`rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4 space-y-3 ${className}`}>
       <div className="flex items-center gap-3">
         <Skeleton variant="circular" width={40} height={40} />
         <div className="flex-1 space-y-2">

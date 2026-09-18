@@ -85,8 +85,8 @@ export function CoordinatorDashboard() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-          <div className="h-8 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          <div className="h-8 w-48 bg-[#D5D5D5] dark:bg-[#3A3A3A] rounded animate-pulse" />
+          <div className="h-8 w-32 bg-[#D5D5D5] dark:bg-[#3A3A3A] rounded animate-pulse" />
         </div>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -98,40 +98,40 @@ export function CoordinatorDashboard() {
   }
 
   if (!data) {
-    return <div className="text-center py-12 text-gray-500 dark:text-gray-400">No data available</div>;
+    return <div className="text-center py-12 text-[#757575] dark:text-[#9E9E9E]">No data available</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Coordinator Dashboard</h2>
+        <h2 className="text-2xl font-bold text-[#121212] dark:text-white">Coordinator Dashboard</h2>
         <div className="flex gap-2">
           <input
             type="date"
             value={new Date(period.start).toISOString().split('T')[0]}
             onChange={(e) => setPeriod((p) => ({ ...p, start: new Date(e.target.value).getTime() }))}
             aria-label="Period start date"
-            className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm dark:text-white"
+            className="rounded-lg border border-[#BDBDBD] dark:border-[#555555] bg-white dark:bg-[#1E1E1E] px-3 py-1.5 text-sm dark:text-white"
           />
           <input
             type="date"
             value={new Date(period.end).toISOString().split('T')[0]}
             onChange={(e) => setPeriod((p) => ({ ...p, end: new Date(e.target.value).getTime() }))}
             aria-label="Period end date"
-            className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm dark:text-white"
+            className="rounded-lg border border-[#BDBDBD] dark:border-[#555555] bg-white dark:bg-[#1E1E1E] px-3 py-1.5 text-sm dark:text-white"
           />
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700">
+      <div className="border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
         <nav className="flex gap-4 -mb-px overflow-x-auto">
           <button
             onClick={() => setActiveTab('overview')}
             className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
               activeTab === 'overview'
                 ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+                : 'border-transparent text-[#757575] dark:text-[#9E9E9E] hover:text-[#3A3A3A] dark:hover:text-[#BDBDBD] hover:border-[#BDBDBD]'
             }`}
           >
             Overview
@@ -141,7 +141,7 @@ export function CoordinatorDashboard() {
             className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
               activeTab === 'trainees'
                 ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+                : 'border-transparent text-[#757575] dark:text-[#9E9E9E] hover:text-[#3A3A3A] dark:hover:text-[#BDBDBD] hover:border-[#BDBDBD]'
             }`}
           >
             Trainees
@@ -151,7 +151,7 @@ export function CoordinatorDashboard() {
             className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
               activeTab === 'placements'
                 ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+                : 'border-transparent text-[#757575] dark:text-[#9E9E9E] hover:text-[#3A3A3A] dark:hover:text-[#BDBDBD] hover:border-[#BDBDBD]'
             }`}
           >
             Placement Requests
@@ -161,7 +161,7 @@ export function CoordinatorDashboard() {
             className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
               activeTab === 'documents'
                 ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+                : 'border-transparent text-[#757575] dark:text-[#9E9E9E] hover:text-[#3A3A3A] dark:hover:text-[#BDBDBD] hover:border-[#BDBDBD]'
             }`}
           >
             Documents
@@ -171,7 +171,7 @@ export function CoordinatorDashboard() {
             className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
               activeTab === 'companies'
                 ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+                : 'border-transparent text-[#757575] dark:text-[#9E9E9E] hover:text-[#3A3A3A] dark:hover:text-[#BDBDBD] hover:border-[#BDBDBD]'
             }`}
           >
             Verify Companies
@@ -181,7 +181,7 @@ export function CoordinatorDashboard() {
             className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
               activeTab === 'invitations'
                 ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+                : 'border-transparent text-[#757575] dark:text-[#9E9E9E] hover:text-[#3A3A3A] dark:hover:text-[#BDBDBD] hover:border-[#BDBDBD]'
             }`}
           >
             Invite Supervisors
@@ -194,49 +194,49 @@ export function CoordinatorDashboard() {
         <>
           {/* Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <AnimatedCard delay={0} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Total Trainees</p>
+        <AnimatedCard delay={0} className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4">
+          <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Total Trainees</p>
           <p className="text-2xl font-bold text-blue-600">{totalTrainees}</p>
-          <p className="text-xs text-gray-400">{activeTrainees} active</p>
+          <p className="text-xs text-[#9E9E9E]">{activeTrainees} active</p>
         </AnimatedCard>
-        <AnimatedCard delay={0.05} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Avg Attendance</p>
+        <AnimatedCard delay={0.05} className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4">
+          <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Avg Attendance</p>
           <p className="text-2xl font-bold text-green-600">{avgAttendance}%</p>
         </AnimatedCard>
-        <AnimatedCard delay={0.1} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Avg OJT Progress</p>
+        <AnimatedCard delay={0.1} className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4">
+          <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Avg OJT Progress</p>
           <p className="text-2xl font-bold text-purple-600">{avgOJT}%</p>
         </AnimatedCard>
-        <AnimatedCard delay={0.15} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Tasks Pending</p>
+        <AnimatedCard delay={0.15} className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4">
+          <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Tasks Pending</p>
           <p className="text-2xl font-bold text-yellow-600">
             {totalSubmittedTasks}
           </p>
         </AnimatedCard>
-        <AnimatedCard delay={0.2} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Missing Docs</p>
+        <AnimatedCard delay={0.2} className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4">
+          <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Missing Docs</p>
           <p className="text-2xl font-bold text-red-600">{totalMissingDocs}</p>
         </AnimatedCard>
       </div>
 
       {/* Trainee Overview Table */}
-      <AnimatedCard delay={0.25} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="font-semibold text-gray-900 dark:text-white">Trainee Overview</h3>
+      <AnimatedCard delay={0.25} className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] overflow-hidden">
+        <div className="px-4 py-3 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
+          <h3 className="font-semibold text-[#121212] dark:text-white">Trainee Overview</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-700/50">
+            <thead className="bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
               <tr>
-                <th className="px-4 py-2 text-left text-gray-600 dark:text-gray-300 font-medium">Name</th>
-                <th className="px-4 py-2 text-center text-gray-600 dark:text-gray-300 font-medium">Status</th>
-                <th className="px-4 py-2 text-center text-gray-600 dark:text-gray-300 font-medium">Attendance</th>
-                <th className="px-4 py-2 text-center text-gray-600 dark:text-gray-300 font-medium">Tasks</th>
-                <th className="px-4 py-2 text-center text-gray-600 dark:text-gray-300 font-medium">Docs</th>
-                <th className="px-4 py-2 text-center text-gray-600 dark:text-gray-300 font-medium">OJT Hours</th>
+                <th className="px-4 py-2 text-left text-[#555555] dark:text-[#BDBDBD] font-medium">Name</th>
+                <th className="px-4 py-2 text-center text-[#555555] dark:text-[#BDBDBD] font-medium">Status</th>
+                <th className="px-4 py-2 text-center text-[#555555] dark:text-[#BDBDBD] font-medium">Attendance</th>
+                <th className="px-4 py-2 text-center text-[#555555] dark:text-[#BDBDBD] font-medium">Tasks</th>
+                <th className="px-4 py-2 text-center text-[#555555] dark:text-[#BDBDBD] font-medium">Docs</th>
+                <th className="px-4 py-2 text-center text-[#555555] dark:text-[#BDBDBD] font-medium">OJT Hours</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
               {data.trainees.map((trainee) => {
                 const att = attendanceMap.get(trainee.traineeId);
                 const task = tasksMap.get(trainee.traineeId);
@@ -244,38 +244,38 @@ export function CoordinatorDashboard() {
                 const ojt = ojtMap.get(trainee.traineeId);
 
                 return (
-                  <tr key={trainee.traineeId} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                  <tr key={trainee.traineeId} className="hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/30">
                     <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900 dark:text-white">{trainee.name}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">{trainee.email}</div>
+                      <div className="font-medium text-[#121212] dark:text-white">{trainee.name}</div>
+                      <div className="text-xs text-[#757575] dark:text-[#9E9E9E]">{trainee.email}</div>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={`px-2 py-0.5 text-xs font-medium rounded ${
                         trainee.status === 'active'
                           ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                          : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                          : 'bg-[#EFEFEF] text-[#555555] dark:bg-[#3A3A3A] dark:text-[#9E9E9E]'
                       }`}>
                         {trainee.status}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <div className="text-gray-900 dark:text-white">
+                      <div className="text-[#121212] dark:text-white">
                         {att ? `${att.presentDays}/${att.totalDays}` : '-'}
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                      <div className="text-xs text-[#757575] dark:text-[#9E9E9E]">
                         {att ? `${att.lateDays} late` : ''}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <div className="text-gray-900 dark:text-white">
+                      <div className="text-[#121212] dark:text-white">
                         {task ? `${task.approvedTasks}/${task.totalTasks}` : '-'}
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                      <div className="text-xs text-[#757575] dark:text-[#9E9E9E]">
                         {task && task.overdueTasks > 0 ? `${task.overdueTasks} overdue` : ''}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <div className="text-gray-900 dark:text-white">
+                      <div className="text-[#121212] dark:text-white">
                         {doc ? `${doc.approvedDocuments}/${doc.totalDocuments}` : '-'}
                       </div>
                       <div className="text-xs text-red-500 dark:text-red-400">
@@ -283,10 +283,10 @@ export function CoordinatorDashboard() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <div className="text-gray-900 dark:text-white">
+                      <div className="text-[#121212] dark:text-white">
                         {ojt ? `${ojt.completed}/${ojt.required}h` : '-'}
                       </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1">
+                      <div className="w-full bg-[#D5D5D5] dark:bg-[#3A3A3A] rounded-full h-1.5 mt-1">
                         <div
                           className="bg-blue-600 h-1.5 rounded-full"
                           style={{ width: `${ojt?.percentComplete || 0}%` }}

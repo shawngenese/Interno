@@ -10,7 +10,7 @@ function minutesToHours(mins: number): string {
 
 function statusBadge(status: DTREntry['status']): React.ReactNode {
   const styles: Record<DTREntry['status'], string> = {
-    draft: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    draft: 'bg-[#EFEFEF] text-[#3A3A3A] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]',
     pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
     approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
     rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
@@ -155,15 +155,15 @@ export function SupervisorDTRList() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">DTR Approval</h2>
+          <h2 className="text-lg font-semibold text-[#121212] dark:text-white">DTR Approval</h2>
           <div className="flex flex-wrap gap-3">
             <select
               value={filters.status || ''}
               onChange={(e) => setFilters(f => ({ ...f, status: e.target.value as DTRStatus | undefined, page: 1 }))}
               aria-label="Filter by status"
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
             >
               <option value="">All Status</option>
               <option value="draft">Draft</option>
@@ -177,7 +177,7 @@ export function SupervisorDTRList() {
               value={filters.startDate ? new Date(filters.startDate).toISOString().split('T')[0] : ''}
               onChange={(e) => setFilters(f => ({ ...f, startDate: e.target.value ? new Date(e.target.value).getTime() : undefined, page: 1 }))}
               aria-label="Start date"
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
               placeholder="Start Date"
             />
             <input
@@ -185,13 +185,13 @@ export function SupervisorDTRList() {
               value={filters.endDate ? new Date(filters.endDate).toISOString().split('T')[0] : ''}
               onChange={(e) => setFilters(f => ({ ...f, endDate: e.target.value ? new Date(e.target.value).getTime() + 86400000 - 1 : undefined, page: 1 }))}
               aria-label="End date"
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
               placeholder="End Date"
             />
             <select
               value={filters.page || 1}
               onChange={(e) => setFilters(f => ({ ...f, page: Number(e.target.value) }))}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white w-32"
+              className="px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white w-32"
             >
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
                 <option key={p} value={p}>Page {p}</option>
@@ -202,19 +202,19 @@ export function SupervisorDTRList() {
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-700/50">
+            <thead className="bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Trainee</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Date</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Regular (hrs)</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">OT (hrs)</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Late (min)</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Undertime (min)</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Trainee</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Date</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Regular (hrs)</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">OT (hrs)</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Late (min)</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Undertime (min)</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Status</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
               {loading ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center">
@@ -226,14 +226,14 @@ export function SupervisorDTRList() {
                 </tr>
               ) : dtrs.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">No DTR entries found</td>
+                  <td colSpan={8} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">No DTR entries found</td>
                 </tr>
               ) : (
                 dtrs.map((dtr) => (
-                  <tr key={dtr.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onClick={() => handleView(dtr)}>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">{dtr.traineeId.slice(0, 8)}...</td>
-                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{formatDateFull(dtr.date)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{minutesToHours(dtr.regularMinutes)}</td>
+                  <tr key={dtr.id} className="hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50 cursor-pointer" onClick={() => handleView(dtr)}>
+                    <td className="px-4 py-3 text-sm font-medium text-[#121212] dark:text-white">{dtr.traineeId.slice(0, 8)}...</td>
+                    <td className="px-4 py-3 text-sm text-[#757575] dark:text-[#9E9E9E]">{formatDateFull(dtr.date)}</td>
+                    <td className="px-4 py-3 text-sm text-[#121212] dark:text-white">{minutesToHours(dtr.regularMinutes)}</td>
                     <td className="px-4 py-3 text-sm text-blue-600 dark:text-blue-400">{minutesToHours(dtr.overtimeMinutes)}</td>
                     <td className="px-4 py-3 text-sm text-red-600 dark:text-red-400">{dtr.lateMinutes}</td>
                     <td className="px-4 py-3 text-sm text-orange-600 dark:text-orange-400">{dtr.undertimeMinutes}</td>
@@ -258,7 +258,7 @@ export function SupervisorDTRList() {
                         )}
                         <button
                           onClick={(e) => { e.stopPropagation(); handleView(dtr); }}
-                          className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                          className="px-3 py-1.5 text-xs font-medium text-[#555555] dark:text-[#9E9E9E] hover:text-[#121212] dark:hover:text-white"
                         >
                           View
                         </button>
@@ -272,7 +272,7 @@ export function SupervisorDTRList() {
 
           {totalPages > 1 && (
             <div className="mt-4 flex items-center justify-between">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">
                 Showing {((filters.page ?? 1) - 1) * (filters.limit || 20) + 1} to {Math.min((filters.page ?? 1) * (filters.limit || 20), total)} of {total}
               </p>
             </div>
@@ -291,14 +291,14 @@ export function SupervisorDTRList() {
         >
           {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
           <div
-            className="bg-white dark:bg-gray-800 rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+            className="bg-white dark:bg-[#1E1E1E] rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
             onKeyDown={(e) => { if (e.key === 'Escape') { setShowDetail(false); setSelectedDTR(null); } }}
           >
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-              <h3 id="dtr-detail-modal-title" className="text-lg font-semibold text-gray-900 dark:text-white">
+            <div className="p-6 border-b border-[#D5D5D5] dark:border-[#3A3A3A] flex items-center justify-between">
+              <h3 id="dtr-detail-modal-title" className="text-lg font-semibold text-[#121212] dark:text-white">
                 DTR Detail: {selectedDTR.traineeId.slice(0, 8)}... - {formatDateFull(selectedDTR.date)}
               </h3>
-              <button aria-label="Close" onClick={() => { setShowDetail(false); setSelectedDTR(null); }} className="text-gray-400 hover:text-gray-600">✕</button>
+              <button aria-label="Close" onClick={() => { setShowDetail(false); setSelectedDTR(null); }} className="text-[#9E9E9E] hover:text-[#555555]">✕</button>
             </div>
 
             {detailLoading ? (
@@ -311,45 +311,45 @@ export function SupervisorDTRList() {
             ) : (
               <div className="p-6 space-y-6">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Time In</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">{selectedDTR.actualTimeIn ? formatTime12(selectedDTR.actualTimeIn) : '—'}</p>
+                  <div className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg">
+                    <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Time In</p>
+                    <p className="text-xl font-bold text-[#121212] dark:text-white">{selectedDTR.actualTimeIn ? formatTime12(selectedDTR.actualTimeIn) : '—'}</p>
                   </div>
-                  <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Time Out</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">{selectedDTR.actualTimeOut ? formatTime12(selectedDTR.actualTimeOut) : '—'}</p>
+                  <div className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg">
+                    <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Time Out</p>
+                    <p className="text-xl font-bold text-[#121212] dark:text-white">{selectedDTR.actualTimeOut ? formatTime12(selectedDTR.actualTimeOut) : '—'}</p>
                   </div>
-                  <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Regular (hrs)</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">{minutesToHours(selectedDTR.regularMinutes)}</p>
+                  <div className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg">
+                    <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Regular (hrs)</p>
+                    <p className="text-xl font-bold text-[#121212] dark:text-white">{minutesToHours(selectedDTR.regularMinutes)}</p>
                   </div>
-                  <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">OT (hrs)</p>
+                  <div className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg">
+                    <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">OT (hrs)</p>
                     <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{minutesToHours(selectedDTR.overtimeMinutes)}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Late (min)</p>
+                  <div className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg">
+                    <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Late (min)</p>
                     <p className="text-xl font-bold text-red-600 dark:text-red-400">{selectedDTR.lateMinutes}</p>
                   </div>
-                  <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Undertime (min)</p>
+                  <div className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg">
+                    <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Undertime (min)</p>
                     <p className="text-xl font-bold text-orange-600 dark:text-orange-400">{selectedDTR.undertimeMinutes}</p>
                   </div>
-                  <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Night Diff (min)</p>
+                  <div className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg">
+                    <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Night Diff (min)</p>
                     <p className="text-xl font-bold text-purple-600 dark:text-purple-400">{selectedDTR.nightDiffMinutes}</p>
                   </div>
-                  <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Status</p>
+                  <div className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg">
+                    <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Status</p>
                     <p className="text-xl font-bold">{statusBadge(selectedDTR.status)}</p>
                   </div>
                 </div>
 
                 {selectedDTR.status === 'pending' && (
-                  <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex justify-end gap-3 pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
                     <button onClick={() => handleReject(selectedDTR)} className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">
                       Reject
                     </button>
@@ -360,17 +360,17 @@ export function SupervisorDTRList() {
                 )}
 
                 {corrections.length > 0 && (
-                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">Correction Requests ({corrections.length})</h4>
+                  <div className="pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
+                    <h4 className="text-md font-medium text-[#121212] dark:text-white mb-3">Correction Requests ({corrections.length})</h4>
                     <div className="space-y-3">
                       {corrections.map((c) => (
-                        <div key={c.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border">
+                        <div key={c.id} className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg border">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium text-gray-900 dark:text-white">{c.status}</span>
-                            <span className="text-xs text-gray-500">by {c.requestedBy.slice(0, 8)}...</span>
+                            <span className="font-medium text-[#121212] dark:text-white">{c.status}</span>
+                            <span className="text-xs text-[#757575]">by {c.requestedBy.slice(0, 8)}...</span>
                           </div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Reason: {c.reason}</p>
-                          <div className="text-xs text-gray-500 mb-2">
+                          <p className="text-sm text-[#555555] dark:text-[#9E9E9E] mb-2">Reason: {c.reason}</p>
+                          <div className="text-xs text-[#757575] mb-2">
                             Proposed: {c.proposedValue.actualTimeIn ? formatTime12(c.proposedValue.actualTimeIn) : '—'} - {c.proposedValue.actualTimeOut ? formatTime12(c.proposedValue.actualTimeOut) : '—'}
                           </div>
                           {c.status === 'pending' && (

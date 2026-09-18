@@ -11,7 +11,7 @@ function minutesToHours(mins: number): string {
 
 function statusBadge(status: DTREntry['status']): React.ReactNode {
   const styles: Record<DTREntry['status'], string> = {
-    draft: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    draft: 'bg-[#EFEFEF] text-[#3A3A3A] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]',
     pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
     approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
     rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
@@ -146,9 +146,9 @@ export function TraineeDTRView() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">My DTR</h2>
+          <h2 className="text-lg font-semibold text-[#121212] dark:text-white">My DTR</h2>
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex gap-2">
               <input
@@ -156,15 +156,15 @@ export function TraineeDTRView() {
                 value={period.start}
                 onChange={(e) => setPeriod(p => ({ ...p, start: e.target.value }))}
                 aria-label="Start date"
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
               />
-              <span className="flex items-center text-gray-500">to</span>
+              <span className="flex items-center text-[#757575]">to</span>
               <input
                 type="date"
                 value={period.end}
                 onChange={(e) => setPeriod(p => ({ ...p, end: e.target.value }))}
                 aria-label="End date"
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
               />
             </div>
             <button
@@ -179,20 +179,20 @@ export function TraineeDTRView() {
 
         {summary && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-            <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Total Regular Hours</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{minutesToHours(summary.totalRegularHours * 60)}</p>
+            <div className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg">
+              <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Total Regular Hours</p>
+              <p className="text-2xl font-bold text-[#121212] dark:text-white">{minutesToHours(summary.totalRegularHours * 60)}</p>
             </div>
-            <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Total Overtime Hours</p>
+            <div className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg">
+              <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Total Overtime Hours</p>
               <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{minutesToHours(summary.totalOvertimeHours * 60)}</p>
             </div>
-            <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Total Late (min)</p>
+            <div className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg">
+              <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Total Late (min)</p>
               <p className="text-2xl font-bold text-red-600 dark:text-red-400">{summary.totalLateMinutes}</p>
             </div>
-            <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Total Undertime (min)</p>
+            <div className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg">
+              <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Total Undertime (min)</p>
               <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{summary.totalUndertimeMinutes}</p>
             </div>
           </div>
@@ -200,33 +200,33 @@ export function TraineeDTRView() {
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-700/50">
+            <thead className="bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Date</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Time In</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Time Out</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Regular (hrs)</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">OT (hrs)</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Late (min)</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Undertime (min)</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Date</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Time In</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Time Out</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Regular (hrs)</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">OT (hrs)</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Late (min)</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Undertime (min)</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Status</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
               {entries.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={9} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">
                     No DTR entries for this period. Click "Calculate DTR" to generate.
                   </td>
                 </tr>
               ) : (
                 entries.map((entry) => (
-                  <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{formatDateFull(entry.date)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{entry.actualTimeIn ? formatTime12(entry.actualTimeIn) : '—'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{entry.actualTimeOut ? formatTime12(entry.actualTimeOut) : '—'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{minutesToHours(entry.regularMinutes)}</td>
+                  <tr key={entry.id} className="hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50">
+                    <td className="px-4 py-3 text-sm text-[#121212] dark:text-white">{formatDateFull(entry.date)}</td>
+                    <td className="px-4 py-3 text-sm text-[#757575] dark:text-[#9E9E9E]">{entry.actualTimeIn ? formatTime12(entry.actualTimeIn) : '—'}</td>
+                    <td className="px-4 py-3 text-sm text-[#757575] dark:text-[#9E9E9E]">{entry.actualTimeOut ? formatTime12(entry.actualTimeOut) : '—'}</td>
+                    <td className="px-4 py-3 text-sm text-[#121212] dark:text-white">{minutesToHours(entry.regularMinutes)}</td>
                     <td className="px-4 py-3 text-sm text-blue-600 dark:text-blue-400">{minutesToHours(entry.overtimeMinutes)}</td>
                     <td className="px-4 py-3 text-sm text-red-600 dark:text-red-400">{entry.lateMinutes}</td>
                     <td className="px-4 py-3 text-sm text-orange-600 dark:text-orange-400">{entry.undertimeMinutes}</td>
@@ -260,11 +260,11 @@ export function TraineeDTRView() {
         >
           {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
           <div
-            className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full"
+            className="bg-white dark:bg-[#1E1E1E] rounded-xl p-6 max-w-md w-full"
             onKeyDown={(e) => { if (e.key === 'Escape') { setShowCorrection(null); setCorrectionReason(''); } }}
           >
-            <h3 id="correction-modal-title" className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Request Correction for {formatDateFull(showCorrection.date)}</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            <h3 id="correction-modal-title" className="text-lg font-semibold text-[#121212] dark:text-white mb-4">Request Correction for {formatDateFull(showCorrection.date)}</h3>
+            <p className="text-sm text-[#757575] dark:text-[#9E9E9E] mb-4">
               Current: {showCorrection.actualTimeIn ? formatTime12(showCorrection.actualTimeIn) : '—'} - {showCorrection.actualTimeOut ? formatTime12(showCorrection.actualTimeOut) : '—'}
             </p>
             <textarea
@@ -272,14 +272,14 @@ export function TraineeDTRView() {
               onChange={(e) => setCorrectionReason(e.target.value)}
               placeholder="Reason for correction (e.g., forgot to time out, system error, etc.)"
               aria-label="Reason for correction"
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-h-[80px] resize-none"
+              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white min-h-[80px] resize-none"
               required
             />
             <div className="flex justify-end gap-3 mt-4">
               <button
                 onClick={() => { setShowCorrection(null); setCorrectionReason(''); }}
                 aria-label="Close"
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg"
+                className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg"
               >
                 Cancel
               </button>

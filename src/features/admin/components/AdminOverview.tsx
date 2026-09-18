@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from 'recharts';
 import { getFirestoreInstancePublic } from '@/config/firebase';
@@ -14,19 +14,27 @@ interface OverviewData {
   totalTrainees: number;
   totalCompanies: number;
   totalDepartments: number;
-  totalAuditLogs: number;
   activeTrainees: number;
   pendingTrainees: number;
   completedTrainees: number;
   onLeaveTrainees: number;
   terminatedTrainees: number;
   archivedTrainees: number;
+  internalTrainees: number;
+  externalTrainees: number;
   usersByRole: { role: string; count: number }[];
-  traineesByStatus: { status: string; count: number }[];
+  traineesByStatus: { status: string; count: number; fill: string }[];
   recentActivity: { action: string; entity: string; time: string }[];
 }
 
-const ROLE_COLORS = ['#8b5cf6', '#3b82f6', '#22c55e', '#6b7280'];
+const STATUS_COLORS: Record<string, string> = {
+  Active: '#22c55e',
+  Pending: '#eab308',
+  Completed: '#3b82f6',
+  'On Leave': '#f97316',
+  Terminated: '#ef4444',
+  Archived: '#9ca3af',
+};
 
 export function AdminOverview() {
   const [data, setData] = useState<OverviewData | null>(null);
@@ -57,15 +65,19 @@ export function AdminOverview() {
         count,
       }));
 
-      const traineesByStatusMap = new Map<string, number>();
       let activeTrainees = 0;
       let pendingTrainees = 0;
       let completedTrainees = 0;
       let onLeaveTrainees = 0;
       let terminatedTrainees = 0;
       let archivedTrainees = 0;
+      let internalTrainees = 0;
+      let externalTrainees = 0;
+      const traineesByStatusMap = new Map<string, number>();
+
       traineesSnap.docs.forEach((doc) => {
-        const status = doc.data().ojtStatus || 'pending';
+        const d = doc.data();
+        const status = d.ojtStatus || 'pending';
         traineesByStatusMap.set(status, (traineesByStatusMap.get(status) || 0) + 1);
         if (status === 'active') activeTrainees++;
         if (status === 'pending') pendingTrainees++;
@@ -73,13 +85,17 @@ export function AdminOverview() {
         if (status === 'on_leave') onLeaveTrainees++;
         if (status === 'terminated') terminatedTrainees++;
         if (status === 'archived') archivedTrainees++;
+        if (d.placementType === 'external') externalTrainees++;
+        else internalTrainees++;
       });
+
       const traineesByStatus = Array.from(traineesByStatusMap.entries()).map(([status, count]) => ({
         status: status.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
         count,
+        fill: STATUS_COLORS[status.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())] || '#BDBDBD',
       }));
 
-      const recentActivity = auditSnap.docs.slice(0, 5).map((doc) => {
+      const recentActivity = auditSnap.docs.slice(0, 8).map((doc) => {
         const d = doc.data();
         const ts = typeof d.timestamp === 'number' ? d.timestamp : d.timestamp?.seconds * 1000 || 0;
         const diff = Date.now() - ts;
@@ -100,13 +116,14 @@ export function AdminOverview() {
         totalTrainees: traineesSnap.size,
         totalCompanies: companiesSnap.size,
         totalDepartments: departmentsSnap.size,
-        totalAuditLogs: auditSnap.size,
         activeTrainees,
         pendingTrainees,
         completedTrainees,
         onLeaveTrainees,
         terminatedTrainees,
         archivedTrainees,
+        internalTrainees,
+        externalTrainees,
         usersByRole,
         traineesByStatus,
         recentActivity,
@@ -150,119 +167,302 @@ export function AdminOverview() {
     ) : null;
   }
 
-  const statCards = [
-    { label: 'Total Users', value: data.totalUsers, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20' },
-    { label: 'Supervisors', value: data.totalSupervisors, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/20' },
-    { label: 'Trainees', value: data.totalTrainees, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/20' },
-    { label: 'Companies', value: data.totalCompanies, color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-900/20' },
-    { label: 'Departments', value: data.totalDepartments, color: 'text-pink-600 dark:text-pink-400', bg: 'bg-pink-50 dark:bg-pink-900/20' },
-    { label: 'Audit Logs', value: data.totalAuditLogs, color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-50 dark:bg-indigo-900/20' },
-  ];
+  const totalForPipeline = data.activeTrainees + data.pendingTrainees + data.completedTrainees + data.onLeaveTrainees + data.terminatedTrainees + data.archivedTrainees;
 
-  const ojtCards = [
-    { label: 'Active OJT', value: data.activeTrainees, color: 'text-green-600 dark:text-green-400' },
-    { label: 'Pending OJT', value: data.pendingTrainees, color: 'text-yellow-600 dark:text-yellow-400' },
-    { label: 'Completed OJT', value: data.completedTrainees, color: 'text-blue-600 dark:text-blue-400' },
-    { label: 'On Leave', value: data.onLeaveTrainees, color: 'text-orange-600 dark:text-orange-400' },
-    { label: 'Terminated', value: data.terminatedTrainees, color: 'text-red-600 dark:text-red-400' },
-    { label: 'Archived', value: data.archivedTrainees, color: 'text-gray-600 dark:text-gray-400' },
+  const placementData = [
+    { name: 'Internal', value: data.internalTrainees, fill: '#3b82f6' },
+    { name: 'External', value: data.externalTrainees, fill: '#8b5cf6' },
   ];
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">System overview</p>
+        <h1 className="text-2xl font-bold text-[#121212] dark:text-white">Dashboard</h1>
+        <p className="text-[#757575] dark:text-[#9E9E9E] mt-1">System overview and key metrics</p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {statCards.map((card, i) => (
-          <AnimatedCard key={card.label} delay={i * 0.05} className={`rounded-xl ${card.bg} border border-gray-200 dark:border-gray-700 p-4`}>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{card.label}</p>
-            <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
-          </AnimatedCard>
-        ))}
-      </div>
-
-      {/* OJT Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {ojtCards.map((card, i) => (
-          <AnimatedCard key={card.label} delay={i * 0.05} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-            <p className="text-sm text-gray-500 dark:text-gray-400">{card.label}</p>
-            <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
-          </AnimatedCard>
-        ))}
-      </div>
-
-      {/* Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Users by Role */}
-        <AnimatedCard delay={0.15} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Users by Role</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie
-                data={data.usersByRole}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={90}
-                paddingAngle={5}
-                dataKey="count"
-                nameKey="role"
-              >
-                {data.usersByRole.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={ROLE_COLORS[index % ROLE_COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
+      {/* Hero Stats — Most Important */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <AnimatedCard delay={0} className="rounded-xl border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-[#757575] dark:text-[#9E9E9E]">Active Trainees</p>
+              <p className="text-3xl font-bold text-[#121212] dark:text-white mt-1">{data.activeTrainees}</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+              <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+          </div>
+          <div className="mt-3 flex items-center gap-2 text-sm">
+            <span className="text-[#757575] dark:text-[#9E9E9E]">{data.totalTrainees} total trainees</span>
+          </div>
         </AnimatedCard>
 
-        {/* Trainees by OJT Status */}
-        <AnimatedCard delay={0.2} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Trainees by OJT Status</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={data.traineesByStatus}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#d1d5db" />
-              <XAxis dataKey="status" tick={{ fontSize: 11, fill: '#9ca3af' }} />
-              <YAxis tick={{ fontSize: 12, fill: '#9ca3af' }} allowDecimals={false} />
-              <Tooltip />
-              <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+        <AnimatedCard delay={0.05} className="rounded-xl border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-[#757575] dark:text-[#9E9E9E]">Pending Actions</p>
+              <p className="text-3xl font-bold text-[#121212] dark:text-white mt-1">{data.pendingTrainees}</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+              <svg className="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+          <div className="mt-3 flex items-center gap-2 text-sm">
+            <span className="text-[#757575] dark:text-[#9E9E9E]">Trainees awaiting setup</span>
+          </div>
+        </AnimatedCard>
+
+        <AnimatedCard delay={0.1} className="rounded-xl border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-[#757575] dark:text-[#9E9E9E]">Completed OJT</p>
+              <p className="text-3xl font-bold text-[#121212] dark:text-white mt-1">{data.completedTrainees}</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+              <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+          <div className="mt-3 flex items-center gap-2 text-sm">
+            <span className="text-[#757575] dark:text-[#9E9E9E]">
+              {data.totalTrainees > 0 ? Math.round((data.completedTrainees / data.totalTrainees) * 100) : 0}% completion rate
+            </span>
+          </div>
+        </AnimatedCard>
+      </div>
+
+      {/* OJT Pipeline — Visual Progress */}
+      <AnimatedCard delay={0.15} className="rounded-xl border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-6">
+        <h3 className="text-sm font-semibold text-[#121212] dark:text-white mb-4">OJT Pipeline</h3>
+        {totalForPipeline > 0 ? (
+          <>
+            <div className="flex h-4 rounded-full overflow-hidden bg-[#EFEFEF] dark:bg-[#3A3A3A]">
+              {data.traineesByStatus.map((item) => {
+                const pct = (item.count / totalForPipeline) * 100;
+                return pct > 0 ? (
+                  <div
+                    key={item.status}
+                    className="h-full transition-all duration-500"
+                    style={{ width: `${pct}%`, backgroundColor: item.fill }}
+                    title={`${item.status}: ${item.count}`}
+                  />
+                ) : null;
+              })}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+              {data.traineesByStatus.map((item) => (
+                <div key={item.status} className="flex items-center gap-2 text-sm">
+                  <span className="w-3 h-3 rounded-full" style={{ backgroundColor: item.fill }} />
+                  <span className="text-[#555555] dark:text-[#9E9E9E]">{item.status}</span>
+                  <span className="font-semibold text-[#121212] dark:text-white">{item.count}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">No trainees yet</p>
+        )}
+      </AnimatedCard>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Trainee Status Bar Chart */}
+        <AnimatedCard delay={0.2} className="rounded-xl border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-6">
+          <h3 className="text-sm font-semibold text-[#121212] dark:text-white mb-4">Trainee Status Distribution</h3>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={data.traineesByStatus} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#EFEFEF" vertical={false} />
+              <XAxis dataKey="status" tick={{ fontSize: 10, fill: '#9E9E9E' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: '#9E9E9E' }} allowDecimals={false} axisLine={false} tickLine={false} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid #D5D5D5',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                }}
+              />
+              <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                {data.traineesByStatus.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </AnimatedCard>
+
+        {/* Placement Type Donut */}
+        <AnimatedCard delay={0.25} className="rounded-xl border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-6">
+          <h3 className="text-sm font-semibold text-[#121212] dark:text-white mb-4">Placement Type</h3>
+          {data.totalTrainees > 0 ? (
+            <div className="flex items-center justify-center gap-8">
+              <ResponsiveContainer width={160} height={160}>
+                <PieChart>
+                  <Pie
+                    data={placementData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={45}
+                    outerRadius={70}
+                    paddingAngle={4}
+                    dataKey="value"
+                  >
+                    {placementData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #D5D5D5',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="space-y-3">
+                {placementData.map((item) => (
+                  <div key={item.name} className="flex items-center gap-3">
+                    <span className="w-3 h-3 rounded-full" style={{ backgroundColor: item.fill }} />
+                    <div>
+                      <p className="text-sm font-medium text-[#121212] dark:text-white">{item.name}</p>
+                      <p className="text-xs text-[#757575] dark:text-[#9E9E9E]">
+                        {item.value} trainees ({data.totalTrainees > 0 ? Math.round((item.value / data.totalTrainees) * 100) : 0}%)
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-[#757575] dark:text-[#9E9E9E] text-center py-8">No trainees yet</p>
+          )}
+        </AnimatedCard>
       </div>
 
-      {/* Recent Activity */}
-      <AnimatedCard delay={0.25} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Recent Activity (Last 7 Days)</h3>
-        {data.recentActivity.length === 0 ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400">No recent activity</p>
-        ) : (
-          <AnimatedList className="space-y-3">
-            {data.recentActivity.map((item, i) => (
-              <AnimatedListItem key={i} variants={listItemVariants} className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <span className={`px-2 py-0.5 text-xs font-medium rounded ${
-                    item.action === 'create' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
-                    item.action === 'update' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
-                    item.action === 'delete' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
-                    'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                  }`}>
-                    {item.action}
-                  </span>
-                  <span className="text-gray-700 dark:text-gray-300">{item.entity}</span>
+      {/* Quick Counts + Recent Activity */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Quick Counts */}
+        <div className="space-y-4">
+          <AnimatedCard delay={0.3} className="rounded-xl border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-5">
+            <h3 className="text-sm font-semibold text-[#121212] dark:text-white mb-3">Resources</h3>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                  </div>
+                  <span className="text-sm text-[#555555] dark:text-[#9E9E9E]">Companies</span>
                 </div>
-                <span className="text-gray-500 dark:text-gray-400">{item.time}</span>
-              </AnimatedListItem>
-            ))}
-          </AnimatedList>
-        )}
-      </AnimatedCard>
+                <span className="text-sm font-semibold text-[#121212] dark:text-white">{data.totalCompanies}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                  </div>
+                  <span className="text-sm text-[#555555] dark:text-[#9E9E9E]">Departments</span>
+                </div>
+                <span className="text-sm font-semibold text-[#121212] dark:text-white">{data.totalDepartments}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                  </div>
+                  <span className="text-sm text-[#555555] dark:text-[#9E9E9E]">Supervisors</span>
+                </div>
+                <span className="text-sm font-semibold text-[#121212] dark:text-white">{data.totalSupervisors}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <span className="text-sm text-[#555555] dark:text-[#9E9E9E]">Users</span>
+                </div>
+                <span className="text-sm font-semibold text-[#121212] dark:text-white">{data.totalUsers}</span>
+              </div>
+            </div>
+          </AnimatedCard>
+
+          {/* Users by Role */}
+          <AnimatedCard delay={0.35} className="rounded-xl border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-5">
+            <h3 className="text-sm font-semibold text-[#121212] dark:text-white mb-3">Users by Role</h3>
+            <div className="space-y-2">
+              {data.usersByRole.map((item, i) => {
+                const pct = data.totalUsers > 0 ? (item.count / data.totalUsers) * 100 : 0;
+                const roleColors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500'];
+                return (
+                  <div key={item.role}>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="text-[#555555] dark:text-[#9E9E9E]">{item.role}</span>
+                      <span className="font-medium text-[#121212] dark:text-white">{item.count}</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-[#EFEFEF] dark:bg-[#3A3A3A]">
+                      <div
+                        className={`h-full rounded-full ${roleColors[i % roleColors.length]} transition-all duration-500`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </AnimatedCard>
+        </div>
+
+        {/* Recent Activity */}
+        <AnimatedCard delay={0.3} className="md:col-span-2 rounded-xl border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-6">
+          <h3 className="text-sm font-semibold text-[#121212] dark:text-white mb-4">Recent Activity (Last 7 Days)</h3>
+          {data.recentActivity.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8">
+              <svg className="w-10 h-10 text-[#D5D5D5] dark:text-[#555555] mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">No recent activity</p>
+            </div>
+          ) : (
+            <AnimatedList className="space-y-0">
+              {data.recentActivity.map((item, i) => (
+                <AnimatedListItem key={i} variants={listItemVariants}>
+                  <div className="flex items-center justify-between py-3 border-b border-[#EFEFEF] dark:border-[#3A3A3A] last:border-0">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${
+                        item.action === 'create' ? 'bg-green-500' :
+                        item.action === 'delete' ? 'bg-red-500' :
+                        item.action === 'update' ? 'bg-blue-500' :
+                        'bg-gray-400'
+                      }`} />
+                      <div>
+                        <p className="text-sm font-medium text-[#121212] dark:text-white">{item.entity}</p>
+                        <p className="text-xs text-[#757575] dark:text-[#9E9E9E]">{item.action}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs text-[#9E9E9E] dark:text-[#757575] whitespace-nowrap">{item.time}</span>
+                  </div>
+                </AnimatedListItem>
+              ))}
+            </AnimatedList>
+          )}
+        </AnimatedCard>
+      </div>
     </div>
   );
 }

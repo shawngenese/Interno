@@ -34,16 +34,16 @@ export interface AnnouncementFormData {
 }
 
 export const ANNOUNCEMENT_PRIORITY_LABELS: Record<AnnouncementPriority, { label: string; color: string }> = {
-  low: { label: 'Low', color: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' },
+  low: { label: 'Low', color: 'bg-[#EFEFEF] text-[#3A3A3A] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]' },
   normal: { label: 'Normal', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
   high: { label: 'High', color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' },
   urgent: { label: 'Urgent', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
 };
 
 export const ANNOUNCEMENT_STATUS_LABELS: Record<AnnouncementStatus, { label: string; color: string }> = {
-  draft: { label: 'Draft', color: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' },
+  draft: { label: 'Draft', color: 'bg-[#EFEFEF] text-[#3A3A3A] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]' },
   published: { label: 'Published', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
-  archived: { label: 'Archived', color: 'bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-400' },
+  archived: { label: 'Archived', color: 'bg-[#D5D5D5] text-[#555555] dark:bg-[#555555] dark:text-[#9E9E9E]' },
 };
 
 export const ROLE_LABELS: Record<string, string> = {

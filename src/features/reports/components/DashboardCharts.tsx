@@ -180,38 +180,38 @@ export function DashboardCharts({ traineeId, startDate, endDate }: DashboardChar
   }, [fetchData]);
 
   if (loading) {
-    return <div className="text-center py-8 text-gray-500 dark:text-gray-400">Loading charts...</div>;
+    return <div className="text-center py-8 text-[#757575] dark:text-[#9E9E9E]">Loading charts...</div>;
   }
 
   if (!data) {
-    return <div className="text-center py-8 text-gray-500 dark:text-gray-400">No data available</div>;
+    return <div className="text-center py-8 text-[#757575] dark:text-[#9E9E9E]">No data available</div>;
   }
 
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Present Days</p>
+        <div className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4">
+          <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Present Days</p>
           <p className="text-2xl font-bold text-green-600">{data.summary.totalPresent}</p>
         </div>
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Late Days</p>
+        <div className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4">
+          <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Late Days</p>
           <p className="text-2xl font-bold text-yellow-600">{data.summary.totalLate}</p>
         </div>
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Regular Hours</p>
+        <div className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4">
+          <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Regular Hours</p>
           <p className="text-2xl font-bold text-blue-600">{data.summary.totalRegularHours}h</p>
         </div>
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Overtime Hours</p>
+        <div className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4">
+          <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Overtime Hours</p>
           <p className="text-2xl font-bold text-purple-600">{data.summary.totalOvertimeHours}h</p>
         </div>
       </div>
 
       {/* Attendance Trend */}
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Attendance Trend</h3>
+      <div className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4">
+        <h3 className="text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-4">Attendance Trend</h3>
         <ResponsiveContainer width="100%" height={250}>
           <BarChart data={data.attendanceByDate}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -228,8 +228,8 @@ export function DashboardCharts({ traineeId, startDate, endDate }: DashboardChar
 
       {/* Task Status */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Task Status</h3>
+        <div className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4">
+          <h3 className="text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-4">Task Status</h3>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie
@@ -252,8 +252,8 @@ export function DashboardCharts({ traineeId, startDate, endDate }: DashboardChar
           </ResponsiveContainer>
         </div>
 
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Hours by Week</h3>
+        <div className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4">
+          <h3 className="text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-4">Hours by Week</h3>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={data.hoursByWeek}>
               <CartesianGrid strokeDasharray="3 3" />

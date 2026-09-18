@@ -94,8 +94,8 @@ export function DocumentUploader({
   }, [bucket, resourceId, documentType, metadata, maxSizeMB, acceptedTypes, onSuccess, onError]);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
+      <h3 className="text-lg font-semibold text-[#121212] dark:text-white mb-4">
         Upload {bucket === 'documents' ? 'Document' : bucket === 'tasks' ? 'Task Attachment' : 'Profile Image'}
       </h3>
 
@@ -107,7 +107,7 @@ export function DocumentUploader({
 
       <div
         className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-          uploading ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-gray-600 hover:border-blue-500'
+          uploading ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-[#BDBDBD] dark:border-[#555555] hover:border-blue-500'
         }`}
         onClick={() => !uploading && fileInputRef.current?.click()}
         onKeyDown={(e) => e.key === 'Enter' && !uploading && fileInputRef.current?.click()}
@@ -126,23 +126,23 @@ export function DocumentUploader({
 
         {uploading ? (
           <div className="space-y-3">
-            <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div className="h-2 bg-[#D5D5D5] dark:bg-[#3A3A3A] rounded-full overflow-hidden">
               <div
                 className="h-full bg-blue-600 transition-all duration-300 ease-out"
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Uploading... {progress}%</p>
+            <p className="text-sm text-[#555555] dark:text-[#9E9E9E]">Uploading... {progress}%</p>
           </div>
         ) : (
           <>
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="mx-auto h-12 w-12 text-[#9E9E9E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
+            <p className="mt-2 text-[#555555] dark:text-[#9E9E9E]">
               Click or drag & drop to upload
             </p>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
+            <p className="mt-1 text-xs text-[#757575] dark:text-[#757575]">
               Max {maxSizeMB}MB • {acceptedTypes.replace(/,/g, ', ')}
             </p>
           </>

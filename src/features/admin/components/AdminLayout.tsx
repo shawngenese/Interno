@@ -102,29 +102,29 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-[#F5F5F5] dark:bg-[#121212]">
         {/* Mobile sidebar backdrop */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 z-40 bg-gray-900/80 lg:hidden"
+            className="fixed inset-0 z-40 bg-[#121212]/80 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
 
         <aside
           aria-label="Admin navigation"
-          className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+          className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-[#1E1E1E] border-r border-[#D5D5D5] dark:border-[#3A3A3A] transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
           <div className="flex flex-col h-full">
-            <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-700">
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Interno Admin</h1>
+            <div className="flex items-center justify-between h-16 px-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
+              <h1 className="text-xl font-bold text-[#121212] dark:text-white">Interno Admin</h1>
               <div className="flex items-center gap-1">
                 <ThemeToggle />
                 <button
                   type="button"
-                  className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 lg:hidden"
+                  className="p-2 rounded-lg text-[#757575] hover:bg-[#EFEFEF] dark:text-[#9E9E9E] dark:hover:bg-[#3A3A3A] lg:hidden"
                   onClick={() => setSidebarOpen(false)}
                   aria-label="Close navigation menu"
                 >
@@ -144,7 +144,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                     `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                       isActive
                         ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        : 'text-[#3A3A3A] dark:text-[#BDBDBD] hover:bg-[#EFEFEF] dark:hover:bg-[#3A3A3A]'
                     }`
                   }
                 >
@@ -157,19 +157,19 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                 </NavLink>
               ))}
             </nav>
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="p-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
               <LogoutButton className="w-full justify-center" />
             </div>
           </div>
         </aside>
 
         <div className="lg:pl-64">
-          <header className="sticky top-0 z-40 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <header className="sticky top-0 z-40 bg-white dark:bg-[#1E1E1E] border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
             <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 lg:hidden"
+                  className="p-2 rounded-lg text-[#757575] hover:bg-[#EFEFEF] dark:text-[#9E9E9E] dark:hover:bg-[#3A3A3A] lg:hidden"
                   onClick={() => setSidebarOpen(true)}
                   aria-label="Open navigation menu"
                 >
@@ -177,7 +177,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                   </svg>
                 </button>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                <h2 className="text-xl font-semibold text-[#121212] dark:text-white">
                   {navigation.find(n => location.pathname === n.href || location.pathname.startsWith(n.href + '/'))?.name || 'Admin'}
                 </h2>
               </div>

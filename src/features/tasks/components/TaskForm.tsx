@@ -132,8 +132,8 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+    <form onSubmit={handleSubmit} className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
+      <h2 className="text-lg font-semibold text-[#121212] dark:text-white mb-6">
         {taskId ? 'Edit Task' : 'Create Task'}
       </h2>
 
@@ -145,7 +145,7 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
 
       <div className="space-y-4">
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="title" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Title *
           </label>
           <input
@@ -153,13 +153,13 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
             id="title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2.5 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Task title"
           />
         </div>
 
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="description" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Description *
           </label>
           <textarea
@@ -167,21 +167,21 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
-            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className="w-full px-4 py-2.5 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             placeholder="Describe the task..."
           />
         </div>
 
         {!initialTraineeId && (
           <div>
-            <label htmlFor="trainee" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="trainee" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Assign to Trainee *
             </label>
             <select
               id="trainee"
               value={selectedTraineeId}
               onChange={(e) => setSelectedTraineeId(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2.5 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Select a trainee</option>
               {trainees.map((t) => (
@@ -193,14 +193,14 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label htmlFor="priority" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="priority" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Priority
             </label>
             <select
               id="priority"
               value={priority}
               onChange={(e) => setPriority(e.target.value as TaskPriority)}
-              className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2.5 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {Object.entries(TASK_PRIORITY_LABELS).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
@@ -209,7 +209,7 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
           </div>
 
           <div>
-            <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="dueDate" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Due Date *
             </label>
             <input
@@ -217,12 +217,12 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
               id="dueDate"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2.5 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div>
-            <label htmlFor="hours" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="hours" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Est. Hours
             </label>
             <input
@@ -232,7 +232,7 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
               onChange={(e) => setEstimatedHours(e.target.value)}
               min="0"
               step="0.5"
-              className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2.5 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="0"
             />
           </div>
@@ -244,9 +244,9 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
             id="requireAttachment"
             checked={requireAttachment}
             onChange={(e) => setRequireAttachment(e.target.checked)}
-            className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            className="h-4 w-4 text-blue-600 border-[#BDBDBD] rounded focus:ring-blue-500"
           />
-          <label htmlFor="requireAttachment" className="text-sm text-gray-700 dark:text-gray-300">
+          <label htmlFor="requireAttachment" className="text-sm text-[#3A3A3A] dark:text-[#BDBDBD]">
             Require file attachment on submission
           </label>
         </div>
@@ -257,7 +257,7 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
+            className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-[#EFEFEF] dark:bg-[#3A3A3A] rounded-lg hover:bg-[#D5D5D5] dark:hover:bg-[#555555]"
           >
             Cancel
           </button>

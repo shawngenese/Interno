@@ -329,8 +329,8 @@ export function AdminDashboard() {
             <>
               <div className="mb-6 flex items-center justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Management</h1>
-                  <p className="text-gray-600 dark:text-gray-400 mt-1">Manage system users and their roles</p>
+                  <h1 className="text-2xl font-bold text-[#121212] dark:text-white">User Management</h1>
+                  <p className="text-[#555555] dark:text-[#9E9E9E] mt-1">Manage system users and their roles</p>
                 </div>
                 <button
                   onClick={() => { setView('create'); setEditingUserId(null); }}
@@ -354,8 +354,8 @@ export function AdminDashboard() {
             <>
               <div className="mb-6 flex items-center justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Company Management</h1>
-                  <p className="text-gray-600 dark:text-gray-400 mt-1">Manage companies</p>
+                  <h1 className="text-2xl font-bold text-[#121212] dark:text-white">Company Management</h1>
+                  <p className="text-[#555555] dark:text-[#9E9E9E] mt-1">Manage companies</p>
                 </div>
                 <button
                   onClick={() => { setView('create'); setEditingCompanyId(null); }}
@@ -379,8 +379,8 @@ export function AdminDashboard() {
             <>
               <div className="mb-6 flex items-center justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Department Management</h1>
-                  <p className="text-gray-600 dark:text-gray-400 mt-1">Manage departments</p>
+                  <h1 className="text-2xl font-bold text-[#121212] dark:text-white">Department Management</h1>
+                  <p className="text-[#555555] dark:text-[#9E9E9E] mt-1">Manage departments</p>
                 </div>
                 <button
                   onClick={() => { setView('create'); setEditingDepartmentId(null); }}
@@ -404,8 +404,8 @@ export function AdminDashboard() {
             <>
               <div className="mb-6 flex items-center justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Supervisor Management</h1>
-                  <p className="text-gray-600 dark:text-gray-400 mt-1">Manage supervisors and trainee assignments</p>
+                  <h1 className="text-2xl font-bold text-[#121212] dark:text-white">Supervisor Management</h1>
+                  <p className="text-[#555555] dark:text-[#9E9E9E] mt-1">Manage supervisors and trainee assignments</p>
                 </div>
                 <button
                   onClick={() => { setView('create'); setEditingUserId(null); setEditingSupervisorId(null); }}
@@ -444,8 +444,8 @@ export function AdminDashboard() {
             <>
               <div className="mb-6 flex items-center justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Coordinator Management</h1>
-                  <p className="text-gray-600 dark:text-gray-400 mt-1">Manage coordinators in your department</p>
+                  <h1 className="text-2xl font-bold text-[#121212] dark:text-white">Coordinator Management</h1>
+                  <p className="text-[#555555] dark:text-[#9E9E9E] mt-1">Manage coordinators in your department</p>
                 </div>
                 <button
                   onClick={() => { setView('create'); setEditingCoordinatorId(null); }}
@@ -469,8 +469,8 @@ export function AdminDashboard() {
             <>
               <div className="mb-6 flex items-center justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Trainee Management</h1>
-                  <p className="text-gray-600 dark:text-gray-400 mt-1">Manage trainees and their profiles</p>
+                  <h1 className="text-2xl font-bold text-[#121212] dark:text-white">Trainee Management</h1>
+                  <p className="text-[#555555] dark:text-[#9E9E9E] mt-1">Manage trainees and their profiles</p>
                 </div>
                 <button
                   onClick={() => { setView('create'); setEditingTraineeId(null); }}
@@ -505,8 +505,8 @@ export function AdminDashboard() {
             <>
               <div className="mb-6 flex items-center justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Work Schedule Management</h1>
-                  <p className="text-gray-600 dark:text-gray-400 mt-1">Manage work schedules</p>
+                  <h1 className="text-2xl font-bold text-[#121212] dark:text-white">Work Schedule Management</h1>
+                  <p className="text-[#555555] dark:text-[#9E9E9E] mt-1">Manage work schedules</p>
                 </div>
                 <button
                   onClick={() => { setView('create'); setEditingWorkScheduleId(null); }}
@@ -530,8 +530,8 @@ export function AdminDashboard() {
             <>
               <div className="mb-6 flex items-center justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">OJT Schedule Management</h1>
-                  <p className="text-gray-600 dark:text-gray-400 mt-1">Manage OJT schedules</p>
+                  <h1 className="text-2xl font-bold text-[#121212] dark:text-white">OJT Schedule Management</h1>
+                  <p className="text-[#555555] dark:text-[#9E9E9E] mt-1">Manage OJT schedules</p>
                 </div>
                 <button
                   onClick={() => { setView('create'); setEditingOJTScheduleId(null); }}

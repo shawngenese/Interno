@@ -23,7 +23,7 @@ function statusBadge(status: DocumentStatus): React.ReactNode {
     pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
     approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
     rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-    archived: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    archived: 'bg-[#EFEFEF] text-[#3A3A3A] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]',
   };
   return <span className={`px-2 py-0.5 text-xs font-medium rounded ${styles[status]}`}>{status}</span>;
 }
@@ -149,9 +149,9 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
         <DocumentChecklist traineeId={traineeId} />
       )}
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-lg font-semibold text-[#121212] dark:text-white">
             {traineeId ? 'Trainee Documents' : isSupervisor ? 'Assigned Trainees\' Documents' : 'All Documents'}
           </h2>
           <div className="flex flex-wrap gap-3">
@@ -159,7 +159,7 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
               value={filters.status || ''}
               onChange={(e) => setFilters(f => ({ ...f, status: e.target.value as DocumentStatus | undefined, page: 1 }))}
               aria-label="Filter by status"
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
             >
               <option value="">All Status</option>
               <option value="pending">Pending</option>
@@ -171,7 +171,7 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
               value={filters.type || ''}
               onChange={(e) => setFilters(f => ({ ...f, type: e.target.value as DocumentType | undefined, page: 1 }))}
               aria-label="Filter by document type"
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
             >
               <option value="">All Types</option>
               <option value="endorsement">Endorsement</option>
@@ -204,18 +204,18 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-700/50">
+            <thead className="bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Trainee</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Type</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">File</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Size</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Uploaded</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Trainee</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Type</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">File</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Size</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Uploaded</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Status</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
               {loading ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center">
@@ -227,16 +227,16 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
                 </tr>
               ) : documents.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">No documents found</td>
+                  <td colSpan={7} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">No documents found</td>
                 </tr>
               ) : (
                 documents.map((doc) => (
-                  <tr key={doc.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">{doc.traineeId.slice(0, 8)}...</td>
-                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{typeLabel(doc.type)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white truncate max-w-xs">{doc.fileName}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{formatSize(doc.fileSize)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{formatDate(doc.createdAt)}</td>
+                  <tr key={doc.id} className="hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50">
+                    <td className="px-4 py-3 text-sm font-medium text-[#121212] dark:text-white">{doc.traineeId.slice(0, 8)}...</td>
+                    <td className="px-4 py-3 text-sm text-[#757575] dark:text-[#9E9E9E]">{typeLabel(doc.type)}</td>
+                    <td className="px-4 py-3 text-sm text-[#121212] dark:text-white truncate max-w-xs">{doc.fileName}</td>
+                    <td className="px-4 py-3 text-sm text-[#757575] dark:text-[#9E9E9E]">{formatSize(doc.fileSize)}</td>
+                    <td className="px-4 py-3 text-sm text-[#757575] dark:text-[#9E9E9E]">{formatDate(doc.createdAt)}</td>
                     <td className="px-4 py-3 text-sm">{statusBadge(doc.status)}</td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -267,7 +267,7 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
                         {canDelete && (
                           <button
                             onClick={() => handleDelete(doc)}
-                            className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                            className="px-3 py-1.5 text-xs font-medium text-[#555555] dark:text-[#9E9E9E] hover:text-red-600 dark:hover:text-red-400"
                           >
                             Delete
                           </button>
@@ -282,21 +282,21 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
 
           {totalPages > 1 && (
             <div className="mt-4 flex items-center justify-between">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">
                 Showing {((filters.page ?? 1) - 1) * (filters.limit || 20) + 1} to {Math.min((filters.page ?? 1) * (filters.limit || 20), total)} of {total}
               </p>
               <div className="flex gap-2">
                 <button
                   onClick={() => setFilters(f => ({ ...f, page: (f.page || 1) - 1 }))}
                   disabled={(filters.page || 1) <= 1}
-                  className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50"
+                  className="px-3 py-1 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg disabled:opacity-50"
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => setFilters(f => ({ ...f, page: (f.page || 1) + 1 }))}
                   disabled={(filters.page || 1) >= totalPages}
-                  className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50"
+                  className="px-3 py-1 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg disabled:opacity-50"
                 >
                   Next
                 </button>

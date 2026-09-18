@@ -19,9 +19,9 @@ export function UnauthorizedPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#F5F5F5] dark:bg-[#121212] px-4">
       <div className="w-full max-w-md text-center">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
+        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-8">
           <div className="mb-6">
             <svg 
               className="mx-auto h-16 w-16 text-red-500" 
@@ -39,11 +39,11 @@ export function UnauthorizedPage() {
             </svg>
           </div>
           
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-2xl font-bold text-[#121212] dark:text-white mb-2">
             Access Denied
           </h1>
           
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
+          <p className="text-[#555555] dark:text-[#9E9E9E] mb-6">
             You don't have permission to access this page.
             {role && <span className="block mt-2">Your role: <strong className="capitalize">{role}</strong></span>}
           </p>
@@ -58,14 +58,14 @@ export function UnauthorizedPage() {
             
             <button
               onClick={handleLogout}
-              className="w-full py-3 px-4 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+              className="w-full py-3 px-4 bg-white dark:bg-[#3A3A3A] text-[#3A3A3A] dark:text-[#BDBDBD] font-medium rounded-lg border border-[#BDBDBD] dark:border-[#555555] hover:bg-[#F5F5F5] dark:hover:bg-[#555555] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
             >
               Sign Out
             </button>
           </div>
 
           {user && (
-            <p className="mt-6 text-xs text-gray-500 dark:text-gray-500">
+            <p className="mt-6 text-xs text-[#757575] dark:text-[#757575]">
               Signed in as: {user.email}
             </p>
           )}

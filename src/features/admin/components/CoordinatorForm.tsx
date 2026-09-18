@@ -155,8 +155,8 @@ export function CoordinatorForm({ editingId, editingCoordinatorId, onCancel, onS
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 max-w-2xl mx-auto">
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6 max-w-2xl mx-auto">
+      <h2 className="text-xl font-semibold text-[#121212] dark:text-white mb-6">
         {isEditing ? 'Edit Coordinator' : 'Add Coordinator'}
       </h2>
 
@@ -168,20 +168,20 @@ export function CoordinatorForm({ editingId, editingCoordinatorId, onCancel, onS
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {isEditing && formData.displayName && (
-          <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
-            <p className="text-sm font-medium text-gray-900 dark:text-white">{formData.displayName}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">{formData.email}</p>
+          <div className="p-3 bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 rounded-lg border border-[#D5D5D5] dark:border-[#555555]">
+            <p className="text-sm font-medium text-[#121212] dark:text-white">{formData.displayName}</p>
+            <p className="text-xs text-[#757575] dark:text-[#9E9E9E]">{formData.email}</p>
           </div>
         )}
 
         {!isEditing && (
           <div className="flex items-center gap-3 mb-4">
-            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <label className="flex items-center gap-2 text-sm text-[#3A3A3A] dark:text-[#BDBDBD]">
               <input
                 type="checkbox"
                 checked={useExistingUser}
                 onChange={(e) => setUseExistingUser(e.target.checked)}
-                className="rounded border-gray-300 dark:border-gray-600"
+                className="rounded border-[#BDBDBD] dark:border-[#555555]"
               />
               Link to existing user account
             </label>
@@ -190,7 +190,7 @@ export function CoordinatorForm({ editingId, editingCoordinatorId, onCancel, onS
 
         {useExistingUser ? (
           <div>
-            <label htmlFor="userId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="userId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               User <span className="text-red-500">*</span>
             </label>
             <select
@@ -198,7 +198,7 @@ export function CoordinatorForm({ editingId, editingCoordinatorId, onCancel, onS
               value={formData.userId}
               onChange={(e) => handleChange('userId', e.target.value)}
               required
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">Select User</option>
               {existingUsers.map(user => (
@@ -209,7 +209,7 @@ export function CoordinatorForm({ editingId, editingCoordinatorId, onCancel, onS
         ) : (
           <>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="email" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
                 Email <span className="text-red-500">*</span>
               </label>
               <input
@@ -218,12 +218,12 @@ export function CoordinatorForm({ editingId, editingCoordinatorId, onCancel, onS
                 value={formData.email}
                 onChange={(e) => handleChange('email', e.target.value)}
                 required
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="coordinator@example.com"
               />
             </div>
             <div>
-              <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="displayName" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
                 Display Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -232,12 +232,12 @@ export function CoordinatorForm({ editingId, editingCoordinatorId, onCancel, onS
                 value={formData.displayName}
                 onChange={(e) => handleChange('displayName', e.target.value)}
                 required
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Juan Dela Cruz"
               />
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="password" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
                 Password <span className="text-red-500">*</span>
               </label>
               <input
@@ -247,7 +247,7 @@ export function CoordinatorForm({ editingId, editingCoordinatorId, onCancel, onS
                 onChange={(e) => handleChange('password', e.target.value)}
                 required
                 minLength={6}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="At least 6 characters"
               />
             </div>
@@ -255,7 +255,7 @@ export function CoordinatorForm({ editingId, editingCoordinatorId, onCancel, onS
         )}
 
         <div>
-          <label htmlFor="companyId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="companyId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Company <span className="text-red-500">*</span>
           </label>
           <select
@@ -263,7 +263,7 @@ export function CoordinatorForm({ editingId, editingCoordinatorId, onCancel, onS
             value={formData.companyId}
             onChange={(e) => handleChange('companyId', e.target.value)}
             required
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="">Select Company</option>
             {companies.map(company => (
@@ -273,7 +273,7 @@ export function CoordinatorForm({ editingId, editingCoordinatorId, onCancel, onS
         </div>
 
         <div>
-          <label htmlFor="departmentId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="departmentId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Department <span className="text-red-500">*</span>
           </label>
           <select
@@ -281,7 +281,7 @@ export function CoordinatorForm({ editingId, editingCoordinatorId, onCancel, onS
             value={formData.departmentId}
             onChange={(e) => handleChange('departmentId', e.target.value)}
             required
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="">Select Department</option>
             {departments.map(dept => (
@@ -290,11 +290,11 @@ export function CoordinatorForm({ editingId, editingCoordinatorId, onCancel, onS
           </select>
         </div>
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex justify-end gap-3 pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#555555] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
           >
             Cancel
           </button>

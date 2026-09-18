@@ -15,13 +15,13 @@ export const EmptyState = React.memo(function EmptyState({ icon: Icon, title, de
   return (
     <div className={`flex flex-col items-center justify-center py-12 px-4 text-center ${className}`}>
       {Icon && (
-        <div className="mb-4 p-4 rounded-full bg-gray-100 dark:bg-gray-800">
-          <Icon className="w-12 h-12 text-gray-400 dark:text-gray-500" />
+        <div className="mb-4 p-4 rounded-full bg-[#EFEFEF] dark:bg-[#1E1E1E]">
+          <Icon className="w-12 h-12 text-[#9E9E9E] dark:text-[#757575]" />
         </div>
       )}
-      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">{title}</h3>
+      <h3 className="text-lg font-medium text-[#121212] dark:text-white mb-1">{title}</h3>
       {description && (
-        <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mb-4">{description}</p>
+        <p className="text-sm text-[#757575] dark:text-[#9E9E9E] max-w-sm mb-4">{description}</p>
       )}
       {action && (
         <button

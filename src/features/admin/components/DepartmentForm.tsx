@@ -125,8 +125,8 @@ export function DepartmentForm({ editingId, onCancel, onSaved }: DepartmentFormP
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 max-w-2xl mx-auto">
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6 max-w-2xl mx-auto">
+      <h2 className="text-xl font-semibold text-[#121212] dark:text-white mb-6">
         {isEditing ? 'Edit Department' : 'Create Department'}
       </h2>
 
@@ -138,7 +138,7 @@ export function DepartmentForm({ editingId, onCancel, onSaved }: DepartmentFormP
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="companyId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="companyId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Company <span className="text-red-500">*</span>
           </label>
           <select
@@ -146,7 +146,7 @@ export function DepartmentForm({ editingId, onCancel, onSaved }: DepartmentFormP
             value={formData.companyId}
             onChange={(e) => handleChange('companyId', e.target.value)}
             required
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="">Select Company</option>
             {companies.map(company => (
@@ -156,7 +156,7 @@ export function DepartmentForm({ editingId, onCancel, onSaved }: DepartmentFormP
         </div>
 
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="name" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Department Name <span className="text-red-500">*</span>
           </label>
           <input
@@ -165,13 +165,13 @@ export function DepartmentForm({ editingId, onCancel, onSaved }: DepartmentFormP
             value={formData.name}
             onChange={(e) => handleChange('name', e.target.value)}
             required
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="Department Name"
           />
         </div>
 
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="description" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Description
           </label>
           <textarea
@@ -179,20 +179,20 @@ export function DepartmentForm({ editingId, onCancel, onSaved }: DepartmentFormP
             value={formData.description}
             onChange={(e) => handleChange('description', e.target.value)}
             rows={3}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="Department description"
           />
         </div>
 
         <div>
-          <label htmlFor="headSupervisorId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="headSupervisorId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Head Supervisor (optional)
           </label>
           <select
             id="headSupervisorId"
             value={formData.headSupervisorId}
             onChange={(e) => handleChange('headSupervisorId', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="">None</option>
             {supervisors.map(sup => (
@@ -201,11 +201,11 @@ export function DepartmentForm({ editingId, onCancel, onSaved }: DepartmentFormP
           </select>
         </div>
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex justify-end gap-3 pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
           <button
             type="button"
             onClick={handleCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#555555] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
           >
             Cancel
           </button>

@@ -124,8 +124,8 @@ export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: Wor
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 max-w-2xl mx-auto">
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6 max-w-2xl mx-auto">
+      <h2 className="text-xl font-semibold text-[#121212] dark:text-white mb-6">
         {viewOnly ? 'View Work Schedule' : isEditing ? 'Edit Work Schedule' : 'Create Work Schedule'}
       </h2>
 
@@ -137,7 +137,7 @@ export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: Wor
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="companyId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="companyId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Company <span className="text-red-500">*</span>
           </label>
           <select
@@ -146,7 +146,7 @@ export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: Wor
             onChange={(e) => handleChange('companyId', e.target.value)}
             required
             disabled={viewOnly}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <option value="">Select Company</option>
             {companies.map(c => (
@@ -156,7 +156,7 @@ export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: Wor
         </div>
 
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="name" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Schedule Name <span className="text-red-500">*</span>
           </label>
           <input
@@ -166,14 +166,14 @@ export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: Wor
             onChange={(e) => handleChange('name', e.target.value)}
             required
             disabled={viewOnly}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder="Work Schedule Name"
           />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label htmlFor="timeIn" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="timeIn" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Time In <span className="text-red-500">*</span>
             </label>
             <input
@@ -183,12 +183,12 @@ export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: Wor
               onChange={(e) => handleChange('timeIn', e.target.value)}
               required
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
 
           <div>
-            <label htmlFor="timeOut" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="timeOut" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Time Out <span className="text-red-500">*</span>
             </label>
             <input
@@ -198,12 +198,12 @@ export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: Wor
               onChange={(e) => handleChange('timeOut', e.target.value)}
               required
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
 
           <div>
-            <label htmlFor="breakDurationMinutes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="breakDurationMinutes" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Break Duration (min) <span className="text-red-500">*</span>
             </label>
             <input
@@ -214,14 +214,14 @@ export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: Wor
               required
               min="0"
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               placeholder="60"
             />
           </div>
         </div>
 
         <div>
-          <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <div className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-2">
             Work Days <span className="text-red-500">*</span>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -235,7 +235,7 @@ export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: Wor
                 } ${
                   formData.workDays.includes(day.value)
                     ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-300'
-                    : 'bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    : 'bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 border-[#D5D5D5] dark:border-[#555555] text-[#3A3A3A] dark:text-[#BDBDBD] hover:bg-[#EFEFEF] dark:hover:bg-[#3A3A3A]'
                 }`}
               >
                 <input
@@ -244,7 +244,7 @@ export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: Wor
                   checked={formData.workDays.includes(day.value)}
                   onChange={() => handleWorkDayToggle(day.value)}
                   disabled={viewOnly}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-4 h-4 text-blue-600 border-[#BDBDBD] rounded focus:ring-blue-500 focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <span className="ml-2 text-sm">{day.label}</span>
               </label>
@@ -252,11 +252,11 @@ export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: Wor
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex justify-end gap-3 pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
           <button
             type="button"
             onClick={handleCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#555555] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
           >
             {viewOnly ? 'Close' : 'Cancel'}
           </button>

@@ -169,9 +169,9 @@ export function SupervisorQRDisplay({
   const actionColorDark = action === 'time_in' ? 'dark:bg-green-500' : 'dark:bg-red-500';
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{actionLabel} QR Code</h2>
+        <h2 className="text-lg font-semibold text-[#121212] dark:text-white">{actionLabel} QR Code</h2>
         <span className={`px-2 py-1 text-xs font-medium text-white rounded ${actionColor} ${actionColorDark}`}>
           {actionLabel}
         </span>
@@ -186,7 +186,7 @@ export function SupervisorQRDisplay({
       <div className="flex flex-col items-center gap-4">
         {token && qrDataUrl && (
           <div className="relative">
-            <div className="bg-white p-4 rounded-lg shadow-inner border border-gray-200 dark:border-gray-700">
+            <div className="bg-white p-4 rounded-lg shadow-inner border border-[#D5D5D5] dark:border-[#3A3A3A]">
               <QRCodeSVG
                 value={token}
                 size={256}
@@ -196,25 +196,25 @@ export function SupervisorQRDisplay({
                 fgColor="#000000"
               />
             </div>
-            <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs px-2 py-1 rounded whitespace-nowrap">
+            <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#121212] dark:bg-[#EFEFEF] text-white dark:text-[#121212] text-xs px-2 py-1 rounded whitespace-nowrap">
               Expires in {formatTime(timeLeft)}
             </div>
           </div>
         )}
 
         <div className="w-full max-w-md text-center">
-          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div className="h-3 bg-[#D5D5D5] dark:bg-[#3A3A3A] rounded-full overflow-hidden">
             <div
               className={`h-full transition-all duration-1000 ease-linear ${actionColor} ${actionColorDark}`}
               style={{ width: `${Math.max(0, (timeLeft / expirationSeconds) * 100)}%` }}
             />
           </div>
-          <p className="mt-2 text-sm font-mono text-gray-600 dark:text-gray-400">
+          <p className="mt-2 text-sm font-mono text-[#555555] dark:text-[#9E9E9E]">
             {formatTime(timeLeft)} remaining
           </p>
         </div>
 
-        <div className="w-full max-w-md space-y-2 text-xs text-gray-500 dark:text-gray-400">
+        <div className="w-full max-w-md space-y-2 text-xs text-[#757575] dark:text-[#9E9E9E]">
           <p>Session ID: <code className="font-mono">{sessionId?.slice(0, 8)}...</code></p>
           <p>Expires: {expiresAt ? formatTime12(expiresAt) : '—'}</p>
         </div>
@@ -230,7 +230,7 @@ export function SupervisorQRDisplay({
 
       {/* Real-time scan notifications */}
       <div className="mt-6 w-full max-w-md">
-        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+        <h3 className="text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-3">
           Active Scans
           {scans.length > 0 && (
             <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
@@ -239,7 +239,7 @@ export function SupervisorQRDisplay({
           )}
         </h3>
         {scans.length === 0 ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+          <p className="text-sm text-[#757575] dark:text-[#9E9E9E] text-center py-4 bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 rounded-lg">
             Waiting for scans...
           </p>
         ) : (
@@ -277,8 +277,8 @@ export function SupervisorQRDisplay({
 
       {token && (
         <details className="mt-4 w-full max-w-md">
-          <summary className="text-sm text-gray-500 dark:text-gray-400 cursor-pointer">Show token (for manual entry)</summary>
-          <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-900 rounded text-xs font-mono text-gray-700 dark:text-gray-300 break-all select-all">
+          <summary className="text-sm text-[#757575] dark:text-[#9E9E9E] cursor-pointer">Show token (for manual entry)</summary>
+          <div className="mt-2 p-2 bg-[#EFEFEF] dark:bg-[#121212] rounded text-xs font-mono text-[#3A3A3A] dark:text-[#BDBDBD] break-all select-all">
             {token}
           </div>
         </details>

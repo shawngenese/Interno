@@ -184,7 +184,7 @@ export function TaskList() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Tasks</h2>
+        <h2 className="text-lg font-semibold text-[#121212] dark:text-white">Tasks</h2>
         <button
           onClick={() => setShowForm(true)}
           className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -193,7 +193,7 @@ export function TaskList() {
         </button>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-4">
         <div className="flex flex-col gap-3">
           <div className="flex flex-col sm:flex-row gap-3">
             <input
@@ -202,14 +202,14 @@ export function TaskList() {
               value={filters.search}
               onChange={(e) => updateFilter('search', e.target.value)}
               aria-label="Search tasks"
-              className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <select
               multiple
               value={filters.status}
               onChange={(e) => updateFilter('status', Array.from(e.target.selectedOptions, (o) => o.value as TaskStatus))}
               aria-label="Filter by status"
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[140px]"
+              className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[140px]"
               size={1}
             >
               <option value="">All Status</option>
@@ -222,7 +222,7 @@ export function TaskList() {
               value={filters.priority}
               onChange={(e) => updateFilter('priority', Array.from(e.target.selectedOptions, (o) => o.value as TaskPriority))}
               aria-label="Filter by priority"
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[140px]"
+              className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[140px]"
               size={1}
             >
               <option value="">All Priority</option>
@@ -236,7 +236,7 @@ export function TaskList() {
               value={filters.traineeId}
               onChange={(e) => updateFilter('traineeId', e.target.value)}
               aria-label="Filter by trainee"
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[180px]"
+              className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[180px]"
             >
               <option value="">All Trainees</option>
               {trainees.map((t) => (
@@ -249,7 +249,7 @@ export function TaskList() {
               onChange={(e) => updateFilter('dueDateFrom', e.target.value)}
               placeholder="Due from"
               aria-label="Due date from"
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <input
               type="date"
@@ -257,7 +257,7 @@ export function TaskList() {
               onChange={(e) => updateFilter('dueDateTo', e.target.value)}
               placeholder="Due to"
               aria-label="Due date to"
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
@@ -272,7 +272,7 @@ export function TaskList() {
           <button onClick={() => handleBulkReview('returned')} className="px-3 py-1 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700">
             Return All
           </button>
-          <button onClick={() => setSelectedIds(new Set())} className="text-xs text-gray-500 hover:text-gray-700">
+          <button onClick={() => setSelectedIds(new Set())} className="text-xs text-[#757575] hover:text-[#3A3A3A]">
             Clear
           </button>
         </div>
@@ -289,23 +289,23 @@ export function TaskList() {
           description="Create a new task or adjust your filters."
         />
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+              <tr className="border-b border-[#D5D5D5] dark:border-[#3A3A3A] bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
                 <th className="w-10 px-4 py-3">
                   <input
                     type="checkbox"
                     checked={selectedIds.size === tasks.length && tasks.length > 0}
                     onChange={toggleSelectAll}
                     aria-label="Select all tasks"
-                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    className="h-4 w-4 text-blue-600 border-[#BDBDBD] rounded focus:ring-blue-500"
                   />
                 </th>
-                <th className="text-left px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Task</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-700 dark:text-gray-300 hidden sm:table-cell">Status</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-700 dark:text-gray-300 hidden md:table-cell">Priority</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-700 dark:text-gray-300 hidden lg:table-cell">Due</th>
+                <th className="text-left px-4 py-3 font-medium text-[#3A3A3A] dark:text-[#BDBDBD]">Task</th>
+                <th className="text-center px-4 py-3 font-medium text-[#3A3A3A] dark:text-[#BDBDBD] hidden sm:table-cell">Status</th>
+                <th className="text-center px-4 py-3 font-medium text-[#3A3A3A] dark:text-[#BDBDBD] hidden md:table-cell">Priority</th>
+                <th className="text-center px-4 py-3 font-medium text-[#3A3A3A] dark:text-[#BDBDBD] hidden lg:table-cell">Due</th>
                 <th className="w-20 px-4 py-3"></th>
               </tr>
             </thead>
@@ -313,7 +313,7 @@ export function TaskList() {
               {tasks.map((task) => (
                 <tr
                   key={task.id}
-                  className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer"
+                  className="border-b border-gray-100 dark:border-[#3A3A3A]/50 hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/30 cursor-pointer"
                   onClick={() => setSelectedTask(task)}
                 >
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -322,13 +322,13 @@ export function TaskList() {
                       checked={selectedIds.has(task.id)}
                       onChange={() => toggleSelect(task.id)}
                       aria-label={`Select ${task.title}`}
-                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      className="h-4 w-4 text-blue-600 border-[#BDBDBD] rounded focus:ring-blue-500"
                     />
                   </td>
                   <td className="px-4 py-3">
                     <div>
-                      <p className="font-medium text-gray-900 dark:text-white">{task.title}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-xs">{task.description}</p>
+                      <p className="font-medium text-[#121212] dark:text-white">{task.title}</p>
+                      <p className="text-xs text-[#757575] dark:text-[#9E9E9E] truncate max-w-xs">{task.description}</p>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-center hidden sm:table-cell">
@@ -341,13 +341,13 @@ export function TaskList() {
                       {TASK_PRIORITY_LABELS[task.priority]}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center text-gray-600 dark:text-gray-400 text-xs hidden lg:table-cell">
+                  <td className="px-4 py-3 text-center text-[#555555] dark:text-[#9E9E9E] text-xs hidden lg:table-cell">
                     {new Date(task.dueDate).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => handleDelete(task.id)}
-                      className="text-gray-400 hover:text-red-500"
+                      className="text-[#9E9E9E] hover:text-red-500"
                       aria-label="Delete task"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>

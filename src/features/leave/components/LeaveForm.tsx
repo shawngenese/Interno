@@ -79,11 +79,11 @@ export function LeaveForm({ onSaved, onCancel }: LeaveFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Leave Type</label>
+        <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">Leave Type</label>
         <select
           value={type}
           onChange={(e) => setType(e.target.value as LeaveType)}
-          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm dark:text-white"
+          className="w-full rounded-lg border border-[#BDBDBD] dark:border-[#555555] bg-white dark:bg-[#1E1E1E] px-3 py-2 text-sm dark:text-white"
         >
           {LEAVE_TYPES.map((lt) => (
             <option key={lt.value} value={lt.value}>{lt.label}</option>
@@ -93,34 +93,34 @@ export function LeaveForm({ onSaved, onCancel }: LeaveFormProps) {
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+          <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">Start Date</label>
           <input
             type="date"
             value={startDate}
             min={today}
             onChange={(e) => setStartDate(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm dark:text-white"
+            className="w-full rounded-lg border border-[#BDBDBD] dark:border-[#555555] bg-white dark:bg-[#1E1E1E] px-3 py-2 text-sm dark:text-white"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
+          <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">End Date</label>
           <input
             type="date"
             value={endDate}
             min={startDate || today}
             onChange={(e) => setEndDate(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm dark:text-white"
+            className="w-full rounded-lg border border-[#BDBDBD] dark:border-[#555555] bg-white dark:bg-[#1E1E1E] px-3 py-2 text-sm dark:text-white"
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reason</label>
+        <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">Reason</label>
         <textarea
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           rows={3}
-          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm dark:text-white"
+          className="w-full rounded-lg border border-[#BDBDBD] dark:border-[#555555] bg-white dark:bg-[#1E1E1E] px-3 py-2 text-sm dark:text-white"
           placeholder="Describe the reason for your leave..."
         />
       </div>
@@ -139,7 +139,7 @@ export function LeaveForm({ onSaved, onCancel }: LeaveFormProps) {
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+            className="flex-1 rounded-lg border border-[#BDBDBD] dark:border-[#555555] px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] hover:bg-[#F5F5F5] dark:hover:bg-[#1E1E1E]"
           >
             Cancel
           </button>

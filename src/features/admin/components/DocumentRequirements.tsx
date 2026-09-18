@@ -53,7 +53,7 @@ export function DocumentRequirements({ traineeId, companyId }: DocumentRequireme
       case 'approved': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
       case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
       case 'rejected': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+      default: return 'bg-[#EFEFEF] text-[#1E1E1E] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]';
     }
   };
 
@@ -78,10 +78,10 @@ export function DocumentRequirements({ traineeId, companyId }: DocumentRequireme
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Document Requirements</h3>
-        <div className="text-xs text-gray-500 dark:text-gray-400">
+        <h3 className="text-sm font-semibold text-[#121212] dark:text-white">Document Requirements</h3>
+        <div className="text-xs text-[#757575] dark:text-[#9E9E9E]">
           {uploadedCount}/{REQUIRED_DOCUMENTS.length} uploaded ({completedCount} approved)
         </div>
       </div>
@@ -98,7 +98,7 @@ export function DocumentRequirements({ traineeId, companyId }: DocumentRequireme
           return (
             <div
               key={required.type}
-              className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50"
+              className="flex items-center justify-between p-2 rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50"
             >
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${
@@ -108,31 +108,31 @@ export function DocumentRequirements({ traineeId, companyId }: DocumentRequireme
                     ? 'bg-yellow-500'
                     : doc?.status === 'rejected'
                     ? 'bg-red-500'
-                    : 'bg-gray-300 dark:bg-gray-600'
+                    : 'bg-[#BDBDBD] dark:bg-[#555555]'
                 }`} />
-                <span className="text-sm text-gray-700 dark:text-gray-300">{required.label}</span>
+                <span className="text-sm text-[#3A3A3A] dark:text-[#BDBDBD]">{required.label}</span>
               </div>
               {doc ? (
                 <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${getStatusColor(doc.status)}`}>
                   {doc.status}
                 </span>
               ) : (
-                <span className="text-xs text-gray-400 dark:text-gray-500">Not uploaded</span>
+                <span className="text-xs text-[#9E9E9E] dark:text-[#757575]">Not uploaded</span>
               )}
             </div>
           );
         })}
       </div>
 
-      <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
+      <div className="mt-4 pt-3 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
         <div className="flex items-center gap-2">
-          <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+          <div className="flex-1 bg-[#D5D5D5] dark:bg-[#3A3A3A] rounded-full h-2">
             <div
               className="bg-blue-600 h-2 rounded-full transition-all duration-300"
               style={{ width: `${(uploadedCount / REQUIRED_DOCUMENTS.length) * 100}%` }}
             />
           </div>
-          <span className="text-xs text-gray-500 dark:text-gray-400">
+          <span className="text-xs text-[#757575] dark:text-[#9E9E9E]">
             {Math.round((uploadedCount / REQUIRED_DOCUMENTS.length) * 100)}%
           </span>
         </div>

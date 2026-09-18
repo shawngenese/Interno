@@ -29,11 +29,20 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
   const [total, setTotal] = useState(0);
   const [statusDropdownId, setStatusDropdownId] = useState<string | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  const [searchValue, setSearchValue] = useState('');
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Keep ref in sync with state
   useEffect(() => {
     traineesRef.current = trainees;
   }, [trainees]);
+
+  // Cleanup debounce timer
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, []);
 
   // Close status dropdown on outside click
   useEffect(() => {
@@ -84,7 +93,11 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
   }, [fetchTrainees]);
 
   const handleSearch = (search: string) => {
-    setFilters(p => ({ ...p, search, page: 1 }));
+    setSearchValue(search);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setFilters(p => ({ ...p, search, page: 1 }));
+    }, 400);
   };
 
   const handlePageChange = (page: number) => {
@@ -128,10 +141,10 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
   const getStatusColor = (status: Trainee['status']) => {
     switch (status) {
       case 'active': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
-      case 'inactive': return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+      case 'inactive': return 'bg-[#EFEFEF] text-[#1E1E1E] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]';
       case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
       case 'archived': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+      default: return 'bg-[#EFEFEF] text-[#1E1E1E] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]';
     }
   };
 
@@ -142,34 +155,50 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
       case 'on_leave': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
       case 'completed': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
       case 'terminated': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
-      case 'archived': return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+      case 'archived': return 'bg-[#EFEFEF] text-[#1E1E1E] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]';
+      default: return 'bg-[#EFEFEF] text-[#1E1E1E] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]';
     }
   };
 
-  if (loading) {
+  if (loading && trainees.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <svg className="animate-spin h-8 w-8 text-blue-600" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
+      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
+        <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <h2 className="text-lg font-semibold text-[#121212] dark:text-white">Trainees</h2>
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <input
+                type="text"
+                placeholder="Search trainees..."
+                value={searchValue}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="w-full sm:w-64 px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <svg className="animate-spin h-8 w-8 text-blue-600" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
+      <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Trainees</h2>
+          <h2 className="text-lg font-semibold text-[#121212] dark:text-white">Trainees</h2>
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
             <input
               type="text"
               placeholder="Search trainees..."
-              value={filters.search || ''}
+              value={searchValue}
               onChange={(e) => handleSearch(e.target.value)}
-              className="w-full sm:w-64 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full sm:w-64 px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
         </div>
@@ -179,7 +208,7 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
             value={filters.status || ''}
             onChange={(e) => handleStatusChange((e.target.value as Trainee['status']) || undefined)}
             aria-label="Filter by status"
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="">All Statuses</option>
             <option value="active">Active</option>
@@ -192,7 +221,7 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
             value={filters.ojtStatus || ''}
             onChange={(e) => handleOJTStatusChange((e.target.value as Trainee['ojtStatus']) || undefined)}
             aria-label="Filter by OJT status"
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="">All OJT Statuses</option>
             <option value="pending">Pending</option>
@@ -207,7 +236,7 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
             value={filters.placementType || ''}
             onChange={(e) => handlePlacementTypeChange((e.target.value as Trainee['placementType']) || undefined)}
             aria-label="Filter by placement type"
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="">All Placement Types</option>
             <option value="internal">Internal</option>
@@ -222,48 +251,54 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
         </div>
       )}
 
+      {loading && trainees.length > 0 && (
+        <div className="h-0.5 w-full overflow-hidden bg-[#EFEFEF] dark:bg-[#3A3A3A]">
+          <div className="h-full bg-blue-600 animate-pulse" style={{ width: '40%' }} />
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50 dark:bg-gray-700/50">
+          <thead className="bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
-              <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Student ID</th>
-              <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Course</th>
-              <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
-              <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Department</th>
-              <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Supervisor</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">OJT Status</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Name</th>
+              <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Student ID</th>
+              <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Course</th>
+              <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Company</th>
+              <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Department</th>
+              <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Supervisor</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Type</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Status</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">OJT Status</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+          <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
             {trainees.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                <td colSpan={9} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">
                   No trainees found
                 </td>
               </tr>
             ) : (
               trainees.map(trainee => (
-                <tr key={trainee.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                  <td className="px-4 py-4 text-sm text-gray-900 dark:text-white font-medium">
+                <tr key={trainee.id} className="hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50">
+                  <td className="px-4 py-4 text-sm text-[#121212] dark:text-white font-medium">
                     {trainee.userName || '—'}
                   </td>
-                  <td className="hidden md:table-cell px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                  <td className="hidden md:table-cell px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
                     {trainee.profile?.studentId || '-'}
                   </td>
-                  <td className="hidden md:table-cell px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                  <td className="hidden md:table-cell px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
                     {trainee.profile?.course || '-'}
                   </td>
-                  <td className="hidden lg:table-cell px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                  <td className="hidden lg:table-cell px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
                     {trainee.companyName || '—'}
                   </td>
-                  <td className="hidden lg:table-cell px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                  <td className="hidden lg:table-cell px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
                     {trainee.departmentName || '—'}
                   </td>
-                  <td className="hidden lg:table-cell px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                  <td className="hidden lg:table-cell px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
                     {trainee.supervisorName || '-'}
                   </td>
                   <td className="px-4 py-4">
@@ -292,16 +327,16 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
                           {updatingStatus === trainee.id ? '...' : 'Status'}
                         </button>
                         {statusDropdownId === trainee.id && (
-                          <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 py-1">
+                          <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-[#1E1E1E] border border-[#D5D5D5] dark:border-[#3A3A3A] rounded-lg shadow-lg z-50 py-1">
                             {(['pending', 'active', 'on_leave', 'completed', 'terminated', 'archived'] as const).map(status => (
                               <button
                                 key={status}
                                 onClick={() => handleOJTStatusUpdate(trainee.id, status)}
                                 disabled={trainee.ojtStatus === status}
-                                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                                className={`w-full text-left px-4 py-2 text-sm hover:bg-[#EFEFEF] dark:hover:bg-[#3A3A3A] ${
                                   trainee.ojtStatus === status
-                                    ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                                    : 'text-gray-700 dark:text-gray-300'
+                                    ? 'text-[#9E9E9E] dark:text-[#757575] cursor-not-allowed'
+                                    : 'text-[#3A3A3A] dark:text-[#BDBDBD]'
                                 }`}
                               >
                                 {status.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
@@ -327,22 +362,22 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
       </div>
 
       {totalPages > 1 && (
-        <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <div className="text-sm text-gray-500 dark:text-gray-400">
+        <div className="px-4 py-3 border-t border-[#D5D5D5] dark:border-[#3A3A3A] flex items-center justify-between">
+          <div className="text-sm text-[#757575] dark:text-[#9E9E9E]">
             Page {filters.page} of {totalPages} ({total} total)
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => handlePageChange((filters.page || 1) - 1)}
               disabled={(filters.page || 1) <= 1}
-              className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
             <button
               onClick={() => handlePageChange((filters.page || 1) + 1)}
               disabled={(filters.page || 1) >= totalPages}
-              className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
             </button>

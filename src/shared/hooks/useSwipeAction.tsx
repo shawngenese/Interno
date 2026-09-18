@@ -153,7 +153,7 @@ export function SwipeableItem({
 
       {/* Content */}
       <div
-        className="relative bg-white dark:bg-gray-800 transition-transform"
+        className="relative bg-white dark:bg-[#1E1E1E] transition-transform"
         style={{ transform: `translateX(${swipeOffset}px)` }}
       >
         {children}

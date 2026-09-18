@@ -86,9 +86,9 @@ export function EvaluationForm({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
+      <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
+        <h3 className="text-lg font-semibold text-[#121212] dark:text-white">
           New Evaluation for {traineeName}
         </h3>
       </div>
@@ -102,13 +102,13 @@ export function EvaluationForm({
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Evaluation Type
             </label>
             <select
               value={type}
               onChange={(e) => setType(e.target.value as EvaluationType)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               {Object.entries(EVALUATION_TYPE_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>{label}</option>
@@ -116,36 +116,36 @@ export function EvaluationForm({
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Period Start
             </label>
             <input
               type="date"
               value={periodStart}
               onChange={(e) => setPeriodStart(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Period End
             </label>
             <input
               type="date"
               value={periodEnd}
               onChange={(e) => setPeriodEnd(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
         </div>
 
         <div className="space-y-4">
-          <h4 className="font-medium text-gray-900 dark:text-white">Ratings</h4>
+          <h4 className="font-medium text-[#121212] dark:text-white">Ratings</h4>
           {ratings.map((item, index) => (
-            <div key={item.category} className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+            <div key={item.category} className="p-4 bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 rounded-lg">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-medium text-gray-900 dark:text-white">{item.category}</span>
-                <span className="text-sm text-gray-500 dark:text-gray-400">
+                <span className="font-medium text-[#121212] dark:text-white">{item.category}</span>
+                <span className="text-sm text-[#757575] dark:text-[#9E9E9E]">
                   {RATING_LABELS[item.rating]}
                 </span>
               </div>
@@ -158,7 +158,7 @@ export function EvaluationForm({
                     className={`w-10 h-10 rounded-lg font-medium transition-colors ${
                       item.rating === value
                         ? 'bg-blue-600 text-white'
-                        : 'bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-500'
+                        : 'bg-white dark:bg-[#555555] text-[#3A3A3A] dark:text-[#BDBDBD] hover:bg-[#EFEFEF] dark:hover:bg-[#757575]'
                     }`}
                   >
                     {value}
@@ -170,34 +170,34 @@ export function EvaluationForm({
                 value={item.comments || ''}
                 onChange={(e) => handleCommentsChange(index, e.target.value)}
                 placeholder="Optional comments..."
-                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#1E1E1E] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
           ))}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Overall Comments
           </label>
           <textarea
             value={overallComments}
             onChange={(e) => setOverallComments(e.target.value)}
             rows={4}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="Provide overall comments about the trainee's performance..."
           />
         </div>
 
-        <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            Overall Rating: <span className="font-semibold text-gray-900 dark:text-white">{calculateOverallRating()}</span>/5
+        <div className="flex items-center justify-between pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
+          <div className="text-sm text-[#757575] dark:text-[#9E9E9E]">
+            Overall Rating: <span className="font-semibold text-[#121212] dark:text-white">{calculateOverallRating()}</span>/5
           </div>
           <div className="flex gap-3">
             {onCancel && (
               <button
                 onClick={onCancel}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#555555] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
               >
                 Cancel
               </button>
@@ -205,7 +205,7 @@ export function EvaluationForm({
             <button
               onClick={() => handleSave(true)}
               disabled={saving}
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#555555] focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {saving ? 'Saving...' : 'Save Draft'}
             </button>

@@ -46,6 +46,7 @@ export function CompanyList({ onEdit }: CompanyListProps) {
   }, [fetchCompanies]);
 
   const handlePageChange = (page: number) => {
+    setPagination(p => ({ ...p, page }));
     setFilters((p: typeof filters) => ({ ...p, page }));
   };
 
@@ -61,9 +62,9 @@ export function CompanyList({ onEdit }: CompanyListProps) {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Companies</h3>
+    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
+      <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
+        <h3 className="text-lg font-semibold text-[#121212] dark:text-white">Companies</h3>
       </div>
 
       {error && (
@@ -74,21 +75,21 @@ export function CompanyList({ onEdit }: CompanyListProps) {
 
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50 dark:bg-gray-700/50">
+          <thead className="bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Verified</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contact Email</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contact Phone</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Created</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Name</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Type</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Verified</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Contact Email</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Contact Phone</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Created</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+          <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
             {loading ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                <td colSpan={5} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">
                   <div className="flex items-center justify-center gap-2">
                     <svg className="animate-spin h-5 w-5 text-blue-600" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -100,17 +101,17 @@ export function CompanyList({ onEdit }: CompanyListProps) {
               </tr>
             ) : companies.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                <td colSpan={5} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">
                   No companies found
                 </td>
               </tr>
             ) : (
               companies.map((company) => (
-                <tr key={company.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                <tr key={company.id} className="hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50">
                   <td className="px-4 py-4">
                     <button
                       onClick={() => onEdit?.(company)}
-                      className="font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400"
+                      className="font-medium text-[#121212] dark:text-white hover:text-blue-600 dark:hover:text-blue-400"
                     >
                       {company.name}
                     </button>
@@ -135,16 +136,16 @@ export function CompanyList({ onEdit }: CompanyListProps) {
                         {company.verified ? 'Verified' : 'Pending'}
                       </span>
                     ) : (
-                      <span className="text-xs text-gray-400">-</span>
+                      <span className="text-xs text-[#9E9E9E]">-</span>
                     )}
                   </td>
-                  <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
                     {company.contactEmail || '-'}
                   </td>
-                  <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
                     {company.contactPhone || '-'}
                   </td>
-                  <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
                     {company.createdAt?.seconds ? new Date(company.createdAt.seconds * 1000).toLocaleDateString() : '-'}
                   </td>
                   <td className="px-4 py-4 text-right">
@@ -163,22 +164,22 @@ export function CompanyList({ onEdit }: CompanyListProps) {
       </div>
 
       {pagination.totalPages > 1 && (
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+        <div className="p-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A] flex items-center justify-between">
+          <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">
             Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)
           </p>
           <div className="flex gap-2">
             <button
               onClick={() => handlePageChange(pagination.page - 1)}
               disabled={pagination.page === 1}
-              className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
             <button
               onClick={() => handlePageChange(pagination.page + 1)}
               disabled={pagination.page === pagination.totalPages}
-              className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
             </button>

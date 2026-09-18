@@ -275,7 +275,7 @@ export function AuditLogViewer() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Audit Logs</h2>
+        <h2 className="text-lg font-semibold text-[#121212] dark:text-white">Audit Logs</h2>
         <div className="flex gap-2">
           <button
             onClick={() => handleExport('pdf')}
@@ -298,7 +298,7 @@ export function AuditLogViewer() {
           value={filters.action}
           onChange={(e) => setFilters((f) => ({ ...f, action: e.target.value }))}
           aria-label="Filter by action"
-          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
           <option value="">All Actions</option>
           {Object.entries(ACTION_LABELS).map(([key, label]) => (
@@ -309,7 +309,7 @@ export function AuditLogViewer() {
           value={filters.entityType}
           onChange={(e) => setFilters((f) => ({ ...f, entityType: e.target.value }))}
           aria-label="Filter by entity type"
-          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
           <option value="">All Entities</option>
           {Object.entries(ENTITY_LABELS).map(([key, label]) => (
@@ -321,19 +321,19 @@ export function AuditLogViewer() {
           value={filters.startDate}
           onChange={(e) => setFilters((f) => ({ ...f, startDate: e.target.value }))}
           aria-label="Start date"
-          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
         <input
           type="date"
           value={filters.endDate}
           onChange={(e) => setFilters((f) => ({ ...f, endDate: e.target.value }))}
           aria-label="End date"
-          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
         {(filters.action || filters.entityType || filters.startDate || filters.endDate) && (
           <button
             onClick={() => setFilters({ action: '', entityType: '', startDate: '', endDate: '' })}
-            className="px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg"
+            className="px-3 py-2 text-sm font-medium text-[#555555] dark:text-[#9E9E9E] hover:text-[#1E1E1E] dark:hover:text-[#D5D5D5] focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg"
           >
             Clear Filters
           </button>
@@ -346,73 +346,73 @@ export function AuditLogViewer() {
           {[1, 2, 3, 4, 5].map((i) => <SkeletonCard key={i} />)}
         </div>
       ) : logs.length === 0 ? (
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400">No audit logs found</div>
+        <div className="text-center py-8 text-[#757575] dark:text-[#9E9E9E]">No audit logs found</div>
       ) : (
         <div className="space-y-2">
           {logs.map((log) => (
             <div
               key={log.id}
-              className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden"
+              className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] overflow-hidden"
             >
               <button
                 onClick={() => setExpandedLog(expandedLog === log.id ? null : log.id)}
                 aria-label="Toggle details"
                 aria-expanded={expandedLog === log.id}
-                className="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                className="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50"
               >
                 <div className="flex items-center gap-3">
                   <span className={`px-2 py-0.5 text-xs font-medium rounded ${
                     log.action === 'create' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
                     log.action === 'update' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
                     log.action === 'delete' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
-                    'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                    'bg-[#EFEFEF] text-[#1E1E1E] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]'
                   }`}>
                     {ACTION_LABELS[log.action] || log.action}
                   </span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                  <span className="text-sm font-medium text-[#121212] dark:text-white">
                     {ENTITY_LABELS[log.entityType] || log.entityType}
                   </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                  <span className="text-xs text-[#757575] dark:text-[#9E9E9E]">
                     {log.entityName || '—'}
                   </span>
                 </div>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="text-xs text-[#757575] dark:text-[#9E9E9E]">
                   {formatTimestamp(log.timestamp)}
                 </span>
               </button>
 
               {expandedLog === log.id && (
-                <div className="px-4 pb-3 border-t border-gray-200 dark:border-gray-700">
+                <div className="px-4 pb-3 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
                   <div className="mt-3 grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="font-medium text-gray-700 dark:text-gray-300">User:</span>
-                      <span className="ml-2 text-gray-600 dark:text-gray-400 break-all">{log.userName || '—'}</span>
+                      <span className="font-medium text-[#3A3A3A] dark:text-[#BDBDBD]">User:</span>
+                      <span className="ml-2 text-[#555555] dark:text-[#9E9E9E] break-all">{log.userName || '—'}</span>
                     </div>
                     <div>
-                      <span className="font-medium text-gray-700 dark:text-gray-300">Entity:</span>
-                      <span className="ml-2 text-gray-600 dark:text-gray-400 break-all">{log.entityName || '—'}</span>
+                      <span className="font-medium text-[#3A3A3A] dark:text-[#BDBDBD]">Entity:</span>
+                      <span className="ml-2 text-[#555555] dark:text-[#9E9E9E] break-all">{log.entityName || '—'}</span>
                     </div>
                   </div>
                   {log.metadata && Object.keys(log.metadata).length > 0 && (
                     <div className="mt-3">
-                      <span className="font-medium text-gray-700 dark:text-gray-300 text-sm">Metadata:</span>
-                      <pre className="mt-1 p-2 bg-gray-50 dark:bg-gray-900 rounded text-xs text-gray-600 dark:text-gray-400 overflow-x-auto">
+                      <span className="font-medium text-[#3A3A3A] dark:text-[#BDBDBD] text-sm">Metadata:</span>
+                      <pre className="mt-1 p-2 bg-[#F5F5F5] dark:bg-[#121212] rounded text-xs text-[#555555] dark:text-[#9E9E9E] overflow-x-auto">
                         {JSON.stringify(log.metadata, null, 2)}
                       </pre>
                     </div>
                   )}
                   {log.originalValue && (
                     <div className="mt-3">
-                      <span className="font-medium text-gray-700 dark:text-gray-300 text-sm">Original Value:</span>
-                      <pre className="mt-1 p-2 bg-gray-50 dark:bg-gray-900 rounded text-xs text-gray-600 dark:text-gray-400 overflow-x-auto">
+                      <span className="font-medium text-[#3A3A3A] dark:text-[#BDBDBD] text-sm">Original Value:</span>
+                      <pre className="mt-1 p-2 bg-[#F5F5F5] dark:bg-[#121212] rounded text-xs text-[#555555] dark:text-[#9E9E9E] overflow-x-auto">
                         {JSON.stringify(log.originalValue, null, 2)}
                       </pre>
                     </div>
                   )}
                   {log.newValue && (
                     <div className="mt-3">
-                      <span className="font-medium text-gray-700 dark:text-gray-300 text-sm">New Value:</span>
-                      <pre className="mt-1 p-2 bg-gray-50 dark:bg-gray-900 rounded text-xs text-gray-600 dark:text-gray-400 overflow-x-auto">
+                      <span className="font-medium text-[#3A3A3A] dark:text-[#BDBDBD] text-sm">New Value:</span>
+                      <pre className="mt-1 p-2 bg-[#F5F5F5] dark:bg-[#121212] rounded text-xs text-[#555555] dark:text-[#9E9E9E] overflow-x-auto">
                         {JSON.stringify(log.newValue, null, 2)}
                       </pre>
                     </div>
@@ -437,7 +437,7 @@ export function AuditLogViewer() {
       )}
 
       {loading && logs.length > 0 && (
-        <div className="text-center py-4 text-gray-500 dark:text-gray-400">Loading more...</div>
+        <div className="text-center py-4 text-[#757575] dark:text-[#9E9E9E]">Loading more...</div>
       )}
     </div>
   );

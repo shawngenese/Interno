@@ -57,7 +57,7 @@ export function DocumentChecklist({ traineeId }: DocumentChecklistProps) {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-4">
         <div className="flex items-center justify-center py-4">
           <svg className="animate-spin h-5 w-5 text-blue-600" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -69,15 +69,15 @@ export function DocumentChecklist({ traineeId }: DocumentChecklistProps) {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-gray-900 dark:text-white">Document Requirements</h3>
-        <span className="text-sm text-gray-500 dark:text-gray-400">
+        <h3 className="font-semibold text-[#121212] dark:text-white">Document Requirements</h3>
+        <span className="text-sm text-[#757575] dark:text-[#9E9E9E]">
           {completedCount}/{REQUIRED_DOCUMENTS.length} completed
         </span>
       </div>
 
-      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-4">
+      <div className="w-full bg-[#D5D5D5] dark:bg-[#3A3A3A] rounded-full h-2 mb-4">
         <div
           className="bg-blue-600 h-2 rounded-full transition-all duration-300"
           style={{ width: `${progress}%` }}
@@ -90,7 +90,7 @@ export function DocumentChecklist({ traineeId }: DocumentChecklistProps) {
           return (
             <div
               key={req.type}
-              className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50"
+              className="flex items-start gap-3 p-3 rounded-lg bg-[#F5F5F5] dark:bg-[#3A3A3A]/50"
             >
               <div className="flex-shrink-0 mt-0.5">
                 {status === 'approved' ? (
@@ -106,20 +106,20 @@ export function DocumentChecklist({ traineeId }: DocumentChecklistProps) {
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                   </svg>
                 ) : (
-                  <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-5 h-5 text-[#9E9E9E]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 )}
               </div>
               <div className="flex-1">
-                <div className="font-medium text-gray-900 dark:text-white text-sm">{req.label}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">{req.description}</div>
+                <div className="font-medium text-[#121212] dark:text-white text-sm">{req.label}</div>
+                <div className="text-xs text-[#757575] dark:text-[#9E9E9E]">{req.description}</div>
               </div>
               <span className={`text-xs font-medium px-2 py-0.5 rounded ${
                 status === 'approved' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
                 status === 'pending' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
                 status === 'rejected' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
-                'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                'bg-[#EFEFEF] text-[#555555] dark:bg-[#3A3A3A] dark:text-[#9E9E9E]'
               }`}>
                 {status === 'missing' ? 'Not uploaded' : status}
               </span>

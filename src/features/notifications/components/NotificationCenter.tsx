@@ -14,7 +14,7 @@ function formatTime(ms: number): string {
 
 function priorityBadge(priority: Notification['priority']): React.ReactNode {
   const styles: Record<Notification['priority'], string> = {
-    low: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    low: 'bg-[#EFEFEF] text-[#3A3A3A] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]',
     normal: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
     high: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
     urgent: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
@@ -51,7 +51,7 @@ function priorityColor(priority: Notification['priority']): string {
   return priority === 'urgent' ? 'text-red-600 dark:text-red-400' :
          priority === 'high' ? 'text-orange-600 dark:text-orange-400' :
          priority === 'normal' ? 'text-blue-600 dark:text-blue-400' :
-         'text-gray-500 dark:text-gray-400';
+         'text-[#757575] dark:text-[#9E9E9E]';
 }
 
 export function NotificationCenter() {
@@ -132,10 +132,10 @@ export function NotificationCenter() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Notifications</h2>
+            <h2 className="text-lg font-semibold text-[#121212] dark:text-white">Notifications</h2>
             {unreadCount > 0 && (
               <span className="px-2 py-0.5 text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 rounded-full">
                 {unreadCount} unread
@@ -152,7 +152,7 @@ export function NotificationCenter() {
             </button>
             <button
               onClick={() => setShowPreferences(!showPreferences)}
-              className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg"
+              className="px-3 py-1.5 text-xs font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg"
             >
               Preferences
             </button>
@@ -160,35 +160,35 @@ export function NotificationCenter() {
         </div>
 
         {showPreferences && preferences && (
-          <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg space-y-4 border border-gray-200 dark:border-gray-700">
-            <h3 className="font-medium text-gray-900 dark:text-white">Notification Preferences</h3>
+          <div className="mb-6 p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg space-y-4 border border-[#D5D5D5] dark:border-[#3A3A3A]">
+            <h3 className="font-medium text-[#121212] dark:text-white">Notification Preferences</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   checked={preferences.fcmEnabled}
                   onChange={e => handlePreferenceChange('fcmEnabled', e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="w-4 h-4 rounded border-[#BDBDBD] text-blue-600 focus:ring-blue-500"
                 />
-                <span className="text-sm text-gray-700 dark:text-gray-300">Push Notifications (FCM)</span>
+                <span className="text-sm text-[#3A3A3A] dark:text-[#BDBDBD]">Push Notifications (FCM)</span>
               </label>
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   checked={preferences.inAppEnabled}
                   onChange={e => handlePreferenceChange('inAppEnabled', e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="w-4 h-4 rounded border-[#BDBDBD] text-blue-600 focus:ring-blue-500"
                 />
-                <span className="text-sm text-gray-700 dark:text-gray-300">In-App Notifications</span>
+                <span className="text-sm text-[#3A3A3A] dark:text-[#BDBDBD]">In-App Notifications</span>
               </label>
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   checked={preferences.emailEnabled}
                   onChange={e => handlePreferenceChange('emailEnabled', e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="w-4 h-4 rounded border-[#BDBDBD] text-blue-600 focus:ring-blue-500"
                 />
-                <span className="text-sm text-gray-700 dark:text-gray-300">Email Notifications</span>
+                <span className="text-sm text-[#3A3A3A] dark:text-[#BDBDBD]">Email Notifications</span>
               </label>
             </div>
           </div>
@@ -196,16 +196,16 @@ export function NotificationCenter() {
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-800/50">
+            <thead className="bg-[#F5F5F5] dark:bg-[#1E1E1E]/50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Type</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Title</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Priority</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Time</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Type</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Title</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Priority</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Time</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
               {loading ? (
                 <tr>
                   <td colSpan={5} className="px-4 py-8 text-center">
@@ -227,16 +227,16 @@ export function NotificationCenter() {
                 </tr>
               ) : (
                 notifications.map((n) => (
-                  <tr key={n.id} className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 ${!n.read ? 'bg-blue-50 dark:bg-blue-900/10' : ''}`}>
+                  <tr key={n.id} className={`hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50 ${!n.read ? 'bg-blue-50 dark:bg-blue-900/10' : ''}`}>
                     <td className="px-4 py-3 text-sm">
                       <div className="flex items-center gap-2">
                         <span className={priorityColor(n.priority)}>{typeIcon(n.type)}</span>
-                        <span className="font-medium text-gray-700 dark:text-gray-300">{n.type.replace(/_/g, ' ')}</span>
+                        <span className="font-medium text-[#3A3A3A] dark:text-[#BDBDBD]">{n.type.replace(/_/g, ' ')}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{n.title}</td>
+                    <td className="px-4 py-3 text-sm text-[#121212] dark:text-white">{n.title}</td>
                     <td className="px-4 py-3 text-sm">{priorityBadge(n.priority)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{formatTime(n.createdAt)}</td>
+                    <td className="px-4 py-3 text-sm text-[#757575] dark:text-[#9E9E9E]">{formatTime(n.createdAt)}</td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
                         {!n.read && (
@@ -249,7 +249,7 @@ export function NotificationCenter() {
                         )}
                         <button
                           onClick={() => handleDelete(n.id)}
-                          className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                          className="px-3 py-1.5 text-xs font-medium text-[#555555] dark:text-[#9E9E9E] hover:text-red-600 dark:hover:text-red-400"
                         >
                           Delete
                         </button>
@@ -263,21 +263,21 @@ export function NotificationCenter() {
 
           {totalPages > 1 && (
             <div className="mt-4 flex items-center justify-between">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">
                 Showing {((filters.page ?? 1) - 1) * (filters.limit || 20) + 1} to {Math.min((filters.page ?? 1) * (filters.limit || 20), total)} of {total}
               </p>
               <div className="flex gap-2">
                 <button
                   onClick={() => setFilters(f => ({ ...f, page: (f.page ?? 1) - 1 }))}
                   disabled={(filters.page ?? 1) <= 1}
-                  className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50"
+                  className="px-3 py-1 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg disabled:opacity-50"
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => setFilters(f => ({ ...f, page: (f.page ?? 1) + 1 }))}
                   disabled={(filters.page ?? 1) >= Math.ceil(total / (filters.limit || 20))}
-                  className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50"
+                  className="px-3 py-1 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg disabled:opacity-50"
                 >
                   Next
                 </button>

@@ -69,7 +69,7 @@ export function PullToRefresh({ onRefresh, children, className = '', threshold =
           </svg>
         ) : (
           <svg
-            className="h-6 w-6 text-gray-400 transition-transform"
+            className="h-6 w-6 text-[#9E9E9E] transition-transform"
             style={{ transform: `rotate(${progress * 180}deg)` }}
             fill="none"
             stroke="currentColor"

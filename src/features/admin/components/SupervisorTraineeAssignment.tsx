@@ -124,7 +124,7 @@ export function SupervisorTraineeAssignment({ supervisor, onClose, onSuccess }: 
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
+      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-8">
         <div className="flex items-center justify-center h-32">
           <svg className="animate-spin h-8 w-8 text-blue-600" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -136,14 +136,14 @@ export function SupervisorTraineeAssignment({ supervisor, onClose, onSuccess }: 
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
+      <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-lg font-semibold text-[#121212] dark:text-white">
               Assign Trainees to {supervisorName || '...'}
             </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-sm text-[#757575] dark:text-[#9E9E9E] mt-1">
               {assignedTraineeIds.length} of {allTrainees.length} trainees assigned
               {hasChanges && <span className="ml-2 text-yellow-600 dark:text-yellow-400">(unsaved changes)</span>}
             </p>
@@ -157,7 +157,7 @@ export function SupervisorTraineeAssignment({ supervisor, onClose, onSuccess }: 
         </div>
       )}
 
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <input
@@ -166,15 +166,15 @@ export function SupervisorTraineeAssignment({ supervisor, onClose, onSuccess }: 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               aria-label="Search trainees"
-              className="w-full px-4 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 pl-10 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9E9E9E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
           <button
             onClick={handleSelectAll}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#555555] transition-colors"
           >
             {assignedTraineeIds.length === filteredTrainees.length ? 'Deselect All' : 'Select All'}
           </button>
@@ -183,7 +183,7 @@ export function SupervisorTraineeAssignment({ supervisor, onClose, onSuccess }: 
 
       <div className="p-4">
         {filteredTrainees.length === 0 ? (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <div className="text-center py-8 text-[#757575] dark:text-[#9E9E9E]">
             No trainees found
           </div>
         ) : (
@@ -205,7 +205,7 @@ export function SupervisorTraineeAssignment({ supervisor, onClose, onSuccess }: 
                         ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800/50 opacity-60 cursor-pointer'
                         : isAssigned
                           ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 cursor-pointer'
-                          : 'bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer'
+                          : 'bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 border-[#D5D5D5] dark:border-[#555555] hover:bg-[#EFEFEF] dark:hover:bg-[#3A3A3A] cursor-pointer'
                   }`}
                 >
                   <input
@@ -213,11 +213,11 @@ export function SupervisorTraineeAssignment({ supervisor, onClose, onSuccess }: 
                     checked={isAssigned}
                     disabled={hasOtherSupervisor}
                     onChange={() => handleToggleTrainee(trainee.id)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-4 h-4 text-blue-600 border-[#BDBDBD] rounded focus:ring-blue-500 focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <div className="ml-3 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className={`font-medium ${hasOtherSupervisor ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}>
+                      <p className={`font-medium ${hasOtherSupervisor ? 'text-[#757575] dark:text-[#9E9E9E]' : 'text-[#121212] dark:text-white'}`}>
                         {trainee.userName || '—'}
                       </p>
                       {hasOtherSupervisor && (
@@ -229,7 +229,7 @@ export function SupervisorTraineeAssignment({ supervisor, onClose, onSuccess }: 
                         </span>
                       )}
                     </div>
-                    <p className={`text-sm ${hasOtherSupervisor ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400'}`}>
+                    <p className={`text-sm ${hasOtherSupervisor ? 'text-[#9E9E9E] dark:text-[#757575]' : 'text-[#757575] dark:text-[#9E9E9E]'}`}>
                       {trainee.profile?.studentId && `${trainee.profile.studentId} • `}
                       {trainee.profile?.course}
                     </p>
@@ -258,10 +258,10 @@ export function SupervisorTraineeAssignment({ supervisor, onClose, onSuccess }: 
         )}
       </div>
 
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+      <div className="p-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A] flex justify-end gap-3">
         <button
           onClick={onClose}
-          className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+          className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#555555] transition-colors"
         >
           Cancel
         </button>

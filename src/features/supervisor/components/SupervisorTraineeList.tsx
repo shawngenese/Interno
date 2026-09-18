@@ -49,10 +49,10 @@ export function SupervisorTraineeList() {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Assigned Trainees</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{trainees.length} trainee(s) assigned to you</p>
+    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
+      <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
+        <h2 className="text-lg font-semibold text-[#121212] dark:text-white">Assigned Trainees</h2>
+        <p className="text-sm text-[#757575] dark:text-[#9E9E9E] mt-1">{trainees.length} trainee(s) assigned to you</p>
       </div>
 
       {error && (
@@ -63,19 +63,19 @@ export function SupervisorTraineeList() {
 
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50 dark:bg-gray-700/50">
+          <thead className="bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Student ID</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Course</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">School</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">OJT Status</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Today</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Student ID</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Course</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">School</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">OJT Status</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Today</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+          <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
             {trainees.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                <td colSpan={5} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">
                   No trainees assigned
                 </td>
               </tr>
@@ -83,14 +83,14 @@ export function SupervisorTraineeList() {
               trainees.map(trainee => {
                 const att = attendance[trainee.id];
                 return (
-                  <tr key={trainee.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-white">
-                      {trainee.profile?.studentId || '-'}
+                  <tr key={trainee.id} className="hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50">
+                    <td className="px-4 py-4 text-sm font-medium text-[#121212] dark:text-white">
+                      {trainee.name || trainee.profile?.studentId || '-'}
                     </td>
-                    <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
                       {trainee.profile?.course || '-'}
                     </td>
-                    <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
                       {trainee.profile?.school || '-'}
                     </td>
                     <td className="px-4 py-4">
@@ -99,15 +99,15 @@ export function SupervisorTraineeList() {
                           ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                           : trainee.ojtStatus === 'on_leave'
                           ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
-                          : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                          : 'bg-[#EFEFEF] text-[#555555] dark:bg-[#3A3A3A] dark:text-[#9E9E9E]'
                       }`}>
                         {trainee.ojtStatus.replace('_', ' ')}
                       </span>
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${att?.hasTimeIn ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                        <span className={`w-2 h-2 rounded-full ${att?.hasTimeIn ? 'bg-green-500' : 'bg-[#BDBDBD] dark:bg-[#555555]'}`} />
+                        <span className="text-xs text-[#757575] dark:text-[#9E9E9E]">
                           {att?.hasTimeIn ? (att?.hasTimeOut ? 'Completed' : 'In progress') : 'Not started'}
                         </span>
                       </div>

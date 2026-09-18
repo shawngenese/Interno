@@ -93,8 +93,8 @@ export function CompanyForm({ editingId, onCancel, onSaved }: CompanyFormProps) 
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 max-w-2xl mx-auto">
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6 max-w-2xl mx-auto">
+      <h2 className="text-xl font-semibold text-[#121212] dark:text-white mb-6">
         {isEditing ? 'Edit Company' : 'Create Company'}
       </h2>
 
@@ -106,7 +106,7 @@ export function CompanyForm({ editingId, onCancel, onSaved }: CompanyFormProps) 
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="name" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Company Name <span className="text-red-500">*</span>
           </label>
           <input
@@ -115,21 +115,21 @@ export function CompanyForm({ editingId, onCancel, onSaved }: CompanyFormProps) 
             value={formData.name}
             onChange={(e) => handleChange('name', e.target.value)}
             required
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="Company Name"
           />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="type" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Company Type <span className="text-red-500">*</span>
             </label>
             <select
               id="type"
               value={formData.type}
               onChange={(e) => handleChange('type', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="internal">Internal</option>
               <option value="external">External</option>
@@ -137,7 +137,7 @@ export function CompanyForm({ editingId, onCancel, onSaved }: CompanyFormProps) 
           </div>
 
           <div>
-            <label htmlFor="contactPerson" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="contactPerson" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Contact Person
             </label>
             <input
@@ -145,14 +145,14 @@ export function CompanyForm({ editingId, onCancel, onSaved }: CompanyFormProps) 
               id="contactPerson"
               value={formData.contactPerson}
               onChange={(e) => handleChange('contactPerson', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Contact Person Name"
             />
           </div>
         </div>
 
         <div>
-          <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="address" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Address
           </label>
           <textarea
@@ -160,14 +160,14 @@ export function CompanyForm({ editingId, onCancel, onSaved }: CompanyFormProps) 
             value={formData.address}
             onChange={(e) => handleChange('address', e.target.value)}
             rows={3}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="Company Address"
           />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="contactEmail" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="contactEmail" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Contact Email
             </label>
             <input
@@ -175,13 +175,13 @@ export function CompanyForm({ editingId, onCancel, onSaved }: CompanyFormProps) 
               id="contactEmail"
               value={formData.contactEmail}
               onChange={(e) => handleChange('contactEmail', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="contact@company.com"
             />
           </div>
 
           <div>
-            <label htmlFor="contactPhone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="contactPhone" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Contact Phone
             </label>
             <input
@@ -189,7 +189,7 @@ export function CompanyForm({ editingId, onCancel, onSaved }: CompanyFormProps) 
               id="contactPhone"
               value={formData.contactPhone}
               onChange={(e) => handleChange('contactPhone', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="+1 (555) 123-4567"
             />
           </div>
@@ -202,19 +202,19 @@ export function CompanyForm({ editingId, onCancel, onSaved }: CompanyFormProps) 
               id="verified"
               checked={formData.verified}
               onChange={(e) => setFormData(prev => ({ ...prev, verified: e.target.checked }))}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-[#BDBDBD] rounded"
             />
-            <label htmlFor="verified" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="verified" className="text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD]">
               Verified (External Company)
             </label>
           </div>
         )}
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex justify-end gap-3 pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
           <button
             type="button"
             onClick={handleCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#555555] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
           >
             Cancel
           </button>

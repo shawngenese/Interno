@@ -18,7 +18,7 @@ const STATUS_STYLES: Record<LeaveStatus, string> = {
   pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
   approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
   rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-  cancelled: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
+  cancelled: 'bg-[#EFEFEF] text-[#555555] dark:bg-[#3A3A3A] dark:text-[#9E9E9E]',
 };
 
 const TYPE_LABELS: Record<LeaveType, string> = {
@@ -86,7 +86,7 @@ export function TraineeLeaveView() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">My Leave Requests</h2>
+        <h2 className="text-lg font-semibold text-[#121212] dark:text-white">My Leave Requests</h2>
         <button
           onClick={() => setShowForm(true)}
           className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
@@ -97,17 +97,17 @@ export function TraineeLeaveView() {
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 text-center">
+        <div className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-3 text-center">
           <p className="text-2xl font-bold text-yellow-600">{pendingCount}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Pending</p>
+          <p className="text-xs text-[#757575] dark:text-[#9E9E9E]">Pending</p>
         </div>
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 text-center">
+        <div className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-3 text-center">
           <p className="text-2xl font-bold text-green-600">{approvedCount}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Approved</p>
+          <p className="text-xs text-[#757575] dark:text-[#9E9E9E]">Approved</p>
         </div>
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 text-center">
-          <p className="text-2xl font-bold text-gray-600">{leaves.length}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Total</p>
+        <div className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-3 text-center">
+          <p className="text-2xl font-bold text-[#555555]">{leaves.length}</p>
+          <p className="text-xs text-[#757575] dark:text-[#9E9E9E]">Total</p>
         </div>
       </div>
 
@@ -117,28 +117,28 @@ export function TraineeLeaveView() {
           {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
         </div>
       ) : leaves.length === 0 ? (
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400">No leave requests yet</div>
+        <div className="text-center py-8 text-[#757575] dark:text-[#9E9E9E]">No leave requests yet</div>
       ) : (
         <div className="space-y-3">
           {leaves.map((leave) => (
-            <div key={leave.id} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+            <div key={leave.id} className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4">
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                    <span className="text-sm font-medium text-[#121212] dark:text-white">
                       {TYPE_LABELS[leave.type]}
                     </span>
                     <span className={`px-2 py-0.5 text-xs font-medium rounded ${STATUS_STYLES[leave.status]}`}>
                       {STATUS_LABELS[leave.status]}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">
                     {formatDate(leave.startDate)} - {formatDate(leave.endDate)}
-                    <span className="ml-2 text-gray-400">({daysBetween(leave.startDate, leave.endDate)}d)</span>
+                    <span className="ml-2 text-[#9E9E9E]">({daysBetween(leave.startDate, leave.endDate)}d)</span>
                   </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">{leave.reason}</p>
+                  <p className="text-sm text-[#555555] dark:text-[#BDBDBD]">{leave.reason}</p>
                   {leave.approvalNotes && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 italic">
+                    <p className="text-xs text-[#757575] dark:text-[#9E9E9E] italic">
                       Supervisor note: {leave.approvalNotes}
                     </p>
                   )}
@@ -170,10 +170,10 @@ export function TraineeLeaveView() {
         >
           {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
           <div
-            className="w-full max-w-md rounded-lg bg-white dark:bg-gray-800 p-6"
+            className="w-full max-w-md rounded-lg bg-white dark:bg-[#1E1E1E] p-6"
             onKeyDown={(e) => { if (e.key === 'Escape') setShowForm(false); }}
           >
-            <h3 id="leave-form-modal-title" className="text-lg font-semibold text-gray-900 dark:text-white mb-4">New Leave Request</h3>
+            <h3 id="leave-form-modal-title" className="text-lg font-semibold text-[#121212] dark:text-white mb-4">New Leave Request</h3>
             <LeaveForm
               onSaved={() => { setShowForm(false); fetchLeaves(); }}
               onCancel={() => setShowForm(false)}

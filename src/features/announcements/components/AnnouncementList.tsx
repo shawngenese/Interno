@@ -62,9 +62,9 @@ export function AnnouncementList({ companyId, role }: AnnouncementListProps) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-lg font-semibold text-[#121212] dark:text-white">
             Announcements
           </h2>
           <div className="flex flex-wrap gap-3">
@@ -72,7 +72,7 @@ export function AnnouncementList({ companyId, role }: AnnouncementListProps) {
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value as AnnouncementStatus | '')}
               aria-label="Filter by status"
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
             >
               <option value="">All Status</option>
               <option value="published">Published</option>
@@ -108,12 +108,12 @@ export function AnnouncementList({ companyId, role }: AnnouncementListProps) {
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-24 bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse" />
+              <div key={i} className="h-24 bg-[#EFEFEF] dark:bg-[#3A3A3A] rounded-lg animate-pulse" />
             ))}
           </div>
         ) : announcements.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-500 dark:text-gray-400">No announcements found</p>
+            <p className="text-[#757575] dark:text-[#9E9E9E]">No announcements found</p>
           </div>
         ) : (
           <div className="space-y-3">

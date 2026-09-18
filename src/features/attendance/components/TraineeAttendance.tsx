@@ -63,24 +63,24 @@ export function TraineeAttendance() {
     <div className="space-y-4">
       <MissingTimeOutAlert />
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Today's Attendance</h2>
+      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
+        <h2 className="text-lg font-semibold text-[#121212] dark:text-white mb-4">Today's Attendance</h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className={`p-4 rounded-lg border ${todayStatus.hasTimeIn ? 'border-green-300 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 dark:border-gray-700'}`}>
+          <div className={`p-4 rounded-lg border ${todayStatus.hasTimeIn ? 'border-green-300 bg-green-50 dark:bg-green-900/20' : 'border-[#D5D5D5] dark:border-[#3A3A3A]'}`}>
             <div className="flex items-center gap-2 mb-1">
-              <span className={`w-2 h-2 rounded-full ${todayStatus.hasTimeIn ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
-              <h3 className="font-medium text-gray-900 dark:text-white">Time In</h3>
+              <span className={`w-2 h-2 rounded-full ${todayStatus.hasTimeIn ? 'bg-green-500' : 'bg-[#BDBDBD] dark:bg-[#555555]'}`} />
+              <h3 className="font-medium text-[#121212] dark:text-white">Time In</h3>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">{timeInLabel}</p>
+            <p className="text-sm text-[#555555] dark:text-[#9E9E9E]">{timeInLabel}</p>
           </div>
 
-          <div className={`p-4 rounded-lg border ${todayStatus.hasTimeOut ? 'border-red-300 bg-red-50 dark:bg-red-900/20' : 'border-gray-200 dark:border-gray-700'}`}>
+          <div className={`p-4 rounded-lg border ${todayStatus.hasTimeOut ? 'border-red-300 bg-red-50 dark:bg-red-900/20' : 'border-[#D5D5D5] dark:border-[#3A3A3A]'}`}>
             <div className="flex items-center gap-2 mb-1">
-              <span className={`w-2 h-2 rounded-full ${todayStatus.hasTimeOut ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
-              <h3 className="font-medium text-gray-900 dark:text-white">Time Out</h3>
+              <span className={`w-2 h-2 rounded-full ${todayStatus.hasTimeOut ? 'bg-red-500' : 'bg-[#BDBDBD] dark:bg-[#555555]'}`} />
+              <h3 className="font-medium text-[#121212] dark:text-white">Time Out</h3>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">{timeOutLabel}</p>
+            <p className="text-sm text-[#555555] dark:text-[#9E9E9E]">{timeOutLabel}</p>
           </div>
         </div>
       </div>
@@ -106,12 +106,12 @@ export function TraineeAttendance() {
 
       {loading && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center">
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-xl p-6 text-center">
             <svg className="animate-spin mx-auto h-8 w-8 text-blue-600" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">Loading attendance...</p>
+            <p className="mt-2 text-[#555555] dark:text-[#9E9E9E]">Loading attendance...</p>
           </div>
         </div>
       )}

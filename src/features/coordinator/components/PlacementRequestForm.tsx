@@ -106,12 +106,12 @@ export function PlacementRequestForm({ onSuccess }: PlacementRequestFormProps) {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
+      <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
+        <h3 className="text-lg font-semibold text-[#121212] dark:text-white">
           Request External Placement
         </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        <p className="text-sm text-[#757575] dark:text-[#9E9E9E] mt-1">
           Submit a request to be placed at an external company
         </p>
       </div>
@@ -124,11 +124,11 @@ export function PlacementRequestForm({ onSuccess }: PlacementRequestFormProps) {
         )}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Select External Company <span className="text-red-500">*</span>
           </label>
           {loading ? (
-            <div className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+            <div className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-[#F5F5F5] dark:bg-[#3A3A3A] text-[#757575] dark:text-[#9E9E9E]">
               Loading companies...
             </div>
           ) : (
@@ -136,7 +136,7 @@ export function PlacementRequestForm({ onSuccess }: PlacementRequestFormProps) {
               value={selectedCompanyId}
               onChange={(e) => setSelectedCompanyId(e.target.value)}
               required
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">Select a company...</option>
               {companies.map((company) => (
@@ -149,19 +149,19 @@ export function PlacementRequestForm({ onSuccess }: PlacementRequestFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Request Notes (optional)
           </label>
           <textarea
             value={requestNotes}
             onChange={(e) => setRequestNotes(e.target.value)}
             rows={4}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="Explain why you want to be placed at this company..."
           />
         </div>
 
-        <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex justify-end pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
           <button
             type="submit"
             disabled={submitting || !selectedCompanyId}

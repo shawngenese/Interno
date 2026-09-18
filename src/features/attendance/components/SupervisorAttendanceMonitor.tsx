@@ -139,9 +139,9 @@ export function SupervisorAttendanceMonitor() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Attendance Monitor</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Real-time attendance status of assigned trainees.</p>
+      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
+        <h2 className="text-lg font-semibold text-[#121212] dark:text-white mb-4">Attendance Monitor</h2>
+        <p className="text-sm text-[#757575] dark:text-[#9E9E9E] mb-6">Real-time attendance status of assigned trainees.</p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
@@ -191,27 +191,27 @@ export function SupervisorAttendanceMonitor() {
             </button>
           </div>
         ) : statuses.length === 0 ? (
-          <p className="text-center text-gray-500 dark:text-gray-400 py-8">No assigned trainees found.</p>
+          <p className="text-center text-[#757575] dark:text-[#9E9E9E] py-8">No assigned trainees found.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Trainee</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Status</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Time In</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Time Out</th>
+                <tr className="border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
+                  <th className="text-left py-3 px-4 font-medium text-[#3A3A3A] dark:text-[#BDBDBD]">Trainee</th>
+                  <th className="text-center py-3 px-4 font-medium text-[#3A3A3A] dark:text-[#BDBDBD]">Status</th>
+                  <th className="text-center py-3 px-4 font-medium text-[#3A3A3A] dark:text-[#BDBDBD]">Time In</th>
+                  <th className="text-center py-3 px-4 font-medium text-[#3A3A3A] dark:text-[#BDBDBD]">Time Out</th>
                 </tr>
               </thead>
               <tbody>
                 {statuses.map((status) => (
-                  <tr key={status.traineeId} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                  <tr key={status.traineeId} className="border-b border-gray-100 dark:border-[#3A3A3A]/50 hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/30">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-xs font-medium text-gray-600 dark:text-gray-300">
+                        <div className="h-8 w-8 rounded-full bg-[#D5D5D5] dark:bg-[#555555] flex items-center justify-center text-xs font-medium text-[#555555] dark:text-[#BDBDBD]">
                           {status.traineeName.split(' ').map((n) => n[0]).join('').slice(0, 2)}
                         </div>
-                        <span className="font-medium text-gray-900 dark:text-white">{status.traineeName}</span>
+                        <span className="font-medium text-[#121212] dark:text-white">{status.traineeName}</span>
                       </div>
                     </td>
                     <td className="py-3 px-4 text-center">
@@ -224,15 +224,15 @@ export function SupervisorAttendanceMonitor() {
                           Timed In
                         </span>
                       ) : (
-                        <span className="px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-full">
+                        <span className="px-2 py-1 text-xs font-medium bg-[#EFEFEF] dark:bg-[#3A3A3A] text-[#757575] dark:text-[#9E9E9E] rounded-full">
                           Not Started
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">
+                    <td className="py-3 px-4 text-center text-[#555555] dark:text-[#9E9E9E]">
                       {status.timeInTime || '—'}
                     </td>
-                    <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">
+                    <td className="py-3 px-4 text-center text-[#555555] dark:text-[#9E9E9E]">
                       {status.timeOutTime || '—'}
                     </td>
                   </tr>

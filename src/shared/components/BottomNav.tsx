@@ -24,24 +24,24 @@ export const BottomNav = React.memo(function BottomNav() {
     <>
       {moreOpen && (
         <div
-          className="fixed inset-0 z-40 bg-gray-900/80 lg:hidden"
+          className="fixed inset-0 z-40 bg-[#121212]/80 lg:hidden"
           onClick={() => setMoreOpen(false)}
         />
       )}
 
       {moreOpen && (
-        <div className="fixed bottom-16 right-2 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-3 min-w-[140px] lg:hidden">
+        <div className="fixed bottom-16 right-2 z-50 bg-white dark:bg-[#1E1E1E] border border-[#D5D5D5] dark:border-[#3A3A3A] rounded-xl shadow-lg p-3 min-w-[140px] lg:hidden">
           <div className="flex items-center justify-between gap-3 mb-2">
-            <span className="text-sm text-gray-700 dark:text-gray-300">Theme</span>
+            <span className="text-sm text-[#3A3A3A] dark:text-[#BDBDBD]">Theme</span>
             <ThemeToggle />
           </div>
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-2">
+          <div className="border-t border-[#D5D5D5] dark:border-[#3A3A3A] pt-2">
             <LogoutButton className="w-full justify-center" />
           </div>
         </div>
       )}
 
-      <nav aria-label="Main navigation (mobile)" className="fixed bottom-0 inset-x-0 z-50 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 safe-area-inset-bottom lg:hidden">
+      <nav aria-label="Main navigation (mobile)" className="fixed bottom-0 inset-x-0 z-50 bg-white dark:bg-[#1E1E1E] border-t border-[#D5D5D5] dark:border-[#3A3A3A] safe-area-inset-bottom lg:hidden">
         <div className="flex justify-around items-center h-16">
           {items.map((item) => (
             <NavLink
@@ -53,7 +53,7 @@ export const BottomNav = React.memo(function BottomNav() {
                 `flex flex-col items-center justify-center gap-1 min-w-[56px] py-1 ${
                   isActive
                     ? 'text-blue-600 dark:text-blue-400'
-                    : 'text-gray-500 dark:text-gray-400'
+                    : 'text-[#757575] dark:text-[#9E9E9E]'
                 }`
               }
             >
@@ -70,7 +70,7 @@ export const BottomNav = React.memo(function BottomNav() {
             className={`flex flex-col items-center justify-center gap-1 min-w-[56px] py-1 ${
               moreOpen
                 ? 'text-blue-600 dark:text-blue-400'
-                : 'text-gray-500 dark:text-gray-400'
+                : 'text-[#757575] dark:text-[#9E9E9E]'
             }`}
             aria-label="More options"
             aria-expanded={moreOpen}

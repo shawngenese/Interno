@@ -61,13 +61,13 @@ export function CompanyBrowser() {
               setShowRequestForm(false);
               setSelectedCompany(null);
             }}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+            className="text-[#757575] hover:text-[#3A3A3A] dark:text-[#9E9E9E] dark:hover:text-[#BDBDBD]"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-xl font-bold text-[#121212] dark:text-white">
             Request Placement at {selectedCompany.name}
           </h2>
         </div>
@@ -82,12 +82,12 @@ export function CompanyBrowser() {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
+      <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
+        <h3 className="text-lg font-semibold text-[#121212] dark:text-white">
           Browse External Companies
         </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        <p className="text-sm text-[#757575] dark:text-[#9E9E9E] mt-1">
           View verified external companies where you can request placement
         </p>
       </div>
@@ -105,24 +105,24 @@ export function CompanyBrowser() {
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
-            <span className="ml-3 text-gray-500 dark:text-gray-400">Loading companies...</span>
+            <span className="ml-3 text-[#757575] dark:text-[#9E9E9E]">Loading companies...</span>
           </div>
         ) : companies.length === 0 ? (
           <div className="text-center py-8">
-            <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-12 h-12 text-[#9E9E9E] mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
-            <p className="text-gray-500 dark:text-gray-400">No verified external companies available at this time.</p>
+            <p className="text-[#757575] dark:text-[#9E9E9E]">No verified external companies available at this time.</p>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {companies.map((company) => (
               <div
                 key={company.id}
-                className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
+                className="border border-[#D5D5D5] dark:border-[#3A3A3A] rounded-lg p-4 hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
               >
                 <div className="flex items-start justify-between mb-3">
-                  <h4 className="font-semibold text-gray-900 dark:text-white">{company.name}</h4>
+                  <h4 className="font-semibold text-[#121212] dark:text-white">{company.name}</h4>
                   <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
                     <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -132,17 +132,17 @@ export function CompanyBrowser() {
                 </div>
 
                 {company.address && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{company.address}</p>
+                  <p className="text-sm text-[#757575] dark:text-[#9E9E9E] mb-2">{company.address}</p>
                 )}
 
                 <div className="space-y-1 mb-4">
                   {company.contactPerson && (
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                    <p className="text-sm text-[#555555] dark:text-[#BDBDBD]">
                       <span className="font-medium">Contact:</span> {company.contactPerson}
                     </p>
                   )}
                   {company.contactEmail && (
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                    <p className="text-sm text-[#555555] dark:text-[#BDBDBD]">
                       <span className="font-medium">Email:</span> {company.contactEmail}
                     </p>
                   )}

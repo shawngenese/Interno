@@ -89,7 +89,7 @@ export function ActionsMenu({ items, align = 'right' }: ActionsMenuProps) {
       <button
         ref={buttonRef}
         onClick={() => setOpen(!open)}
-        className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="p-1.5 rounded-lg text-[#9E9E9E] hover:text-[#555555] dark:hover:text-[#BDBDBD] hover:bg-[#EFEFEF] dark:hover:bg-[#3A3A3A] transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
         aria-label="Actions"
         aria-haspopup="true"
         aria-expanded={open}
@@ -104,7 +104,7 @@ export function ActionsMenu({ items, align = 'right' }: ActionsMenuProps) {
       {open && createPortal(
         <div
           ref={menuRef}
-          className="fixed z-[9999] min-w-[160px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1"
+          className="fixed z-[9999] min-w-[160px] bg-white dark:bg-[#1E1E1E] border border-[#D5D5D5] dark:border-[#3A3A3A] rounded-lg shadow-lg py-1"
           style={{ top: pos.top, left: pos.left }}
           role="menu"
         >
@@ -116,7 +116,7 @@ export function ActionsMenu({ items, align = 'right' }: ActionsMenuProps) {
                 className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
                   item.danger
                     ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                    : 'text-[#3A3A3A] dark:text-[#BDBDBD] hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50'
                 }`}
                 role="menuitem"
               >

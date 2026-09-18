@@ -29,19 +29,19 @@ export function TraineeEvaluationView({ traineeId }: TraineeEvaluationViewProps)
 
   const getStatusBadge = (status: string) => {
     const badges: Record<string, string> = {
-      draft: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+      draft: 'bg-[#EFEFEF] text-[#3A3A3A] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]',
       submitted: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
       reviewed: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
       finalized: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
     };
-    return badges[status] || 'bg-gray-100 text-gray-700';
+    return badges[status] || 'bg-[#EFEFEF] text-[#3A3A3A]';
   };
 
   if (loading) {
     return (
       <div className="space-y-4">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-24 bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse" />
+          <div key={i} className="h-24 bg-[#EFEFEF] dark:bg-[#3A3A3A] rounded-lg animate-pulse" />
         ))}
       </div>
     );
@@ -49,9 +49,9 @@ export function TraineeEvaluationView({ traineeId }: TraineeEvaluationViewProps)
 
   if (evaluations.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
         <div className="text-center py-12">
-          <p className="text-gray-500 dark:text-gray-400">No evaluations yet</p>
+          <p className="text-[#757575] dark:text-[#9E9E9E]">No evaluations yet</p>
         </div>
       </div>
     );
@@ -59,8 +59,8 @@ export function TraineeEvaluationView({ traineeId }: TraineeEvaluationViewProps)
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
+        <h2 className="text-lg font-semibold text-[#121212] dark:text-white mb-4">
           My Evaluations
         </h2>
 
@@ -71,7 +71,7 @@ export function TraineeEvaluationView({ traineeId }: TraineeEvaluationViewProps)
               <div key={evaluation.id}>
                 <button
                   onClick={() => setSelectedEvaluation(isSelected ? null : evaluation)}
-                  className="w-full text-left p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  className="w-full text-left p-4 bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 rounded-lg hover:bg-[#EFEFEF] dark:hover:bg-[#3A3A3A] transition-colors"
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -79,39 +79,39 @@ export function TraineeEvaluationView({ traineeId }: TraineeEvaluationViewProps)
                         <span className={`px-2 py-0.5 text-xs rounded-full ${getStatusBadge(evaluation.status)}`}>
                           {evaluation.status.charAt(0).toUpperCase() + evaluation.status.slice(1)}
                         </span>
-                        <span className="font-medium text-gray-900 dark:text-white">
+                        <span className="font-medium text-[#121212] dark:text-white">
                           {EVALUATION_TYPE_LABELS[evaluation.type]}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">
                         By {evaluation.supervisorName} • {new Date(evaluation.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                     {evaluation.overallRating && (
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-lg text-gray-900 dark:text-white">
+                        <span className="font-semibold text-lg text-[#121212] dark:text-white">
                           {evaluation.overallRating}
                         </span>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">/5</span>
+                        <span className="text-sm text-[#757575] dark:text-[#9E9E9E]">/5</span>
                       </div>
                     )}
                   </div>
                 </button>
 
                 {isSelected && (
-                  <div className="mt-2 p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <div className="mt-2 p-4 bg-white dark:bg-[#1E1E1E] border border-[#D5D5D5] dark:border-[#3A3A3A] rounded-lg">
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <span className="text-gray-500 dark:text-gray-400">Period:</span>
-                          <p className="font-medium text-gray-900 dark:text-white">
+                          <span className="text-[#757575] dark:text-[#9E9E9E]">Period:</span>
+                          <p className="font-medium text-[#121212] dark:text-white">
                             {new Date(evaluation.period.startDate).toLocaleDateString()} -{' '}
                             {new Date(evaluation.period.endDate).toLocaleDateString()}
                           </p>
                         </div>
                         <div>
-                          <span className="text-gray-500 dark:text-gray-400">Overall Rating:</span>
-                          <p className="font-medium text-gray-900 dark:text-white">
+                          <span className="text-[#757575] dark:text-[#9E9E9E]">Overall Rating:</span>
+                          <p className="font-medium text-[#121212] dark:text-white">
                             {evaluation.overallRating}/5 ({RATING_LABELS[evaluation.overallRating as keyof typeof RATING_LABELS]})
                           </p>
                         </div>
@@ -120,17 +120,17 @@ export function TraineeEvaluationView({ traineeId }: TraineeEvaluationViewProps)
                       <div className="space-y-2">
                         {evaluation.ratings.map((item) => (
                           <div key={item.category} className="flex items-center justify-between py-1">
-                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                            <span className="text-sm text-[#3A3A3A] dark:text-[#BDBDBD]">
                               {item.category}
                             </span>
                             <div className="flex items-center gap-2">
-                              <div className="w-20 h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                              <div className="w-20 h-2 bg-[#D5D5D5] dark:bg-[#555555] rounded-full overflow-hidden">
                                 <div
                                   className="h-full bg-blue-600 rounded-full"
                                   style={{ width: `${(item.rating / 5) * 100}%` }}
                                 />
                               </div>
-                              <span className="text-sm font-medium text-gray-900 dark:text-white w-8 text-right">
+                              <span className="text-sm font-medium text-[#121212] dark:text-white w-8 text-right">
                                 {item.rating}
                               </span>
                             </div>
@@ -140,10 +140,10 @@ export function TraineeEvaluationView({ traineeId }: TraineeEvaluationViewProps)
 
                       {evaluation.overallComments && (
                         <div>
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          <span className="text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD]">
                             Supervisor Comments:
                           </span>
-                          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
+                          <p className="mt-1 text-sm text-[#555555] dark:text-[#9E9E9E] bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 p-3 rounded-lg">
                             {evaluation.overallComments}
                           </p>
                         </div>
@@ -151,10 +151,10 @@ export function TraineeEvaluationView({ traineeId }: TraineeEvaluationViewProps)
 
                       {evaluation.reviewComments && (
                         <div>
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          <span className="text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD]">
                             Coordinator Feedback:
                           </span>
-                          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
+                          <p className="mt-1 text-sm text-[#555555] dark:text-[#9E9E9E] bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
                             {evaluation.reviewComments}
                           </p>
                         </div>

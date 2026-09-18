@@ -36,7 +36,7 @@ export function ExternalPlacementRequest() {
       case 'rejected':
         return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400';
+        return 'bg-[#EFEFEF] text-[#1E1E1E] dark:bg-[#3A3A3A] dark:text-[#9E9E9E]';
     }
   };
 
@@ -67,22 +67,22 @@ export function ExternalPlacementRequest() {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
+      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-8">
         <div className="flex items-center justify-center">
           <svg className="animate-spin h-6 w-6 text-blue-600" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
-          <span className="ml-3 text-gray-500 dark:text-gray-400">Loading your placement requests...</span>
+          <span className="ml-3 text-[#757575] dark:text-[#9E9E9E]">Loading your placement requests...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
+      <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
+        <h3 className="text-lg font-semibold text-[#121212] dark:text-white">
           My Placement Requests
         </h3>
       </div>
@@ -96,39 +96,39 @@ export function ExternalPlacementRequest() {
       <div className="p-4">
         {requests.length === 0 ? (
           <div className="text-center py-8">
-            <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-12 h-12 text-[#9E9E9E] mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
-            <p className="text-gray-500 dark:text-gray-400">You haven't submitted any placement requests yet.</p>
+            <p className="text-[#757575] dark:text-[#9E9E9E]">You haven't submitted any placement requests yet.</p>
           </div>
         ) : (
           <div className="space-y-4">
             {requests.map((request) => (
               <div
                 key={request.id}
-                className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+                className="border border-[#D5D5D5] dark:border-[#3A3A3A] rounded-lg p-4"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3">
                     {getStatusIcon(request.status)}
                     <div>
-                      <h4 className="font-medium text-gray-900 dark:text-white">
+                      <h4 className="font-medium text-[#121212] dark:text-white">
                         {request.externalCompanyName}
                       </h4>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">
                         Requested on {request.createdAt?.seconds
                           ? new Date(request.createdAt.seconds * 1000).toLocaleDateString()
                           : '-'}
                       </p>
                       {request.requestNotes && (
-                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                        <p className="mt-2 text-sm text-[#555555] dark:text-[#BDBDBD]">
                           {request.requestNotes}
                         </p>
                       )}
                       {request.reviewerNotes && (
-                        <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded text-sm">
-                          <span className="font-medium text-gray-700 dark:text-gray-300">Coordinator Notes: </span>
-                          <span className="text-gray-600 dark:text-gray-400">{request.reviewerNotes}</span>
+                        <div className="mt-2 p-2 bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 rounded text-sm">
+                          <span className="font-medium text-[#3A3A3A] dark:text-[#BDBDBD]">Coordinator Notes: </span>
+                          <span className="text-[#555555] dark:text-[#9E9E9E]">{request.reviewerNotes}</span>
                         </div>
                       )}
                     </div>

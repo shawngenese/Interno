@@ -137,7 +137,7 @@ export function SupervisorDiagnostic() {
         DIAGNOSTIC (temporary - remove after debugging)
       </h3>
       {running ? (
-        <p className="text-sm text-gray-600 dark:text-gray-400">Running diagnostics...</p>
+        <p className="text-sm text-[#555555] dark:text-[#9E9E9E]">Running diagnostics...</p>
       ) : (
         <div className="space-y-1">
           {results.map((r, i) => (
@@ -145,8 +145,8 @@ export function SupervisorDiagnostic() {
               <span className={r.status === 'ok' ? 'text-green-600' : r.status === 'warn' ? 'text-yellow-600' : 'text-red-600'}>
                 {r.status === 'ok' ? '[OK]' : r.status === 'warn' ? '[WARN]' : '[FAIL]'}
               </span>
-              <span className="font-bold text-gray-700 dark:text-gray-300">{r.label}:</span>
-              <span className="text-gray-600 dark:text-gray-400 break-all">{r.detail}</span>
+              <span className="font-bold text-[#3A3A3A] dark:text-[#BDBDBD]">{r.label}:</span>
+              <span className="text-[#555555] dark:text-[#9E9E9E] break-all">{r.detail}</span>
             </div>
           ))}
         </div>

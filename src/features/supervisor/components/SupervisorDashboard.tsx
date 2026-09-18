@@ -106,11 +106,11 @@ export function SupervisorDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-2xl font-bold text-[#121212] dark:text-white">
             {isExternal ? 'External Supervisor Dashboard' : 'Supervisor Dashboard'}
           </h2>
           {isExternal && (
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">
               Viewing company-scoped trainees only
             </p>
           )}
@@ -158,8 +158,8 @@ export function SupervisorDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <AnimatedCard delay={0.2} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h3>
+      <AnimatedCard delay={0.2} className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
+        <h3 className="text-lg font-semibold text-[#121212] dark:text-white mb-4">Quick Actions</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <button
             onClick={() => navigate('/supervisor/qr')}
@@ -172,8 +172,8 @@ export function SupervisorDashboard() {
               </svg>
             </div>
             <div>
-              <div className="font-medium text-gray-900 dark:text-white">Generate QR Code</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Create attendance QR for trainees</div>
+              <div className="font-medium text-[#121212] dark:text-white">Generate QR Code</div>
+              <div className="text-sm text-[#757575] dark:text-[#9E9E9E]">Create attendance QR for trainees</div>
             </div>
           </button>
 
@@ -187,8 +187,8 @@ export function SupervisorDashboard() {
               </svg>
             </div>
             <div>
-              <div className="font-medium text-gray-900 dark:text-white">DTR Approvals</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Review and approve DTRs</div>
+              <div className="font-medium text-[#121212] dark:text-white">DTR Approvals</div>
+              <div className="text-sm text-[#757575] dark:text-[#9E9E9E]">Review and approve DTRs</div>
             </div>
           </button>
 
@@ -202,8 +202,8 @@ export function SupervisorDashboard() {
               </svg>
             </div>
             <div>
-              <div className="font-medium text-gray-900 dark:text-white">View Trainees</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">See all assigned trainees</div>
+              <div className="font-medium text-[#121212] dark:text-white">View Trainees</div>
+              <div className="text-sm text-[#757575] dark:text-[#9E9E9E]">See all assigned trainees</div>
             </div>
           </button>
         </div>
@@ -211,9 +211,9 @@ export function SupervisorDashboard() {
 
       {/* Pending DTR Approvals */}
       {pendingDTRs.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Pending DTR Approvals</h3>
+            <h3 className="text-lg font-semibold text-[#121212] dark:text-white">Pending DTR Approvals</h3>
             <button
               onClick={() => navigate('/supervisor/dtr')}
               className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
@@ -224,21 +224,21 @@ export function SupervisorDashboard() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <tr className="text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">
                   <th className="pb-2">Trainee</th>
                   <th className="pb-2">Date</th>
                   <th className="pb-2">Regular Hours</th>
                   <th className="pb-2">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
                 {pendingDTRs.slice(0, 5).map(dtr => (
                   <tr key={dtr.id}>
-                    <td className="py-3 text-sm text-gray-900 dark:text-white">{dtr.traineeId}</td>
-                    <td className="py-3 text-sm text-gray-500 dark:text-gray-400">
+                    <td className="py-3 text-sm text-[#121212] dark:text-white">{dtr.traineeId}</td>
+                    <td className="py-3 text-sm text-[#757575] dark:text-[#9E9E9E]">
                       {new Date(dtr.date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
-                    <td className="py-3 text-sm text-gray-500 dark:text-gray-400">
+                    <td className="py-3 text-sm text-[#757575] dark:text-[#9E9E9E]">
                       {(dtr.regularMinutes / 60).toFixed(1)}h
                     </td>
                     <td className="py-3">
@@ -255,9 +255,9 @@ export function SupervisorDashboard() {
       )}
 
       {/* Assigned Trainees */}
-      <AnimatedCard delay={0.25} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <AnimatedCard delay={0.25} className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Assigned Trainees</h3>
+          <h3 className="text-lg font-semibold text-[#121212] dark:text-white">Assigned Trainees</h3>
           <button
             onClick={() => navigate('/supervisor/trainees')}
             className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
@@ -266,30 +266,30 @@ export function SupervisorDashboard() {
           </button>
         </div>
         {trainees.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400 text-sm">No trainees assigned yet.</p>
+          <p className="text-[#757575] dark:text-[#9E9E9E] text-sm">No trainees assigned yet.</p>
         ) : (
           <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {trainees.slice(0, 6).map(trainee => {
               const att = attendance[trainee.id];
               return (
                 <AnimatedListItem key={trainee.id} variants={listItemVariants}>
-                  <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                  <div className="p-4 bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 rounded-lg border border-[#D5D5D5] dark:border-[#555555]">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      <span className="text-sm font-medium text-[#121212] dark:text-white">
                         {trainee.profile?.studentId || trainee.userId}
                       </span>
                       <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                         trainee.ojtStatus === 'active'
                           ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                          : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                          : 'bg-[#EFEFEF] text-[#555555] dark:bg-[#3A3A3A] dark:text-[#9E9E9E]'
                       }`}>
                         {trainee.ojtStatus}
                       </span>
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                    <div className="text-xs text-[#757575] dark:text-[#9E9E9E] space-y-1">
                       <div>{trainee.profile?.course || 'No course'}</div>
                       <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${att?.hasTimeIn ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                        <span className={`w-2 h-2 rounded-full ${att?.hasTimeIn ? 'bg-green-500' : 'bg-[#BDBDBD] dark:bg-[#555555]'}`} />
                         <span>{att?.hasTimeIn ? 'Time In' : 'Not yet'}</span>
                         {att?.hasTimeOut && (
                           <>
@@ -348,12 +348,12 @@ function StatCard({ title, value, subtitle, icon, color }: {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{title}</p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{value}</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>
+          <p className="text-sm font-medium text-[#555555] dark:text-[#9E9E9E]">{title}</p>
+          <p className="text-3xl font-bold text-[#121212] dark:text-white mt-1">{value}</p>
+          <p className="text-sm text-[#757575] dark:text-[#9E9E9E] mt-1">{subtitle}</p>
         </div>
         <div className={`p-3 rounded-lg ${colorMap[color]}`}>
           {icons[icon]}

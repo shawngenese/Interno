@@ -168,7 +168,7 @@ export function DocumentReview() {
       case 'rejected':
         return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400';
+        return 'bg-[#EFEFEF] text-[#1E1E1E] dark:bg-[#3A3A3A] dark:text-[#9E9E9E]';
     }
   };
 
@@ -179,7 +179,7 @@ export function DocumentReview() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Document Review</h2>
+        <h2 className="text-2xl font-bold text-[#121212] dark:text-white">Document Review</h2>
       </div>
 
       {error && (
@@ -188,13 +188,13 @@ export function DocumentReview() {
         </div>
       )}
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
+        <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
           <div className="flex items-center gap-4">
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">All Statuses</option>
               <option value="pending">Pending</option>
@@ -204,7 +204,7 @@ export function DocumentReview() {
             <select
               value={filterTrainee}
               onChange={(e) => setFilterTrainee(e.target.value)}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">All Trainees</option>
               {trainees.map((t) => (
@@ -216,20 +216,20 @@ export function DocumentReview() {
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-700/50">
+            <thead className="bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Trainee</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Document Type</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">File</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Uploaded</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Trainee</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Document Type</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">File</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Uploaded</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={6} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">
                     <div className="flex items-center justify-center gap-2">
                       <svg className="animate-spin h-5 w-5 text-blue-600" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -241,26 +241,26 @@ export function DocumentReview() {
                 </tr>
               ) : documents.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={6} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">
                     No documents found
                   </td>
                 </tr>
               ) : (
                 documents.map((doc) => (
-                  <tr key={doc.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <tr key={doc.id} className="hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50">
                     <td className="px-4 py-4">
-                      <div className="font-medium text-gray-900 dark:text-white">{doc.traineeName || 'Unknown'}</div>
+                      <div className="font-medium text-[#121212] dark:text-white">{doc.traineeName || 'Unknown'}</div>
                     </td>
-                    <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
                       {getDocumentTypeLabel(doc.type)}
                     </td>
                     <td className="px-4 py-4">
-                      <div className="text-sm text-gray-900 dark:text-white">{doc.fileName}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                      <div className="text-sm text-[#121212] dark:text-white">{doc.fileName}</div>
+                      <div className="text-xs text-[#757575] dark:text-[#9E9E9E]">
                         {(doc.fileSize / 1024).toFixed(1)} KB
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
                       {doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : '-'}
                     </td>
                     <td className="px-4 py-4">
@@ -286,23 +286,23 @@ export function DocumentReview() {
 
       {selectedDoc && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full">
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-xl max-w-lg w-full">
+            <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
+              <h4 className="text-lg font-semibold text-[#121212] dark:text-white">
                 Review Document
               </h4>
             </div>
             <div className="p-4 space-y-4">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Trainee</p>
-                <p className="font-medium text-gray-900 dark:text-white">{selectedDoc.traineeName}</p>
+                <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Trainee</p>
+                <p className="font-medium text-[#121212] dark:text-white">{selectedDoc.traineeName}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Document Type</p>
-                <p className="font-medium text-gray-900 dark:text-white">{getDocumentTypeLabel(selectedDoc.type)}</p>
+                <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Document Type</p>
+                <p className="font-medium text-[#121212] dark:text-white">{getDocumentTypeLabel(selectedDoc.type)}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">File</p>
+                <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">File</p>
                 <a
                   href={selectedDoc.fileUrl}
                   target="_blank"
@@ -313,25 +313,25 @@ export function DocumentReview() {
                 </a>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
                   Review Notes (optional)
                 </label>
                 <textarea
                   value={reviewNotes}
                   onChange={(e) => setReviewNotes(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Add notes about your decision..."
                 />
               </div>
             </div>
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+            <div className="p-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A] flex justify-end gap-3">
               <button
                 onClick={() => {
                   setSelectedDoc(null);
                   setReviewNotes('');
                 }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#555555] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
               >
                 Cancel
               </button>

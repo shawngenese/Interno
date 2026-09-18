@@ -89,6 +89,7 @@ export interface Trainee {
   placementApprovedBy?: string;
   placementApprovedAt?: Timestamp;
   placementNotes?: string;
+  name?: string;
   profile?: {
     studentId?: string;
     course?: string;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { adminService } from '../services/adminService';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
 import { ActionsMenu } from '@/shared/components/ActionsMenu';
@@ -20,6 +20,15 @@ export function OJTScheduleList({ onEdit, onView }: OJTScheduleListProps) {
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ListOJTSchedulesParams>({ page: 1, limit: 10 });
   const [total, setTotal] = useState(0);
+  const [searchValue, setSearchValue] = useState('');
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup debounce timer
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, []);
 
   const fetchSchedules = useCallback(async () => {
     setLoading(true);
@@ -50,7 +59,11 @@ export function OJTScheduleList({ onEdit, onView }: OJTScheduleListProps) {
   }, [fetchSchedules]);
 
   const handleSearch = (search: string) => {
-    setFilters(p => ({ ...p, search, page: 1 }));
+    setSearchValue(search);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setFilters(p => ({ ...p, search, page: 1 }));
+    }, 400);
   };
 
   const handlePageChange = (page: number) => {
@@ -72,29 +85,45 @@ export function OJTScheduleList({ onEdit, onView }: OJTScheduleListProps) {
     return '—';
   };
 
-  if (loading) {
+  if (loading && schedules.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <svg className="animate-spin h-8 w-8 text-blue-600" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
+      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
+        <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <h2 className="text-lg font-semibold text-[#121212] dark:text-white">OJT Schedules</h2>
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <input
+                type="text"
+                placeholder="Search schedules..."
+                value={searchValue}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="w-full sm:w-64 px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <svg className="animate-spin h-8 w-8 text-blue-600" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
+      <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">OJT Schedules</h2>
+          <h2 className="text-lg font-semibold text-[#121212] dark:text-white">OJT Schedules</h2>
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
             <input
               type="text"
               placeholder="Search schedules..."
-              value={filters.search || ''}
+              value={searchValue}
               onChange={(e) => handleSearch(e.target.value)}
-              className="w-full sm:w-64 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full sm:w-64 px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
         </div>
@@ -106,45 +135,51 @@ export function OJTScheduleList({ onEdit, onView }: OJTScheduleListProps) {
         </div>
       )}
 
+      {loading && schedules.length > 0 && (
+        <div className="h-0.5 w-full overflow-hidden bg-[#EFEFEF] dark:bg-[#3A3A3A]">
+          <div className="h-full bg-blue-600 animate-pulse" style={{ width: '40%' }} />
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50 dark:bg-gray-700/50">
+          <thead className="bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Start Date</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">End Date</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Required Hours</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Work Schedule</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Name</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Company</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Start Date</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">End Date</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Required Hours</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Work Schedule</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+          <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
             {schedules.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                <td colSpan={7} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">
                   No OJT schedules found
                 </td>
               </tr>
             ) : (
               schedules.map(schedule => (
-                <tr key={schedule.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                  <td className="px-4 py-4 text-sm text-gray-900 dark:text-white font-medium">
+                <tr key={schedule.id} className="hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50">
+                  <td className="px-4 py-4 text-sm text-[#121212] dark:text-white font-medium">
                     {schedule.name}
                   </td>
-                  <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
                     {schedule.companyName || '—'}
                   </td>
-                  <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
                     {formatDate(schedule.startDate)}
                   </td>
-                  <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
                     {formatDate(schedule.endDate)}
                   </td>
-                  <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
                     {schedule.requiredHours}
                   </td>
-                  <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
                     {schedule.workScheduleName || '—'}
                   </td>
                   <td className="px-4 py-4 text-right">
@@ -163,22 +198,22 @@ export function OJTScheduleList({ onEdit, onView }: OJTScheduleListProps) {
       </div>
 
       {totalPages > 1 && (
-        <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <div className="text-sm text-gray-500 dark:text-gray-400">
+        <div className="px-4 py-3 border-t border-[#D5D5D5] dark:border-[#3A3A3A] flex items-center justify-between">
+          <div className="text-sm text-[#757575] dark:text-[#9E9E9E]">
             Page {filters.page} of {totalPages} ({total} total)
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => handlePageChange((filters.page || 1) - 1)}
               disabled={(filters.page || 1) <= 1}
-              className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
             <button
               onClick={() => handlePageChange((filters.page || 1) + 1)}
               disabled={(filters.page || 1) >= totalPages}
-              className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
             </button>

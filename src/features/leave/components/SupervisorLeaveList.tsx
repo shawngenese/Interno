@@ -15,7 +15,7 @@ const STATUS_STYLES: Record<LeaveStatus, string> = {
   pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
   approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
   rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-  cancelled: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
+  cancelled: 'bg-[#EFEFEF] text-[#555555] dark:bg-[#3A3A3A] dark:text-[#9E9E9E]',
 };
 
 const TYPE_LABELS: Record<LeaveType, string> = {
@@ -80,8 +80,8 @@ export function SupervisorLeaveList() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Leave Requests</h2>
-        <span className="text-sm text-gray-500 dark:text-gray-400">{total} total</span>
+        <h2 className="text-lg font-semibold text-[#121212] dark:text-white">Leave Requests</h2>
+        <span className="text-sm text-[#757575] dark:text-[#9E9E9E]">{total} total</span>
       </div>
 
       {/* Filters */}
@@ -90,7 +90,7 @@ export function SupervisorLeaveList() {
           value={filters.status || ''}
           onChange={(e) => setFilters((f) => ({ ...f, status: (e.target.value || undefined) as LeaveStatus }))}
           aria-label="Filter by status"
-          className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm dark:text-white"
+          className="rounded-lg border border-[#BDBDBD] dark:border-[#555555] bg-white dark:bg-[#1E1E1E] px-3 py-1.5 text-sm dark:text-white"
         >
           <option value="">All Status</option>
           <option value="pending">Pending</option>
@@ -102,7 +102,7 @@ export function SupervisorLeaveList() {
           value={filters.type || ''}
           onChange={(e) => setFilters((f) => ({ ...f, type: (e.target.value || undefined) as LeaveType }))}
           aria-label="Filter by leave type"
-          className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm dark:text-white"
+          className="rounded-lg border border-[#BDBDBD] dark:border-[#555555] bg-white dark:bg-[#1E1E1E] px-3 py-1.5 text-sm dark:text-white"
         >
           <option value="">All Types</option>
           <option value="sick">Sick</option>
@@ -120,28 +120,28 @@ export function SupervisorLeaveList() {
           {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
         </div>
       ) : leaves.length === 0 ? (
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400">No leave requests found</div>
+        <div className="text-center py-8 text-[#757575] dark:text-[#9E9E9E]">No leave requests found</div>
       ) : (
         <div className="space-y-3">
           {leaves.map((leave) => (
-            <div key={leave.id} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+            <div key={leave.id} className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4">
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                    <span className="text-sm font-medium text-[#121212] dark:text-white">
                       {TYPE_LABELS[leave.type]}
                     </span>
                     <span className={`px-2 py-0.5 text-xs font-medium rounded ${STATUS_STYLES[leave.status]}`}>
                       {STATUS_LABELS[leave.status]}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">
                     {formatDate(leave.startDate)} - {formatDate(leave.endDate)}
-                    <span className="ml-2 text-gray-400">({daysBetween(leave.startDate, leave.endDate)}d)</span>
+                    <span className="ml-2 text-[#9E9E9E]">({daysBetween(leave.startDate, leave.endDate)}d)</span>
                   </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">{leave.reason}</p>
+                  <p className="text-sm text-[#555555] dark:text-[#BDBDBD]">{leave.reason}</p>
                   {leave.approvalNotes && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 italic">
+                    <p className="text-xs text-[#757575] dark:text-[#9E9E9E] italic">
                       Note: {leave.approvalNotes}
                     </p>
                   )}
@@ -174,17 +174,17 @@ export function SupervisorLeaveList() {
           <button
             onClick={() => setFilters((f) => ({ ...f, page: Math.max(1, (f.page || 1) - 1) }))}
             disabled={(filters.page || 1) <= 1}
-            className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm disabled:opacity-50"
+            className="rounded-lg border border-[#BDBDBD] dark:border-[#555555] px-3 py-1.5 text-sm disabled:opacity-50"
           >
             Previous
           </button>
-          <span className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400">
+          <span className="px-3 py-1.5 text-sm text-[#555555] dark:text-[#9E9E9E]">
             Page {filters.page || 1} of {Math.ceil(total / 20)}
           </span>
           <button
             onClick={() => setFilters((f) => ({ ...f, page: (f.page || 1) + 1 }))}
             disabled={(filters.page || 1) >= Math.ceil(total / 20)}
-            className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm disabled:opacity-50"
+            className="rounded-lg border border-[#BDBDBD] dark:border-[#555555] px-3 py-1.5 text-sm disabled:opacity-50"
           >
             Next
           </button>
@@ -203,13 +203,13 @@ export function SupervisorLeaveList() {
         >
           {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
           <div
-            className="w-full max-w-md rounded-lg bg-white dark:bg-gray-800 p-6 space-y-4"
+            className="w-full max-w-md rounded-lg bg-white dark:bg-[#1E1E1E] p-6 space-y-4"
             onKeyDown={(e) => { if (e.key === 'Escape') { setActionModal(null); setReviewNotes(''); } }}
           >
-            <h3 id="leave-review-modal-title" className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h3 id="leave-review-modal-title" className="text-lg font-semibold text-[#121212] dark:text-white">
               {actionModal.action === 'approved' ? 'Approve' : 'Reject'} Leave Request
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-300">
+            <p className="text-sm text-[#555555] dark:text-[#BDBDBD]">
               {TYPE_LABELS[actionModal.leave.type]} &middot; {formatDate(actionModal.leave.startDate)} - {formatDate(actionModal.leave.endDate)}
             </p>
             <textarea
@@ -217,7 +217,7 @@ export function SupervisorLeaveList() {
               onChange={(e) => setReviewNotes(e.target.value)}
               rows={3}
               aria-label="Review notes"
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm dark:text-white"
+              className="w-full rounded-lg border border-[#BDBDBD] dark:border-[#555555] bg-white dark:bg-[#1E1E1E] px-3 py-2 text-sm dark:text-white"
               placeholder="Notes (optional)"
             />
             <div className="flex gap-3">
@@ -235,7 +235,7 @@ export function SupervisorLeaveList() {
               <button
                 onClick={() => { setActionModal(null); setReviewNotes(''); }}
                 aria-label="Close"
-                className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                className="flex-1 rounded-lg border border-[#BDBDBD] dark:border-[#555555] px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] hover:bg-[#F5F5F5] dark:hover:bg-[#1E1E1E]"
               >
                 Cancel
               </button>

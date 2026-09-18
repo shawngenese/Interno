@@ -124,9 +124,9 @@ export function CoordinatorTraineeAssignment() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Assign Trainees to Supervisors</h2>
+        <h2 className="text-2xl font-bold text-[#121212] dark:text-white">Assign Trainees to Supervisors</h2>
         {saving && (
-          <span className="text-sm text-gray-500 dark:text-gray-400">Saving...</span>
+          <span className="text-sm text-[#757575] dark:text-[#9E9E9E]">Saving...</span>
         )}
       </div>
 
@@ -138,15 +138,15 @@ export function CoordinatorTraineeAssignment() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Unassigned Trainees */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="font-semibold text-gray-900 dark:text-white">
+        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
+          <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
+            <h3 className="font-semibold text-[#121212] dark:text-white">
               Unassigned Trainees ({getUnassignedTrainees().length})
             </h3>
           </div>
           <div className="p-4 space-y-2 min-h-[200px]">
             {getUnassignedTrainees().length === 0 ? (
-              <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+              <p className="text-sm text-[#757575] dark:text-[#9E9E9E] text-center py-4">
                 All trainees are assigned
               </p>
             ) : (
@@ -155,10 +155,10 @@ export function CoordinatorTraineeAssignment() {
                   key={trainee.traineeId}
                   draggable
                   onDragStart={() => handleDragStart(trainee)}
-                  className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 cursor-move hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
+                  className="p-3 bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 rounded-lg border border-[#D5D5D5] dark:border-[#555555] cursor-move hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
                 >
-                  <div className="font-medium text-gray-900 dark:text-white text-sm">{trainee.name}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">{trainee.email}</div>
+                  <div className="font-medium text-[#121212] dark:text-white text-sm">{trainee.name}</div>
+                  <div className="text-xs text-[#757575] dark:text-[#9E9E9E]">{trainee.email}</div>
                 </div>
               ))
             )}
@@ -166,13 +166,13 @@ export function CoordinatorTraineeAssignment() {
         </div>
 
         {/* Supervisors */}
-        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="font-semibold text-gray-900 dark:text-white">Supervisors</h3>
+        <div className="lg:col-span-2 bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
+          <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
+            <h3 className="font-semibold text-[#121212] dark:text-white">Supervisors</h3>
           </div>
           <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
             {supervisors.length === 0 ? (
-              <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4 col-span-2">
+              <p className="text-sm text-[#757575] dark:text-[#9E9E9E] text-center py-4 col-span-2">
                 No supervisors found
               </p>
             ) : (
@@ -189,33 +189,33 @@ export function CoordinatorTraineeAssignment() {
                     className={`p-4 rounded-lg border-2 border-dashed transition-colors ${
                       isDragOver
                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/30'
+                        : 'border-[#D5D5D5] dark:border-[#3A3A3A] bg-[#F5F5F5] dark:bg-[#3A3A3A]/30'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-3">
                       <div>
-                        <h4 className="font-medium text-gray-900 dark:text-white">{supervisor.name}</h4>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{supervisor.email}</p>
+                        <h4 className="font-medium text-[#121212] dark:text-white">{supervisor.name}</h4>
+                        <p className="text-xs text-[#757575] dark:text-[#9E9E9E]">{supervisor.email}</p>
                       </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                      <span className="text-xs text-[#757575] dark:text-[#9E9E9E]">
                         {assignedTrainees.length} trainee(s)
                       </span>
                     </div>
 
                     <div className="space-y-2 min-h-[60px]">
                       {assignedTrainees.length === 0 ? (
-                        <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">
+                        <p className="text-xs text-[#9E9E9E] dark:text-[#757575] text-center py-2">
                           Drop trainees here
                         </p>
                       ) : (
                         assignedTrainees.map((trainee) => (
                           <div
                             key={trainee.traineeId}
-                            className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600"
+                            className="flex items-center justify-between p-2 bg-white dark:bg-[#1E1E1E] rounded border border-[#D5D5D5] dark:border-[#555555]"
                           >
                             <div>
-                              <div className="text-sm font-medium text-gray-900 dark:text-white">{trainee.name}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">{trainee.email}</div>
+                              <div className="text-sm font-medium text-[#121212] dark:text-white">{trainee.name}</div>
+                              <div className="text-xs text-[#757575] dark:text-[#9E9E9E]">{trainee.email}</div>
                             </div>
                             <button
                               onClick={() => handleRemoveAssignment(trainee)}

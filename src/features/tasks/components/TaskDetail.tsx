@@ -107,15 +107,15 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
 
   if (!task && !error) {
     return (
-      <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-        <p className="text-gray-500 dark:text-gray-400">Task not found.</p>
+      <div className="text-center py-12 bg-white dark:bg-[#1E1E1E] rounded-xl border border-[#D5D5D5] dark:border-[#3A3A3A]">
+        <p className="text-[#757575] dark:text-[#9E9E9E]">Task not found.</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+      <div className="text-center py-12 bg-white dark:bg-[#1E1E1E] rounded-xl border border-[#D5D5D5] dark:border-[#3A3A3A]">
         <p className="text-red-500 dark:text-red-400 mb-4">{error}</p>
         <button
           onClick={loadTask}
@@ -147,18 +147,18 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
 
   return (
     <div className="space-y-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{task.title}</h2>
+              <h2 className="text-xl font-semibold text-[#121212] dark:text-white">{task.title}</h2>
               {isOverdue && (
                 <span className="px-2 py-0.5 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded">
                   Overdue
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
+            <div className="flex items-center gap-3 text-sm text-[#757575] dark:text-[#9E9E9E]">
               <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${TASK_STATUS_COLORS[task.status].bg} ${TASK_STATUS_COLORS[task.status].text}`}>
                 {TASK_STATUS_LABELS[task.status]}
               </span>
@@ -172,7 +172,7 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
           {isSupervisor && task.status === 'pending' && (
             <button
               onClick={() => setEditing(true)}
-              className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
+              className="px-3 py-1.5 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-[#EFEFEF] dark:bg-[#3A3A3A] rounded-lg hover:bg-[#D5D5D5] dark:hover:bg-[#555555]"
             >
               Edit
             </button>
@@ -180,7 +180,7 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
         </div>
 
         <div className="prose prose-sm dark:prose-invert max-w-none mb-4">
-          <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{task.description}</p>
+          <p className="text-[#3A3A3A] dark:text-[#BDBDBD] whitespace-pre-wrap">{task.description}</p>
         </div>
 
         {task.submission && (
@@ -211,15 +211,15 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
       </div>
 
       {task.status === 'submitted' && isSupervisor && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Review Submission</h3>
+        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
+          <h3 className="text-lg font-semibold text-[#121212] dark:text-white mb-4">Review Submission</h3>
           <textarea
             value={reviewFeedback}
             onChange={(e) => setReviewFeedback(e.target.value)}
             rows={3}
             placeholder="Add feedback (optional)..."
             aria-label="Review feedback"
-            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none mb-4"
+            className="w-full px-4 py-2.5 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none mb-4"
           />
           <div className="flex gap-3">
             <button
@@ -241,26 +241,26 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
       )}
 
       {(task.status === 'pending' || task.status === 'in_progress' || task.status === 'returned') && !isSupervisor && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Submit Work</h3>
+        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
+          <h3 className="text-lg font-semibold text-[#121212] dark:text-white mb-4">Submit Work</h3>
           <textarea
             value={submitText}
             onChange={(e) => setSubmitText(e.target.value)}
             rows={4}
             placeholder="Describe your progress or paste your work..."
             aria-label="Describe your progress"
-            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none mb-3"
+            className="w-full px-4 py-2.5 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none mb-3"
           />
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Attachments</label>
+            <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">Attachments</label>
             <input
               type="file"
               multiple
               onChange={(e) => setSubmitFiles(Array.from(e.target.files || []))}
-              className="w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 dark:file:bg-blue-900/30 dark:file:text-blue-300 hover:file:bg-blue-100"
+              className="w-full text-sm text-[#757575] dark:text-[#9E9E9E] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 dark:file:bg-blue-900/30 dark:file:text-blue-300 hover:file:bg-blue-100"
             />
             {submitFiles.length > 0 && (
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{submitFiles.length} file(s) selected</p>
+              <p className="mt-1 text-xs text-[#757575] dark:text-[#9E9E9E]">{submitFiles.length} file(s) selected</p>
             )}
           </div>
           <button
@@ -274,29 +274,29 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
       )}
 
       {/* Comments Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
+        <h3 className="text-lg font-semibold text-[#121212] dark:text-white mb-4">
           Comments
           {comments.length > 0 && (
-            <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">({comments.length})</span>
+            <span className="ml-2 text-sm font-normal text-[#757575] dark:text-[#9E9E9E]">({comments.length})</span>
           )}
         </h3>
 
         <div className="space-y-3 mb-4">
           {comments.length === 0 ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400">No comments yet.</p>
+            <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">No comments yet.</p>
           ) : (
             comments.map((c) => (
-              <div key={c.id} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+              <div key={c.id} className="p-3 bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 rounded-lg">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                  <span className="text-xs font-medium text-[#3A3A3A] dark:text-[#BDBDBD]">
                     {c.userId === user?.uid ? 'You' : c.userId.slice(0, 8) + '...'}
                   </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                  <span className="text-xs text-[#757575] dark:text-[#9E9E9E]">
                     {formatDateTime12(c.createdAt)}
                   </span>
                 </div>
-                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{c.text}</p>
+                <p className="text-sm text-[#3A3A3A] dark:text-[#BDBDBD] whitespace-pre-wrap">{c.text}</p>
                 {c.attachments && c.attachments.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-2">
                     {c.attachments.map((url, i) => (
@@ -311,21 +311,21 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
           )}
         </div>
 
-        <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+        <div className="border-t border-[#D5D5D5] dark:border-[#3A3A3A] pt-4">
           <textarea
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
             rows={2}
             placeholder="Add a comment..."
             aria-label="Add a comment"
-            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none mb-3"
+            className="w-full px-4 py-2.5 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none mb-3"
           />
           <div className="flex items-center justify-between">
             <input
               type="file"
               multiple
               onChange={(e) => setCommentFiles(Array.from(e.target.files || []))}
-              className="text-sm text-gray-500 dark:text-gray-400 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-gray-100 file:text-gray-700 dark:file:bg-gray-700 dark:file:text-gray-300 hover:file:bg-gray-200"
+              className="text-sm text-[#757575] dark:text-[#9E9E9E] file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-[#EFEFEF] file:text-[#3A3A3A] dark:file:bg-[#3A3A3A] dark:file:text-[#BDBDBD] hover:file:bg-[#D5D5D5]"
             />
             <button
               onClick={handleAddComment}
@@ -339,8 +339,8 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
       </div>
 
       {approvals.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Approval History</h3>
+        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
+          <h3 className="text-lg font-semibold text-[#121212] dark:text-white mb-4">Approval History</h3>
           <div className="space-y-3">
             {approvals.map((a) => (
               <div key={a.id} className={`p-3 rounded-lg border ${
@@ -354,12 +354,12 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
                   }`}>
                     {a.action === 'approved' ? 'Approved' : 'Returned'}
                   </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                  <span className="text-xs text-[#757575] dark:text-[#9E9E9E]">
                     {formatDateTime12(a.timestamp)}
                   </span>
                 </div>
                 {a.feedback && (
-                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{a.feedback}</p>
+                  <p className="mt-1 text-sm text-[#555555] dark:text-[#9E9E9E]">{a.feedback}</p>
                 )}
               </div>
             ))}

@@ -90,5 +90,6 @@ AGENTS.md
 # OTHER
 figma-design.json
 TO_FIX.md
+NEEDED_FIX.md
 .env.example
 seed-test-data.cjs

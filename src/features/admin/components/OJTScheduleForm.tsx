@@ -136,8 +136,8 @@ export function OJTScheduleForm({ editingId, viewOnly, onCancel, onSaved }: OJTS
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 max-w-2xl mx-auto">
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6 max-w-2xl mx-auto">
+      <h2 className="text-xl font-semibold text-[#121212] dark:text-white mb-6">
         {viewOnly ? 'View OJT Schedule' : isEditing ? 'Edit OJT Schedule' : 'Create OJT Schedule'}
       </h2>
 
@@ -149,7 +149,7 @@ export function OJTScheduleForm({ editingId, viewOnly, onCancel, onSaved }: OJTS
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="companyId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="companyId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Company <span className="text-red-500">*</span>
           </label>
           <select
@@ -158,7 +158,7 @@ export function OJTScheduleForm({ editingId, viewOnly, onCancel, onSaved }: OJTS
             onChange={(e) => handleChange('companyId', e.target.value)}
             required
             disabled={viewOnly}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <option value="">Select Company</option>
             {companies.map(c => (
@@ -168,7 +168,7 @@ export function OJTScheduleForm({ editingId, viewOnly, onCancel, onSaved }: OJTS
         </div>
 
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="name" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Schedule Name <span className="text-red-500">*</span>
           </label>
           <input
@@ -178,14 +178,14 @@ export function OJTScheduleForm({ editingId, viewOnly, onCancel, onSaved }: OJTS
             onChange={(e) => handleChange('name', e.target.value)}
             required
             disabled={viewOnly}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder="OJT Schedule Name"
           />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="startDate" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Start Date <span className="text-red-500">*</span>
             </label>
             <input
@@ -195,12 +195,12 @@ export function OJTScheduleForm({ editingId, viewOnly, onCancel, onSaved }: OJTS
               onChange={(e) => handleChange('startDate', new Date(e.target.value))}
               required
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
 
           <div>
-            <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="endDate" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               End Date <span className="text-red-500">*</span>
             </label>
             <input
@@ -210,14 +210,14 @@ export function OJTScheduleForm({ editingId, viewOnly, onCancel, onSaved }: OJTS
               onChange={(e) => handleChange('endDate', new Date(e.target.value))}
               required
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="requiredHours" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="requiredHours" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Required Hours <span className="text-red-500">*</span>
             </label>
             <input
@@ -228,13 +228,13 @@ export function OJTScheduleForm({ editingId, viewOnly, onCancel, onSaved }: OJTS
               required
               min="1"
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               placeholder="480"
             />
           </div>
 
           <div>
-            <label htmlFor="workScheduleId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="workScheduleId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Work Schedule <span className="text-red-500">*</span>
             </label>
             <select
@@ -243,7 +243,7 @@ export function OJTScheduleForm({ editingId, viewOnly, onCancel, onSaved }: OJTS
               onChange={(e) => handleChange('workScheduleId', e.target.value)}
               required
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Select Work Schedule</option>
               {workSchedules.map(ws => (
@@ -254,7 +254,7 @@ export function OJTScheduleForm({ editingId, viewOnly, onCancel, onSaved }: OJTS
         </div>
 
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="description" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Description
           </label>
           <textarea
@@ -263,16 +263,16 @@ export function OJTScheduleForm({ editingId, viewOnly, onCancel, onSaved }: OJTS
             onChange={(e) => handleChange('description', e.target.value)}
             rows={3}
             disabled={viewOnly}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder="Schedule description"
           />
         </div>
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex justify-end gap-3 pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
           <button
             type="button"
             onClick={handleCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#555555] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
           >
             {viewOnly ? 'Close' : 'Cancel'}
           </button>

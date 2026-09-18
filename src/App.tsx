@@ -247,16 +247,16 @@ function PrivateLayout({ children }: { children: React.ReactNode }) {
   const pageName = PAGE_NAMES[location.pathname] || 'Dashboard';
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-[#F5F5F5] dark:bg-[#121212]">
       <SkipToContent />
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40" role="banner">
+      <header className="bg-white dark:bg-[#1E1E1E] border-b border-[#D5D5D5] dark:border-[#3A3A3A] sticky top-0 z-40" role="banner">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Interno</h1>
+            <h1 className="text-xl font-bold text-[#121212] dark:text-white">Interno</h1>
             <div className="flex items-center gap-2">
               <NetworkStatusIndicator />
               <ThemeToggle />
-              <span className="text-sm text-gray-600 dark:text-gray-400 hidden sm:inline">{pageName}</span>
+              <span className="text-sm text-[#555555] dark:text-[#9E9E9E] hidden sm:inline">{pageName}</span>
               <LogoutButton />
             </div>
           </div>
@@ -374,17 +374,17 @@ function TraineeDashboard() {
   return (
     <PrivateLayout>
       <div className="space-y-6">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
+          <h2 className="text-2xl font-bold text-[#121212] dark:text-white">
             Welcome{user?.displayName ? `, ${user.displayName}` : ''}
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-[#555555] dark:text-[#9E9E9E] mt-1">
             Here you can manage your OJT activities.
           </p>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Access</h3>
+        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
+          <h3 className="text-lg font-semibold text-[#121212] dark:text-white mb-4">Quick Access</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {cards.map((card) => (
               <button
@@ -396,8 +396,8 @@ function TraineeDashboard() {
                   <span className={card.iconColor}>{card.icon}</span>
                 </div>
                 <div>
-                  <div className="font-medium text-gray-900 dark:text-white">{card.title}</div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">{card.description}</div>
+                  <div className="font-medium text-[#121212] dark:text-white">{card.title}</div>
+                  <div className="text-sm text-[#757575] dark:text-[#9E9E9E]">{card.description}</div>
                 </div>
               </button>
             ))}
