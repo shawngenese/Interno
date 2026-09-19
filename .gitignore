@@ -63,6 +63,8 @@ assign-admin.cjs
 check-admin.cjs
 check-admin.js
 set-claims.cjs
+scripts/
+seed-test-data.cjs
 
 # Local temp/notes
 emulator.txt
@@ -91,5 +93,4 @@ AGENTS.md
 figma-design.json
 TO_FIX.md
 NEEDED_FIX.md
-.env.example
-seed-test-data.cjs
+tests.json
