@@ -17,6 +17,15 @@ function toEntity<T>(id: string, data: Record<string, unknown>): T {
 /** Get supervisor record by userId (the logged-in user's UID). */
 export async function getSupervisorByUserId(userId: string): Promise<Supervisor | null> {
   const db = getFirestoreInstancePublic();
+  const { doc, getDoc } = await import('firebase/firestore');
+
+  // Direct doc lookup first (supervisors doc ID equals userId — avoids collection query permission issues)
+  const directSnap = await getDoc(doc(db, COLLECTIONS.SUPERVISORS, userId));
+  if (directSnap.exists()) {
+    return toEntity<Supervisor>(directSnap.id, directSnap.data() as Record<string, unknown>);
+  }
+
+  // Fallback: query by userId field (in case doc ID differs from userId)
   const q = query(
     collection(db, COLLECTIONS.SUPERVISORS),
     where('userId', '==', userId),
@@ -26,13 +35,6 @@ export async function getSupervisorByUserId(userId: string): Promise<Supervisor 
   if (!snap.empty) {
     const docSnap = snap.docs[0];
     return toEntity<Supervisor>(docSnap.id, docSnap.data() as Record<string, unknown>);
-  }
-
-  // Direct doc lookup fallback (supervisors doc ID often equals userId)
-  const { doc, getDoc } = await import('firebase/firestore');
-  const directSnap = await getDoc(doc(db, COLLECTIONS.SUPERVISORS, userId));
-  if (directSnap.exists()) {
-    return toEntity<Supervisor>(directSnap.id, directSnap.data() as Record<string, unknown>);
   }
 
   return null;

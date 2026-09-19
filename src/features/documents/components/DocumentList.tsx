@@ -6,6 +6,7 @@ import { useToast } from '@/shared/components/Toast';
 import { useAuth } from '@/features/auth';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { resolveDocName } from '@/shared/utils/resolveDocName';
 import type { Document, DocumentType, DocumentStatus, ListDocumentsParams } from '../types';
 
 function formatDate(ms: number): string {
@@ -79,9 +80,11 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
   const canDelete = role === 'admin';
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState<ListDocumentsParams>({ page: 1, limit: 20, status: 'pending' });
+  const [filters, setFilters] = useState<ListDocumentsParams>({ page: 1, limit: 20 });
   const [total, setTotal] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const [showUploader, setShowUploader] = useState(false);
+  const [traineeNameMap, setTraineeNameMap] = useState<Map<string, string>>(new Map());
 
   const fetchDocuments = useCallback(async () => {
     setLoading(true);
@@ -93,8 +96,25 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
       const result = await listDocuments(params);
       setDocuments(result.data);
       setTotal(result.total);
+
+      const uniqueTraineeIds = [...new Set(result.data.map(d => d.traineeId).filter(Boolean))];
+      const nameEntries = await Promise.all(
+        uniqueTraineeIds.map(async (id) => {
+          const { getFirestoreInstancePublic } = await import('@/config/firebase');
+          const { doc, getDoc } = await import('firebase/firestore');
+          const db = getFirestoreInstancePublic();
+          const traineeSnap = await getDoc(doc(db, 'trainees', id));
+          if (!traineeSnap.exists()) return { id, name: '-' };
+          const userId = traineeSnap.data()?.userId;
+          if (!userId) return { id, name: '-' };
+          const name = await resolveDocName('users', userId, 'displayName');
+          return { id, name };
+        }),
+      );
+      setTraineeNameMap(new Map(nameEntries.map(e => [e.id, e.name])));
     } catch (err) {
       console.error('Failed to load documents:', err);
+      setError('Failed to load documents. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -195,11 +215,18 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
         {showUploader && (
           <DocumentUploader
             bucket="documents"
-            resourceId={filters.traineeId || ''}
-            metadata={{ traineeId: filters.traineeId || '', companyId: filters.companyId || '', bucket: 'documents' }}
+            resourceId={traineeId || ''}
+            metadata={{ traineeId: traineeId || '', companyId: companyId || '', bucket: 'documents' }}
             onSuccess={handleUploadSuccess}
             onError={(err) => addToast('error', err)}
           />
+        )}
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm flex items-center justify-between">
+            <span>{error}</span>
+            <button onClick={() => { setError(null); fetchDocuments(); }} className="text-sm font-medium text-red-700 dark:text-red-400 hover:underline">Retry</button>
+          </div>
         )}
 
         <div className="overflow-x-auto">
@@ -232,7 +259,7 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
               ) : (
                 documents.map((doc) => (
                   <tr key={doc.id} className="hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50">
-                    <td className="px-4 py-3 text-sm font-medium text-[#121212] dark:text-white">{doc.traineeId.slice(0, 8)}...</td>
+                    <td className="px-4 py-3 text-sm font-medium text-[#121212] dark:text-white">{traineeNameMap.get(doc.traineeId) || doc.traineeId.slice(0, 8) + '...'}</td>
                     <td className="px-4 py-3 text-sm text-[#757575] dark:text-[#9E9E9E]">{typeLabel(doc.type)}</td>
                     <td className="px-4 py-3 text-sm text-[#121212] dark:text-white truncate max-w-xs">{doc.fileName}</td>
                     <td className="px-4 py-3 text-sm text-[#757575] dark:text-[#9E9E9E]">{formatSize(doc.fileSize)}</td>

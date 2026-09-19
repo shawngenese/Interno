@@ -5,6 +5,9 @@ import { getAdminDb, getAdminAuth, COLLECTIONS, type AuditAction, type EntityTyp
 import { generateQRTokenHandler } from './qr/generateQRToken';
 import { validateQRScanHandler } from './qr/validateQRScan';
 import { calculateDTRHandler } from './dtr/calculateDTR';
+import { approveDTRHandler } from './dtr/approveDTR';
+import { rejectDTRHandler } from './dtr/rejectDTR';
+import { reviewCorrectionRequestHandler } from './dtr/reviewCorrectionRequest';
 import { validateUploadHandler } from './storage/validateUpload';
 import { sendFCMNotificationHandler } from './notifications/sendFCM';
 import { sendEmailHandler } from './notifications/sendEmail';
@@ -36,10 +39,16 @@ export const writeAuditLog = onCall<{
     throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
+  const callerRole = request.auth.token?.role as string | undefined;
   const { userId, action, entityType, entityId, originalValue, newValue, metadata } = request.data;
 
-  if (request.auth.uid !== userId && request.auth.token.role !== 'admin') {
+  if (request.auth.uid !== userId && callerRole !== 'admin') {
     throw new HttpsError('permission-denied', 'Cannot write audit log for another user');
+  }
+
+  const SENSITIVE_ACTIONS: AuditAction[] = ['approve', 'reject', 'role_change', 'delete', 'update', 'archive'];
+  if (SENSITIVE_ACTIONS.includes(action) && callerRole !== 'admin') {
+    throw new HttpsError('permission-denied', `Action '${action}' requires admin role`);
   }
 
   await logAction(
@@ -57,6 +66,11 @@ export const getAuditLogsByEntity = onCall<{
 }>({ region: REGION }, async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const callerRole = request.auth.token?.role as string | undefined;
+  if (!callerRole || !['admin', 'supervisor', 'coordinator'].includes(callerRole)) {
+    throw new HttpsError('permission-denied', 'Required role: admin, supervisor, or coordinator');
   }
 
   const { entityType, entityId, limit = 50 } = request.data;
@@ -129,6 +143,23 @@ export const calculateDTR = onCall<{ traineeId: string; startDate: number; endDa
   calculateDTRHandler
 );
 
+export const approveDTR = onCall<{ dtrId: string; notes?: string }>(
+  { region: REGION },
+  approveDTRHandler
+);
+
+export const rejectDTR = onCall<{ dtrId: string; reason?: string }>(
+  { region: REGION },
+  rejectDTRHandler
+);
+
+export const reviewCorrectionRequest = onCall<{
+  dtrId: string;
+  correctionRequestId: string;
+  action: 'approve' | 'reject';
+  notes?: string;
+}>({ region: REGION }, reviewCorrectionRequestHandler);
+
 export const validateUpload = onCall<{ fileName: string; mimeType: string; fileSize: number; bucket: 'documents' | 'tasks' | 'profiles'; traineeId?: string; taskId?: string; userId?: string }>(
   { region: REGION },
   validateUploadHandler
@@ -136,12 +167,30 @@ export const validateUpload = onCall<{ fileName: string; mimeType: string; fileS
 
 export const sendFCMNotification = onCall<{ tokens?: string[]; topic?: string; title: string; body: string; data?: Record<string, string>; image?: string; priority?: 'high' | 'normal'; ttl?: number }>(
   { region: REGION },
-  sendFCMNotificationHandler
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    const role = request.auth.token?.role as string | undefined;
+    if (!role || !['admin', 'supervisor'].includes(role)) {
+      throw new HttpsError('permission-denied', 'Required role: admin or supervisor');
+    }
+    return sendFCMNotificationHandler(request);
+  }
 );
 
 export const sendEmail = onCall<{ to: string | string[]; subject: string; html: string; text?: string; replyTo?: string }>(
   { region: REGION },
-  sendEmailHandler
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    const role = request.auth.token?.role as string | undefined;
+    if (!role || !['admin', 'supervisor'].includes(role)) {
+      throw new HttpsError('permission-denied', 'Required role: admin or supervisor');
+    }
+    return sendEmailHandler(request);
+  }
 );
 
 export const deleteUserAccount = onCall<{ uid: string }>({ region: REGION }, async (request) => {

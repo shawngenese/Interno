@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, getDocs, addDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useAuth } from '@/features/auth';
 import { COMPANY_TYPES } from '@/config/constants';
 
 interface Company {
@@ -16,6 +17,7 @@ interface SupervisorInviteProps {
 }
 
 export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
+  const { role } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
   const [supervisorName, setSupervisorName] = useState('');
@@ -24,12 +26,9 @@ export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    fetchCompanies();
-  }, []);
-
-  const fetchCompanies = async () => {
+  const fetchCompanies = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     try {
       const db = getFirestoreInstancePublic();
@@ -39,6 +38,7 @@ export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
         where('verified', '==', true)
       );
       const snap = await getDocs(q);
+      if (signal?.aborted) return;
       const data = snap.docs.map((doc) => ({
         id: doc.id,
         name: doc.data().name,
@@ -47,16 +47,38 @@ export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
       })) as Company[];
       setCompanies(data);
     } catch (err) {
-      setError('Failed to load companies');
-      console.error(err);
+      if (!signal?.aborted) {
+        setError('Failed to load companies');
+        console.error(err);
+      }
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    fetchCompanies(controller.signal);
+    return () => controller.abort();
+  }, [fetchCompanies]);
+
+  useEffect(() => {
+    if (!success) return;
+    const t = setTimeout(() => setSuccess(false), 5000);
+    return () => clearTimeout(t);
+  }, [success]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCompanyId || !supervisorName || !supervisorEmail) return;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(supervisorEmail)) {
+      setError('Please enter a valid email address');
+      return;
+    }
 
     setSubmitting(true);
     setError(null);
@@ -64,22 +86,22 @@ export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
     try {
       const db = getFirestoreInstancePublic();
       
-      // Create invitation record
-      await addDoc(collection(db, 'supervisor_invitations'), {
-        companyId: selectedCompanyId,
-        supervisorName,
-        supervisorEmail,
-        status: 'pending',
-        createdAt: serverTimestamp(),
-      });
-
-      // Call Cloud Function to send invitation email
+      // Call Cloud Function first to send invitation email
       const functions = getFunctions();
       const sendInvite = httpsCallable(functions, 'sendSupervisorInvite');
       await sendInvite({
         companyId: selectedCompanyId,
         supervisorName,
         supervisorEmail,
+      });
+
+      // Only create Firestore record after CF succeeds
+      await addDoc(collection(db, 'supervisor_invitations'), {
+        companyId: selectedCompanyId,
+        supervisorName,
+        supervisorEmail,
+        status: 'pending',
+        createdAt: serverTimestamp(),
       });
 
       setSuccess(true);
@@ -140,7 +162,7 @@ export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
         )}
 
         <div>
-          <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+          <label htmlFor="company-select" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             External Company <span className="text-red-500">*</span>
           </label>
           {loading ? (
@@ -149,6 +171,7 @@ export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
             </div>
           ) : (
             <select
+              id="company-select"
               value={selectedCompanyId}
               onChange={(e) => setSelectedCompanyId(e.target.value)}
               required
@@ -165,10 +188,11 @@ export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+          <label htmlFor="supervisor-name" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Supervisor Name <span className="text-red-500">*</span>
           </label>
           <input
+            id="supervisor-name"
             type="text"
             value={supervisorName}
             onChange={(e) => setSupervisorName(e.target.value)}
@@ -179,10 +203,11 @@ export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+          <label htmlFor="supervisor-email" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Supervisor Email <span className="text-red-500">*</span>
           </label>
           <input
+            id="supervisor-email"
             type="email"
             value={supervisorEmail}
             onChange={(e) => setSupervisorEmail(e.target.value)}
@@ -193,13 +218,15 @@ export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
         </div>
 
         <div className="flex justify-end pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
-          <button
-            type="submit"
-            disabled={submitting || !selectedCompanyId}
-            className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {submitting ? 'Sending...' : 'Send Invitation'}
-          </button>
+          {(role === 'coordinator' || role === 'admin') && (
+            <button
+              type="submit"
+              disabled={submitting || !selectedCompanyId}
+              className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {submitting ? 'Sending...' : 'Send Invitation'}
+            </button>
+          )}
         </div>
       </form>
     </div>

@@ -4,7 +4,7 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts';
 import { getFirestoreInstancePublic } from '@/config/firebase';
-import { collection, getDocs, query, where, limit as firestoreLimit } from 'firebase/firestore';
+import { collection, getDocs, query, where, limit as firestoreLimit, Timestamp } from 'firebase/firestore';
 import { AnimatedCard } from '@/shared/components/AnimatedCard';
 import { AnimatedList, AnimatedListItem, listItemVariants } from '@/shared/components/AnimatedList';
 
@@ -52,7 +52,7 @@ export function AdminOverview() {
         getDocs(query(collection(db, 'trainees'), firestoreLimit(500))),
         getDocs(query(collection(db, 'companies'), firestoreLimit(500))),
         getDocs(query(collection(db, 'departments'), firestoreLimit(500))),
-        getDocs(query(collection(db, 'audit_logs'), where('timestamp', '>=', Date.now() - 7 * 86400000), firestoreLimit(50))),
+        getDocs(query(collection(db, 'audit_logs'), where('timestamp', '>=', Timestamp.fromMillis(Date.now() - 7 * 86400000)), firestoreLimit(50))),
       ]);
 
       const usersByRoleMap = new Map<string, number>();

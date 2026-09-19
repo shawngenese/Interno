@@ -172,6 +172,16 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
           },
         },
       }));
+    } else if (field === 'companyId') {
+      const selectedCompany = companies.find(c => c.id === value);
+      const isExternal = selectedCompany?.type === 'external';
+      setFormData(prev => ({
+        ...prev,
+        companyId: value,
+        placementType: isExternal ? 'external' : 'internal',
+        externalCompanyId: isExternal ? value : '',
+        externalSupervisorId: isExternal ? prev.externalSupervisorId : '',
+      }));
     } else {
       setFormData(prev => ({ ...prev, [field]: value }));
     }
@@ -263,6 +273,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
           <div className="flex items-center gap-3 mb-4">
             <label className="flex items-center gap-2 text-sm text-[#3A3A3A] dark:text-[#BDBDBD]">
               <input
+                autoFocus
                 type="checkbox"
                 checked={useExistingUser}
                 onChange={(e) => setUseExistingUser(e.target.checked)}
@@ -359,62 +370,46 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
             >
               <option value="">Select Company</option>
               {companies.map(company => (
-                <option key={company.id} value={company.id}>{company.name}</option>
+                <option key={company.id} value={company.id}>
+                  {company.name} ({company.type === 'external' ? 'External' : 'Internal'})
+                </option>
               ))}
             </select>
           </div>
 
           <div>
             <label htmlFor="placementType" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              Placement Type <span className="text-red-500">*</span>
+              Placement Type
             </label>
-            <select
-              id="placementType"
-              value={formData.placementType}
-              onChange={(e) => handleChange('placementType', e.target.value)}
-              disabled={viewOnly}
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <option value="internal">Internal</option>
-              <option value="external">External</option>
-            </select>
+            <div className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-[#F5F5F5] dark:bg-[#2A2A2A] text-[#121212] dark:text-white">
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full ${
+                formData.placementType === 'external'
+                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+                  : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+              }`}>
+                {formData.placementType === 'external' ? 'External' : 'Internal'}
+              </span>
+              {!formData.companyId && (
+                <span className="text-xs text-[#9E9E9E] ml-2">Select a company first</span>
+              )}
+            </div>
           </div>
 
           {formData.placementType === 'external' && (
-            <>
-              <div>
-                <label htmlFor="externalCompanyId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-                  External Company <span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="externalCompanyId"
-                  value={formData.externalCompanyId}
-                  onChange={(e) => handleChange('externalCompanyId', e.target.value)}
-                  disabled={viewOnly}
-                  className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <option value="">Select External Company</option>
-                  {companies.filter(c => c.type === 'external' && c.verified).map(company => (
-                    <option key={company.id} value={company.id}>{company.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="externalSupervisorId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-                  External Supervisor ID
-                </label>
-                <input
-                  type="text"
-                  id="externalSupervisorId"
-                  value={formData.externalSupervisorId}
-                  onChange={(e) => handleChange('externalSupervisorId', e.target.value)}
-                  disabled={viewOnly}
-                  className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-                  placeholder="External supervisor email or ID"
-                />
-              </div>
-            </>
+            <div>
+              <label htmlFor="externalSupervisorId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+                External Supervisor ID
+              </label>
+              <input
+                type="text"
+                id="externalSupervisorId"
+                value={formData.externalSupervisorId}
+                onChange={(e) => handleChange('externalSupervisorId', e.target.value)}
+                disabled={viewOnly}
+                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                placeholder="External supervisor email or ID"
+              />
+            </div>
           )}
 
           <div>

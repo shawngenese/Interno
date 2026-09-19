@@ -1,11 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/features/auth';
 import { LoginPage, UnauthorizedPage } from '@/features/auth';
+import { NotFoundPage } from '@/features/auth';
 import { AdminRoute, SupervisorRoute, CoordinatorRoute, TraineeRoute } from '@/features/auth';
 import { LogoutButton } from '@/features/auth';
 import { AdminLayout } from '@/features/admin/components/AdminLayout';
 import { AdminDashboard } from '@/features/admin/components/AdminDashboard';
 import { SupervisorLayout, SupervisorDashboard, SupervisorTraineeList } from '@/features/supervisor';
+
 import { SupervisorQRPage } from '@/features/attendance/components/SupervisorQRPage';
 import { SupervisorAttendanceMonitor } from '@/features/attendance/components/SupervisorAttendanceMonitor';
 import { SupervisorDTRList } from '@/features/dtr/components/SupervisorDTRList';
@@ -18,7 +20,18 @@ import { TraineeDTRView } from '@/features/dtr/components/TraineeDTRView';
 import { DocumentList } from '@/features/documents/components/DocumentList';
 import { CoordinatorDashboard } from '@/features/coordinator/components/CoordinatorDashboard';
 import { CoordinatorLayout } from '@/features/coordinator/components/CoordinatorLayout';
+import { CoordinatorTraineeAssignment } from '@/features/coordinator/components/CoordinatorTraineeAssignment';
+import { CoordinatorTraineeList } from '@/features/coordinator/components/CoordinatorTraineeList';
+import { PlacementRequestList } from '@/features/coordinator/components/PlacementRequestList';
+import { CompanyVerification } from '@/features/coordinator/components/CompanyVerification';
+import { SupervisorInvite } from '@/features/coordinator/components/SupervisorInvite';
+import { DocumentReview } from '@/features/coordinator/components/DocumentReview';
+import { CoordinatorAttendanceView } from '@/features/coordinator/components/CoordinatorAttendanceView';
+import { CoordinatorTaskView } from '@/features/coordinator/components/CoordinatorTaskView';
 import { AuditLogViewer } from '@/features/admin/components/AuditLogViewer';
+import { EvaluationList } from '@/features/evaluations/components/EvaluationList';
+import { AnnouncementList } from '@/features/announcements/components/AnnouncementList';
+import { AnnouncementForm } from '@/features/announcements/components/AnnouncementForm';
 import { CompanyBrowser } from '@/features/trainee/components/CompanyBrowser';
 import { ExternalPlacementRequest } from '@/features/trainee/components/ExternalPlacementRequest';
 import { NetworkStatusIndicator } from '@/shared/components/NetworkStatus';
@@ -55,6 +68,28 @@ function App() {
               <AdminLayout>
                 <PageTransition>
                   <AuditLogViewer />
+                </PageTransition>
+              </AdminLayout>
+            </AdminRoute>
+          } />
+
+
+
+          <Route path="/admin/announcements" element={
+            <AdminRoute>
+              <AdminLayout>
+                <PageTransition>
+                  <AnnouncementList role="admin" />
+                </PageTransition>
+              </AdminLayout>
+            </AdminRoute>
+          } />
+
+          <Route path="/admin/announcements/new" element={
+            <AdminRoute>
+              <AdminLayout>
+                <PageTransition>
+                  <AnnouncementForm />
                 </PageTransition>
               </AdminLayout>
             </AdminRoute>
@@ -139,12 +174,132 @@ function App() {
               </SupervisorLayout>
             </SupervisorRoute>
           } />
+
+          <Route path="/supervisor/evaluations" element={
+            <SupervisorRoute>
+              <SupervisorLayout>
+                <PageTransition>
+                  <EvaluationList role="supervisor" />
+                </PageTransition>
+              </SupervisorLayout>
+            </SupervisorRoute>
+          } />
           
           <Route path="/coordinator" element={
             <CoordinatorRoute>
               <CoordinatorLayout>
                 <PageTransition>
                   <CoordinatorDashboard />
+                </PageTransition>
+              </CoordinatorLayout>
+            </CoordinatorRoute>
+          } />
+
+          <Route path="/coordinator/assign" element={
+            <CoordinatorRoute>
+              <CoordinatorLayout>
+                <PageTransition>
+                  <CoordinatorTraineeAssignment />
+                </PageTransition>
+              </CoordinatorLayout>
+            </CoordinatorRoute>
+          } />
+
+          <Route path="/coordinator/trainees" element={
+            <CoordinatorRoute>
+              <CoordinatorLayout>
+                <PageTransition>
+                  <CoordinatorTraineeList />
+                </PageTransition>
+              </CoordinatorLayout>
+            </CoordinatorRoute>
+          } />
+
+          <Route path="/coordinator/placements" element={
+            <CoordinatorRoute>
+              <CoordinatorLayout>
+                <PageTransition>
+                  <PlacementRequestList />
+                </PageTransition>
+              </CoordinatorLayout>
+            </CoordinatorRoute>
+          } />
+
+          <Route path="/coordinator/companies" element={
+            <CoordinatorRoute>
+              <CoordinatorLayout>
+                <PageTransition>
+                  <CompanyVerification />
+                </PageTransition>
+              </CoordinatorLayout>
+            </CoordinatorRoute>
+          } />
+
+          <Route path="/coordinator/documents" element={
+            <CoordinatorRoute>
+              <CoordinatorLayout>
+                <PageTransition>
+                  <DocumentReview />
+                </PageTransition>
+              </CoordinatorLayout>
+            </CoordinatorRoute>
+          } />
+
+          <Route path="/coordinator/attendance" element={
+            <CoordinatorRoute>
+              <CoordinatorLayout>
+                <PageTransition>
+                  <CoordinatorAttendanceView />
+                </PageTransition>
+              </CoordinatorLayout>
+            </CoordinatorRoute>
+          } />
+
+          <Route path="/coordinator/tasks" element={
+            <CoordinatorRoute>
+              <CoordinatorLayout>
+                <PageTransition>
+                  <CoordinatorTaskView />
+                </PageTransition>
+              </CoordinatorLayout>
+            </CoordinatorRoute>
+          } />
+
+          <Route path="/coordinator/invite-supervisors" element={
+            <CoordinatorRoute>
+              <CoordinatorLayout>
+                <PageTransition>
+                  <SupervisorInvite />
+                </PageTransition>
+              </CoordinatorLayout>
+            </CoordinatorRoute>
+          } />
+
+          <Route path="/coordinator/evaluations" element={
+            <CoordinatorRoute>
+              <CoordinatorLayout>
+                <PageTransition>
+                  <EvaluationList role="coordinator" />
+                </PageTransition>
+              </CoordinatorLayout>
+            </CoordinatorRoute>
+          } />
+
+          <Route path="/coordinator/announcements" element={
+            <CoordinatorRoute>
+              <CoordinatorLayout>
+                <PageTransition>
+                  <AnnouncementList role="coordinator" />
+                </PageTransition>
+              </CoordinatorLayout>
+            </CoordinatorRoute>
+          } />
+
+          <Route path="/coordinator/announcements/new" element={
+            <CoordinatorRoute>
+              <CoordinatorLayout>
+                <PageTransition>
+                  <AnnouncementForm />
                 </PageTransition>
               </CoordinatorLayout>
             </CoordinatorRoute>
@@ -224,7 +379,7 @@ function App() {
 
           <Route path="/dashboard" element={<DashboardRedirect />} />
 
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

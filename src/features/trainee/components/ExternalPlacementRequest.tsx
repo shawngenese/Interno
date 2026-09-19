@@ -93,6 +93,7 @@ export function ExternalPlacementRequest() {
         </div>
       )}
 
+      {!error && (
       <div className="p-4">
         {requests.length === 0 ? (
           <div className="text-center py-8">
@@ -142,6 +143,7 @@ export function ExternalPlacementRequest() {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

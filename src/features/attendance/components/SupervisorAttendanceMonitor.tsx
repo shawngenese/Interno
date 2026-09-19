@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/features/auth/AuthProvider';
-import { getSupervisorByUserId, getAssignedTrainees } from '@/features/supervisor/services/supervisorService';
+import { useSupervisor } from '@/shared/hooks/useSupervisor';
+import { getAssignedTrainees } from '@/features/supervisor/services/supervisorService';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, query, where, onSnapshot, orderBy, limit, getDocs } from 'firebase/firestore';
 import { formatTime12 } from '@/shared/utils/dateUtils';
@@ -17,9 +18,11 @@ interface TraineeAttendanceStatus {
 
 export function SupervisorAttendanceMonitor() {
   const { user } = useAuth();
+  const { supervisor, loading: supLoading } = useSupervisor();
   const [statuses, setStatuses] = useState<TraineeAttendanceStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
   const unsubscribeRef = useRef<(() => void)[]>([]);
 
   const cleanup = useCallback(() => {
@@ -28,17 +31,17 @@ export function SupervisorAttendanceMonitor() {
   }, []);
 
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.uid || supLoading || !supervisor) {
+      if (!supLoading) setLoading(false);
+      return;
+    }
 
     let mounted = true;
 
     async function setup() {
       try {
         setError(null);
-        const supervisor = await getSupervisorByUserId(user!.uid);
-        if (!supervisor) return;
-
-        const trainees = await getAssignedTrainees(supervisor.id);
+        const trainees = await getAssignedTrainees(supervisor.id, supervisor.companyId);
         if (!mounted) return;
 
         const db = getFirestoreInstancePublic();
@@ -79,15 +82,16 @@ export function SupervisorAttendanceMonitor() {
 
         cleanup();
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayMs = today.getTime();
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
 
         for (const trainee of trainees) {
           const q = query(
             collection(db, 'attendance_records'),
             where('traineeId', '==', trainee.id),
-            where('timestamp', '>=', todayMs),
+            where('timestamp', '>=', todayStart),
+            where('timestamp', '<', todayEnd),
             orderBy('timestamp', 'desc'),
             limit(10),
           );
@@ -132,7 +136,7 @@ export function SupervisorAttendanceMonitor() {
       mounted = false;
       cleanup();
     };
-  }, [user?.uid, cleanup]);
+  }, [user?.uid, supLoading, supervisor, cleanup, retryKey]);
 
   const allTimedIn = statuses.filter((s) => s.hasTimeIn);
   const missingTimeOut = statuses.filter((s) => s.hasTimeIn && !s.hasTimeOut);
@@ -184,7 +188,7 @@ export function SupervisorAttendanceMonitor() {
           <div className="flex flex-col items-center justify-center py-12 gap-4">
             <p className="text-red-500 dark:text-red-400">{error}</p>
             <button
-              onClick={() => { setLoading(true); setError(null); }}
+              onClick={() => { setError(null); setRetryKey(k => k + 1); }}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
             >
               Retry

@@ -31,6 +31,8 @@ export function TraineeDTRView() {
   const [period, setPeriod] = useState({ start: '', end: '' });
   const [showCorrection, setShowCorrection] = useState<DTREntry | null>(null);
   const [correctionReason, setCorrectionReason] = useState('');
+  const [correctionTimeIn, setCorrectionTimeIn] = useState('');
+  const [correctionTimeOut, setCorrectionTimeOut] = useState('');
   const [traineeId, setTraineeId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -66,7 +68,7 @@ export function TraineeDTRView() {
     } finally {
       setLoading(false);
     }
-  }, [user, period, traineeId]);
+  }, [user, traineeId]);
 
   useEffect(() => {
     refresh();
@@ -106,12 +108,21 @@ export function TraineeDTRView() {
   const handleCorrectionSubmit = async (entry: DTREntry) => {
     if (!correctionReason.trim()) return;
     try {
+      const entryDate = new Date(entry.date);
+      const proposedTimeIn = correctionTimeIn
+        ? new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate(), ...correctionTimeIn.split(':').map(Number)).getTime()
+        : entry.actualTimeIn;
+      const proposedTimeOut = correctionTimeOut
+        ? new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate(), ...correctionTimeOut.split(':').map(Number)).getTime()
+        : entry.actualTimeOut;
       await createCorrectionRequest(entry.id, correctionReason, {
-        actualTimeIn: entry.actualTimeIn,
-        actualTimeOut: entry.actualTimeOut,
+        actualTimeIn: proposedTimeIn,
+        actualTimeOut: proposedTimeOut,
       });
       setShowCorrection(null);
       setCorrectionReason('');
+      setCorrectionTimeIn('');
+      setCorrectionTimeOut('');
       await refresh();
     } catch (err) {
       console.error('Correction request failed:', err);
@@ -234,7 +245,7 @@ export function TraineeDTRView() {
                     <td className="px-4 py-3 text-right">
                       {entry.status === 'draft' && (
                         <button
-                          onClick={() => { setShowCorrection(entry); setCorrectionReason(''); }}
+                          onClick={() => { setShowCorrection(entry); setCorrectionReason(''); setCorrectionTimeIn(''); setCorrectionTimeOut(''); }}
                           className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                         >
                           Request Correction
@@ -256,17 +267,39 @@ export function TraineeDTRView() {
           aria-modal="true"
           aria-labelledby="correction-modal-title"
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          onClick={(e) => { if (e.target === e.currentTarget) { setShowCorrection(null); setCorrectionReason(''); } }}
+          onClick={(e) => { if (e.target === e.currentTarget) { setShowCorrection(null); setCorrectionReason(''); setCorrectionTimeIn(''); setCorrectionTimeOut(''); } }}
         >
           {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
           <div
             className="bg-white dark:bg-[#1E1E1E] rounded-xl p-6 max-w-md w-full"
-            onKeyDown={(e) => { if (e.key === 'Escape') { setShowCorrection(null); setCorrectionReason(''); } }}
+            onKeyDown={(e) => { if (e.key === 'Escape') { setShowCorrection(null); setCorrectionReason(''); setCorrectionTimeIn(''); setCorrectionTimeOut(''); } }}
           >
             <h3 id="correction-modal-title" className="text-lg font-semibold text-[#121212] dark:text-white mb-4">Request Correction for {formatDateFull(showCorrection.date)}</h3>
             <p className="text-sm text-[#757575] dark:text-[#9E9E9E] mb-4">
               Current: {showCorrection.actualTimeIn ? formatTime12(showCorrection.actualTimeIn) : '—'} - {showCorrection.actualTimeOut ? formatTime12(showCorrection.actualTimeOut) : '—'}
             </p>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label htmlFor="correction-time-in" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">Corrected Time In</label>
+                <input
+                  id="correction-time-in"
+                  type="time"
+                  value={correctionTimeIn}
+                  onChange={(e) => setCorrectionTimeIn(e.target.value)}
+                  className="w-full px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
+                />
+              </div>
+              <div>
+                <label htmlFor="correction-time-out" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">Corrected Time Out</label>
+                <input
+                  id="correction-time-out"
+                  type="time"
+                  value={correctionTimeOut}
+                  onChange={(e) => setCorrectionTimeOut(e.target.value)}
+                  className="w-full px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
+                />
+              </div>
+            </div>
             <textarea
               value={correctionReason}
               onChange={(e) => setCorrectionReason(e.target.value)}
@@ -277,7 +310,7 @@ export function TraineeDTRView() {
             />
             <div className="flex justify-end gap-3 mt-4">
               <button
-                onClick={() => { setShowCorrection(null); setCorrectionReason(''); }}
+                onClick={() => { setShowCorrection(null); setCorrectionReason(''); setCorrectionTimeIn(''); setCorrectionTimeOut(''); }}
                 aria-label="Close"
                 className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg"
               >

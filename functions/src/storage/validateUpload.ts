@@ -33,11 +33,14 @@ function checkMagicBytes(mimeType: string, buffer: Uint8Array): boolean {
   return patterns.some((pattern) => pattern.every((byte, i) => buffer[i] === byte));
 }
 
-function generateStoragePath(bucket: string, resourceId: string, fileName: string): string {
+function generateStoragePath(bucket: string, companyId: string, resourceId: string, fileName: string): string {
   const ext = fileName.split('.').pop()?.toLowerCase() || 'bin';
   const timestamp = Date.now();
   const random = crypto.randomBytes(8).toString('hex');
-  return `${bucket}/${resourceId}/${timestamp}_${random}.${ext}`;
+  if (bucket === 'profiles') {
+    return `${bucket}/${resourceId}/${timestamp}_${random}.${ext}`;
+  }
+  return `${bucket}/${companyId}/${resourceId}/${timestamp}_${random}.${ext}`;
 }
 
 export interface ValidateUploadRequest {
@@ -135,7 +138,7 @@ export async function validateUploadHandler(
     }
   }
 
-  const path = generateStoragePath(bucket, resourceId, fileName);
+  const path = generateStoragePath(bucket, callerCompanyId, resourceId, fileName);
 
   const now = Date.now();
   await logAction({

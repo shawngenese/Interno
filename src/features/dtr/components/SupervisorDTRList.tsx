@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { listDTRs, listCorrectionRequests } from '../services/dtrService';
+import { listDTRs, listCorrectionRequests, approveDTR, rejectDTR, reviewCorrectionRequest } from '../services/dtrService';
+import { useSupervisor } from '@/shared/hooks/useSupervisor';
+import { useAuth } from '@/features/auth';
 import { useToast } from '@/shared/components/Toast';
 import { formatDateFull, formatTime12 } from '@/shared/utils/dateUtils';
 import type { DTREntry, DTRStatus, DTRCorrectionRequest, ListDTRParams } from '../types';
@@ -21,27 +23,38 @@ function statusBadge(status: DTREntry['status']): React.ReactNode {
 
 export function SupervisorDTRList() {
   const { addToast } = useToast();
+  const { user, role } = useAuth();
+  const { supervisor, loading: supLoading } = useSupervisor();
   const [dtrs, setDtrs] = useState<DTREntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ListDTRParams>({ page: 1, limit: 20, status: 'pending' });
   const [total, setTotal] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const [selectedDTR, setSelectedDTR] = useState<DTREntry | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [corrections, setCorrections] = useState<DTRCorrectionRequest[]>([]);
 
   const fetchDTRs = useCallback(async () => {
+    if (!supervisor) return;
     setLoading(true);
     try {
-      const result = await listDTRs(filters);
+      const companyId = supervisor.companyId;
+      if (!companyId) {
+        setDtrs([]);
+        setTotal(0);
+        return;
+      }
+      const result = await listDTRs({ ...filters, companyId });
       setDtrs(result.data);
       setTotal(result.total);
     } catch (err) {
       console.error('Failed to load DTRs:', err);
+      setError('Failed to load DTRs. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, supervisor]);
 
   useEffect(() => {
     fetchDTRs();
@@ -62,22 +75,14 @@ export function SupervisorDTRList() {
   };
 
   const handleApprove = async (dtr: DTREntry) => {
+    if (!confirm('Approve this DTR?')) return;
     try {
-      const { getFirestoreInstancePublic } = await import('@/config/firebase');
-      const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
-      const { getAuthInstancePublic } = await import('@/config/firebase');
-      const auth = getAuthInstancePublic();
-      const currentUser = auth.currentUser;
-      if (!currentUser) throw new Error('Not authenticated');
-
-      await updateDoc(doc(getFirestoreInstancePublic(), 'dtrs', dtr.id), {
-        status: 'approved',
-        approvedAt: serverTimestamp(),
-        approvedBy: currentUser.uid,
-        updatedAt: serverTimestamp(),
-      });
+      await approveDTR(dtr.id);
+      addToast('success', 'DTR approved');
       await fetchDTRs();
-      if (selectedDTR?.id === dtr.id) handleView(dtr);
+      if (selectedDTR?.id === dtr.id) {
+        setSelectedDTR({ ...dtr, status: 'approved' });
+      }
     } catch (err) {
       console.error('Approve failed:', err);
       addToast('error', 'Failed to approve DTR');
@@ -87,21 +92,12 @@ export function SupervisorDTRList() {
   const handleReject = async (dtr: DTREntry) => {
     if (!confirm('Reject this DTR?')) return;
     try {
-      const { getFirestoreInstancePublic } = await import('@/config/firebase');
-      const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
-      const { getAuthInstancePublic } = await import('@/config/firebase');
-      const auth = getAuthInstancePublic();
-      const currentUser = auth.currentUser;
-      if (!currentUser) throw new Error('Not authenticated');
-
-      await updateDoc(doc(getFirestoreInstancePublic(), 'dtrs', dtr.id), {
-        status: 'rejected',
-        reviewedAt: serverTimestamp(),
-        reviewedBy: currentUser.uid,
-        updatedAt: serverTimestamp(),
-      });
+      await rejectDTR(dtr.id);
+      addToast('success', 'DTR rejected');
       await fetchDTRs();
-      if (selectedDTR?.id === dtr.id) handleView(dtr);
+      if (selectedDTR?.id === dtr.id) {
+        setSelectedDTR({ ...dtr, status: 'rejected' });
+      }
     } catch (err) {
       console.error('Reject failed:', err);
       addToast('error', 'Failed to reject DTR');
@@ -110,40 +106,8 @@ export function SupervisorDTRList() {
 
   const handleCorrectionAction = async (correction: DTRCorrectionRequest, action: 'approve' | 'reject') => {
     try {
-      const { getFirestoreInstancePublic } = await import('@/config/firebase');
-      const { doc, updateDoc, getDoc, serverTimestamp } = await import('firebase/firestore');
-      const { getAuthInstancePublic } = await import('@/config/firebase');
-      const auth = getAuthInstancePublic();
-      const currentUser = auth.currentUser;
-      if (!currentUser) throw new Error('Not authenticated');
-
-      const db = getFirestoreInstancePublic();
-
-      if (action === 'approve') {
-        // Apply proposed values to DTR
-        const dtrSnap = await getDoc(doc(db, 'dtrs', correction.dtrId));
-        if (!dtrSnap.exists()) throw new Error('DTR not found');
-
-        await updateDoc(doc(db, 'dtrs', correction.dtrId), {
-          ...correction.proposedValue,
-          status: 'corrected',
-          correctionRequestId: correction.id,
-          updatedAt: serverTimestamp(),
-        });
-        await updateDoc(doc(db, 'dtrs', correction.dtrId, 'correction_requests', correction.id), {
-          status: 'approved',
-          reviewedBy: currentUser.uid,
-          reviewedAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-      } else {
-        await updateDoc(doc(db, 'dtrs', correction.dtrId, 'correction_requests', correction.id), {
-          status: 'rejected',
-          reviewedBy: currentUser.uid,
-          reviewedAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-      }
+      await reviewCorrectionRequest(correction.dtrId, correction.id, action);
+      addToast('success', action === 'approve' ? 'Correction approved' : 'Correction rejected');
       if (selectedDTR) handleView(selectedDTR);
     } catch (err) {
       console.error('Correction action failed:', err);
@@ -200,6 +164,13 @@ export function SupervisorDTRList() {
           </div>
         </div>
 
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm flex items-center justify-between">
+            <span>{error}</span>
+            <button onClick={() => { setError(null); fetchDTRs(); }} className="text-sm font-medium text-red-700 dark:text-red-400 hover:underline">Retry</button>
+          </div>
+        )}
+
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
@@ -240,7 +211,7 @@ export function SupervisorDTRList() {
                     <td className="px-4 py-3 text-sm">{statusBadge(dtr.status)}</td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {dtr.status === 'pending' && (
+                        {dtr.status === 'pending' && (role === 'supervisor' || role === 'admin') && (
                           <>
                             <button
                               onClick={(e) => { e.stopPropagation(); handleApprove(dtr); }}
@@ -348,7 +319,7 @@ export function SupervisorDTRList() {
                   </div>
                 </div>
 
-                {selectedDTR.status === 'pending' && (
+                {selectedDTR.status === 'pending' && (role === 'supervisor' || role === 'admin') && (
                   <div className="flex justify-end gap-3 pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
                     <button onClick={() => handleReject(selectedDTR)} className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">
                       Reject
@@ -373,7 +344,7 @@ export function SupervisorDTRList() {
                           <div className="text-xs text-[#757575] mb-2">
                             Proposed: {c.proposedValue.actualTimeIn ? formatTime12(c.proposedValue.actualTimeIn) : '—'} - {c.proposedValue.actualTimeOut ? formatTime12(c.proposedValue.actualTimeOut) : '—'}
                           </div>
-                          {c.status === 'pending' && (
+                          {c.status === 'pending' && (role === 'supervisor' || role === 'admin') && (
                             <div className="flex gap-2 mt-2">
                               <button onClick={() => handleCorrectionAction(c, 'approve')} className="px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700">
                                 Approve Correction

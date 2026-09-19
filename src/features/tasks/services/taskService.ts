@@ -392,12 +392,12 @@ export async function getTraineeTaskCounts(
 }
 
 /** Add a comment to a task. */
-export async function addComment(taskId: string, text: string, userId: string, attachments: string[] = []): Promise<void> {
+export async function addComment(taskId: string, content: string, userId: string, attachments: string[] = []): Promise<void> {
   const db = getFirestoreInstancePublic();
   await addDoc(collection(db, 'task_comments'), {
     taskId,
     userId,
-    text,
+    content,
     attachments,
     createdAt: Date.now(),
   });

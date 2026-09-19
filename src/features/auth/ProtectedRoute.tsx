@@ -40,9 +40,9 @@ export function SupervisorRoute({ children }: { children: React.ReactNode }) {
 }
 
 export function CoordinatorRoute({ children }: { children: React.ReactNode }) {
-  return <ProtectedRoute allowedRoles={['admin', 'supervisor', 'coordinator']}>{children}</ProtectedRoute>;
+  return <ProtectedRoute allowedRoles={['admin', 'coordinator']}>{children}</ProtectedRoute>;
 }
 
 export function TraineeRoute({ children }: { children: React.ReactNode }) {
-  return <ProtectedRoute allowedRoles={['admin', 'supervisor', 'coordinator', 'trainee']}>{children}</ProtectedRoute>;
+  return <ProtectedRoute allowedRoles={['admin', 'trainee']}>{children}</ProtectedRoute>;
 }

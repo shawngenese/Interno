@@ -112,7 +112,7 @@ export function TraineeEvaluationView({ traineeId }: TraineeEvaluationViewProps)
                         <div>
                           <span className="text-[#757575] dark:text-[#9E9E9E]">Overall Rating:</span>
                           <p className="font-medium text-[#121212] dark:text-white">
-                            {evaluation.overallRating}/5 ({RATING_LABELS[evaluation.overallRating as keyof typeof RATING_LABELS]})
+                            {evaluation.overallRating != null ? `${evaluation.overallRating}/5 (${RATING_LABELS[evaluation.overallRating as keyof typeof RATING_LABELS]})` : 'N/A'}
                           </p>
                         </div>
                       </div>

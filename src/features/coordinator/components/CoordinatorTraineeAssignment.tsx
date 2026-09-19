@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getCoordinatorTrainees, getSupervisors, updateTraineeAssignment } from '../services/coordinatorService';
 import { useAuth } from '@/features/auth';
 import { getFirestoreInstancePublic } from '@/config/firebase';
@@ -22,19 +22,16 @@ export function CoordinatorTraineeAssignment() {
   const [draggedTrainee, setDraggedTrainee] = useState<CoordinatorTrainee | null>(null);
   const [dragOverSupervisor, setDragOverSupervisor] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, [user]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async (signal?: AbortSignal) => {
     if (!user) return;
     setLoading(true);
     setError(null);
     try {
       const db = getFirestoreInstancePublic();
       const userSnap = await getDoc(doc(db, 'users', user.uid));
-      if (!userSnap.exists()) return;
+      if (!userSnap.exists() || signal?.aborted) return;
       const userData = userSnap.data() as { companyId?: string };
       const cid = userData.companyId || '';
 
@@ -43,15 +40,27 @@ export function CoordinatorTraineeAssignment() {
         getSupervisors(),
       ]);
 
-      setTrainees(traineeData);
-      setSupervisors(supervisorData.filter(s => s.companyId === cid));
+      if (!signal?.aborted) {
+        setTrainees(traineeData);
+        setSupervisors(supervisorData.filter(s => s.companyId === cid));
+      }
     } catch (err) {
-      console.error('Failed to load data:', err);
-      setError('Failed to load data');
+      if (!signal?.aborted) {
+        console.error('Failed to load data:', err);
+        setError('Failed to load data');
+      }
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    fetchData(controller.signal);
+    return () => controller.abort();
+  }, [fetchData]);
 
   const handleDragStart = (trainee: CoordinatorTrainee) => {
     setDraggedTrainee(trainee);

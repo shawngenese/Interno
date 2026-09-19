@@ -167,6 +167,7 @@ export function UserForm({ editingId, defaultRole, onCancel, onSaved }: UserForm
               Email <span className="text-red-500">*</span>
             </label>
             <input
+              autoFocus
               type="email"
               id="email"
               value={formData.email}

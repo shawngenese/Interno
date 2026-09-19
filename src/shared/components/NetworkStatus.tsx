@@ -8,6 +8,7 @@ export const NetworkStatusIndicator = React.memo(function NetworkStatusIndicator
   const [online, setOnline] = useState(navigator.onLine);
   const [pendingCount, setPendingCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   const doRefreshPending = useCallback(async () => {
     try {
@@ -21,12 +22,15 @@ export const NetworkStatusIndicator = React.memo(function NetworkStatusIndicator
   const handleSync = useCallback(async () => {
     if (!navigator.onLine) return;
     setSyncing(true);
+    setSyncError(null);
     try {
       const result = await syncPendingMutations();
       console.log('[NetworkStatus] Sync result:', result);
       await doRefreshPending();
     } catch (err) {
       console.error('Sync failed:', err);
+      setSyncError('Sync failed. Will retry later.');
+      setTimeout(() => setSyncError(null), 5000);
     } finally {
       setSyncing(false);
     }
@@ -36,12 +40,21 @@ export const NetworkStatusIndicator = React.memo(function NetworkStatusIndicator
     const unsubscribe = onOnlineChange(setOnline);
     doRefreshPending();
 
+    const refreshInterval = setInterval(() => {
+      doRefreshPending();
+    }, 30000);
+
     const cleanupInterval = setInterval(() => {
-      cleanupSyncedMutations().catch(console.error);
+      cleanupSyncedMutations()
+        .then((cleaned) => {
+          if (cleaned > 0) console.log(`[NetworkStatus] Cleaned up ${cleaned} synced mutations`);
+        })
+        .catch(console.error);
     }, 24 * 60 * 60 * 1000);
 
     return () => {
       unsubscribe();
+      clearInterval(refreshInterval);
       clearInterval(cleanupInterval);
     };
   }, [doRefreshPending]);
@@ -70,7 +83,7 @@ export const NetworkStatusIndicator = React.memo(function NetworkStatusIndicator
       {(pendingCount > 0 || !online) && (
         <button
           onClick={handleSync}
-          disabled={syncing || !navigator.onLine}
+          disabled={syncing || !online}
           className="px-2 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
           aria-label={syncing ? 'Syncing...' : online ? 'Sync pending changes' : 'Waiting for connection'}
         >
@@ -85,6 +98,10 @@ export const NetworkStatusIndicator = React.memo(function NetworkStatusIndicator
             'Waiting for connection...'
           )}
         </button>
+      )}
+
+      {syncError && (
+        <span className="text-xs text-red-600 dark:text-red-400">{syncError}</span>
       )}
     </div>
   );

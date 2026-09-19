@@ -71,6 +71,7 @@ export function AdminDashboard() {
     setEditingWorkScheduleId(null);
     setEditingOJTScheduleId(null);
     setEditingSupervisorId(null);
+    setEditingCoordinatorId(null);
     setAssigningSupervisor(null);
     setViewingTraineeCompanyId(null);
   }, [location.pathname]);
@@ -277,6 +278,7 @@ export function AdminDashboard() {
     setEditingWorkScheduleId(null);
     setEditingOJTScheduleId(null);
     setEditingSupervisorId(null);
+    setEditingCoordinatorId(null);
     setAssigningSupervisor(null);
     setViewingTraineeCompanyId(null);
   };
@@ -483,7 +485,7 @@ export function AdminDashboard() {
                 onEdit={handleEditTrainee} 
                 onView={handleViewTrainee}
                 onViewDocuments={handleViewTraineeDocuments}
-                onStatusChange={() => {}} 
+                onStatusChange={() => window.location.reload()} 
               />
             </>
           )}

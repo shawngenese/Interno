@@ -12,6 +12,7 @@ const navigation = [
   { name: 'Attendance', href: '/supervisor/attendance', icon: ClockIcon },
   { name: 'DTR Approvals', href: '/supervisor/dtr', icon: ClipboardIcon },
   { name: 'Leave Requests', href: '/supervisor/leave', icon: CalendarIcon },
+  { name: 'Evaluations', href: '/supervisor/evaluations', icon: ClipboardCheckIcon },
 ];
 
 function HomeIcon({ className }: { className?: string }) {

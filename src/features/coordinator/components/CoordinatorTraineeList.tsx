@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCoordinatorTrainees, updateTraineeAssignment, getSupervisors } from '../services/coordinatorService';
 import { useAuth } from '@/features/auth';
@@ -22,21 +22,19 @@ export function CoordinatorTraineeList() {
   const [error, setError] = useState<string | null>(null);
   const [selectedTrainee, setSelectedTrainee] = useState<CoordinatorTrainee | null>(null);
   const [assigning, setAssigning] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [selectedSupervisorId, setSelectedSupervisorId] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('');
+  const abortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, [user]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async (signal?: AbortSignal) => {
     if (!user) return;
     setLoading(true);
     setError(null);
     try {
       const db = getFirestoreInstancePublic();
       const userSnap = await getDoc(doc(db, 'users', user.uid));
-      if (!userSnap.exists()) return;
+      if (!userSnap.exists() || signal?.aborted) return;
       const userData = userSnap.data() as { companyId?: string };
       const cid = userData.companyId || '';
 
@@ -45,15 +43,27 @@ export function CoordinatorTraineeList() {
         getSupervisors(),
       ]);
 
-      setTrainees(traineeData);
-      setSupervisors(supervisorData.filter(s => s.companyId === cid));
+      if (!signal?.aborted) {
+        setTrainees(traineeData);
+        setSupervisors(supervisorData.filter(s => s.companyId === cid));
+      }
     } catch (err) {
-      console.error('Failed to load trainees:', err);
-      setError('Failed to load trainees');
+      if (!signal?.aborted) {
+        console.error('Failed to load trainees:', err);
+        setError('Failed to load trainees');
+      }
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    fetchData(controller.signal);
+    return () => controller.abort();
+  }, [fetchData]);
 
   const handleAssign = async (trainee: CoordinatorTrainee) => {
     setSelectedTrainee(trainee);
@@ -63,6 +73,7 @@ export function CoordinatorTraineeList() {
 
   const handleSaveAssignment = async () => {
     if (!selectedTrainee) return;
+    setSaving(true);
     try {
       await updateTraineeAssignment(selectedTrainee.traineeId, {
         supervisorId: selectedSupervisorId || undefined,
@@ -73,6 +84,8 @@ export function CoordinatorTraineeList() {
     } catch (err) {
       setError('Failed to update assignment');
       console.error(err);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -178,7 +191,7 @@ export function CoordinatorTraineeList() {
                       <div className="w-full bg-[#D5D5D5] dark:bg-[#3A3A3A] rounded-full h-1.5 mt-1">
                         <div
                           className="bg-blue-600 h-1.5 rounded-full"
-                          style={{ width: `${Math.min(100, (trainee.ojtHoursCompleted / trainee.ojtHoursRequired) * 100)}%` }}
+                          style={{ width: `${trainee.ojtHoursRequired > 0 ? Math.min(100, (trainee.ojtHoursCompleted / trainee.ojtHoursRequired) * 100) : 0}%` }}
                         />
                       </div>
                     </td>
@@ -212,10 +225,11 @@ export function CoordinatorTraineeList() {
                 <p className="font-medium text-[#121212] dark:text-white">{selectedTrainee.name}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+                <label htmlFor="supervisor-select" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
                   Select Supervisor
                 </label>
                 <select
+                  id="supervisor-select"
                   value={selectedSupervisorId}
                   onChange={(e) => setSelectedSupervisorId(e.target.value)}
                   className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -241,9 +255,10 @@ export function CoordinatorTraineeList() {
               </button>
               <button
                 onClick={handleSaveAssignment}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Save
+                {saving ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>

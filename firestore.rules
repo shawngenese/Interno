@@ -85,14 +85,18 @@ service cloud.firestore {
     }
     
     function isValidRole(role) {
-      return role in ['admin', 'supervisor', 'coordinator', 'trainee'];
+      return role == 'admin' || role == 'supervisor' || role == 'coordinator' || role == 'trainee';
     }
     
     // ============================================
     // USERS Collection
     // ============================================
     match /users/{userId} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() && (
+        isOwner(userId) ||
+        isAdmin() ||
+        isCoordinator()
+      );
       
       allow create: if isSignedIn() && isAdmin() && 
         request.resource.data.keys().hasAll(['email', 'role', 'displayName']) &&
@@ -101,7 +105,7 @@ service cloud.firestore {
       allow update: if isSignedIn() && (
         isAdmin() ||
         (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL', 'preferences'])) ||
-        (isSupervisor() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
+        (isSupervisor() && sameCompany(resource.data.companyId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
       );
       
       allow delete: if isSignedIn() && isAdmin();
@@ -144,10 +148,8 @@ service cloud.firestore {
       allow read: if isSignedIn() && (
         isAdmin() ||
         isCoordinator() ||
-        isSupervisor() ||
         isOwner(supervisorId) ||
-        (isSupervisor() && resource.data.userId == request.auth.uid) ||
-        sameCompany(resource.data.companyId)
+        (isSupervisor() && sameCompany(resource.data.companyId))
       );
       
       allow create: if isSignedIn() && isAdmin() &&
@@ -181,11 +183,8 @@ service cloud.firestore {
     match /coordinators/{coordinatorId} {
       allow read: if isSignedIn() && (
         isAdmin() ||
-        isCoordinator() ||
-        isSupervisor() ||
         isOwner(coordinatorId) ||
-        (isCoordinator() && resource.data.userId == request.auth.uid) ||
-        sameCompany(resource.data.companyId)
+        (isCoordinator() && sameCompany(resource.data.companyId))
       );
       
       allow create: if isSignedIn() && isAdmin() &&
@@ -359,6 +358,35 @@ service cloud.firestore {
           isSupervisorOfByField(get(/databases/$(database)/documents/tasks/$(taskId)).data.traineeId)
         );
       }
+    }
+    
+    // ============================================
+    // TASK_APPROVALS Collection (top-level)
+    // ============================================
+    match /task_approvals/{approvalId} {
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        isSupervisor() ||
+        isCoordinator() ||
+        isAssignedTrainee(resource.data.traineeId) ||
+        isSupervisorOf(resource.data.traineeId) ||
+        isSupervisorOfByField(resource.data.traineeId)
+      );
+      
+      allow create: if isSignedIn() && (
+        isAdmin() ||
+        isSupervisor() ||
+        isSupervisorOf(resource.data.traineeId) ||
+        isSupervisorOfByField(resource.data.traineeId)
+      ) && request.resource.data.keys().hasAll(['taskId', 'traineeId', 'status']);
+      
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        isSupervisor() ||
+        isCoordinator()
+      );
+      
+      allow delete: if isSignedIn() && isAdmin();
     }
     
     // ============================================
@@ -696,7 +724,8 @@ service cloud.firestore {
       
       allow update: if isSignedIn() && (
         isAdmin() ||
-        isCoordinator()
+        isCoordinator() ||
+        (isSupervisor() && resource.data.supervisorId == request.auth.uid)
       ) && sameCompany(resource.data.companyId);
       
       allow delete: if isSignedIn() && isAdmin();
@@ -706,26 +735,25 @@ service cloud.firestore {
     // ANNOUNCEMENTS Collection
     // ============================================
     match /announcements/{announcementId} {
-      allow read: if isSignedIn() && sameCompany(resource.data.companyId);
+      allow read: if isSignedIn() && (isAdmin() || sameCompany(resource.data.companyId));
       
       allow create: if isSignedIn() && (
         isAdmin() ||
-        isCoordinator()
-      ) && sameCompany(request.resource.data.companyId) &&
-        request.resource.data.keys().hasAll([
+        (isCoordinator() && sameCompany(request.resource.data.companyId))
+      ) && request.resource.data.keys().hasAll([
           'title', 'content', 'authorId', 'authorName', 'companyId',
           'priority', 'status', 'targetRoles', 'pinned'
         ]);
       
       allow update: if isSignedIn() && (
         isAdmin() ||
-        isCoordinator()
-      ) && sameCompany(resource.data.companyId);
+        (isCoordinator() && sameCompany(resource.data.companyId))
+      );
       
       allow delete: if isSignedIn() && (
         isAdmin() ||
-        isCoordinator()
-      ) && sameCompany(resource.data.companyId);
+        (isCoordinator() && sameCompany(resource.data.companyId))
+      );
     }
     
     // ============================================

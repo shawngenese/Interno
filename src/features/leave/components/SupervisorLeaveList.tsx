@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { listLeaveRequests, reviewLeaveRequest } from '../services/leaveService';
+import { useSupervisor } from '@/shared/hooks/useSupervisor';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { SkeletonCard } from '@/shared/components/Skeleton';
 import type { LeaveRequest, LeaveStatus, LeaveType, ListLeaveParams } from '../types';
@@ -36,7 +37,8 @@ function daysBetween(start: number, end: number): number {
 }
 
 export function SupervisorLeaveList() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const { supervisor, loading: supLoading } = useSupervisor();
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ListLeaveParams>({ page: 1, limit: 20 });
@@ -45,21 +47,34 @@ export function SupervisorLeaveList() {
   const [reviewNotes, setReviewNotes] = useState('');
   const [actionModal, setActionModal] = useState<{ leave: LeaveRequest; action: 'approved' | 'rejected' } | null>(null);
 
-  const fetchLeaves = useCallback(async () => {
+  const fetchLeaves = useCallback(async (signal?: AbortSignal) => {
+    if (!supervisor) return;
     setLoading(true);
     try {
-      const result = await listLeaveRequests(filters);
-      setLeaves(result.data);
-      setTotal(result.total);
+      const companyId = supervisor.companyId;
+      if (!companyId) {
+        if (!signal?.aborted) {
+          setLeaves([]);
+          setTotal(0);
+        }
+        return;
+      }
+      const result = await listLeaveRequests({ ...filters, companyId });
+      if (!signal?.aborted) {
+        setLeaves(result.data);
+        setTotal(result.total);
+      }
     } catch (err) {
-      console.error('Failed to load leave requests:', err);
+      if (!signal?.aborted) console.error('Failed to load leave requests:', err);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
-  }, [filters]);
+  }, [filters, supervisor]);
 
   useEffect(() => {
-    fetchLeaves();
+    const controller = new AbortController();
+    fetchLeaves(controller.signal);
+    return () => controller.abort();
   }, [fetchLeaves]);
 
   const handleReview = async () => {
@@ -146,7 +161,7 @@ export function SupervisorLeaveList() {
                     </p>
                   )}
                 </div>
-                {leave.status === 'pending' && (
+                {leave.status === 'pending' && (role === 'supervisor' || role === 'admin') && (
                   <div className="flex gap-2">
                     <button
                       onClick={() => setActionModal({ leave, action: 'approved' })}

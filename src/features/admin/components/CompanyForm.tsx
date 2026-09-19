@@ -110,6 +110,7 @@ export function CompanyForm({ editingId, onCancel, onSaved }: CompanyFormProps) 
             Company Name <span className="text-red-500">*</span>
           </label>
           <input
+            autoFocus
             type="text"
             id="name"
             value={formData.name}
@@ -129,6 +130,7 @@ export function CompanyForm({ editingId, onCancel, onSaved }: CompanyFormProps) 
               id="type"
               value={formData.type}
               onChange={(e) => handleChange('type', e.target.value)}
+              required
               className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="internal">Internal</option>

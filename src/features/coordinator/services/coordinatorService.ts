@@ -186,7 +186,7 @@ export async function getDocumentSummary(companyId: string): Promise<Coordinator
   const traineeNameMap = new Map<string, string>();
   traineeSnap.docs.forEach((d) => traineeNameMap.set(d.id, d.data().name || 'Unknown'));
 
-  const requiredDocs = ['resume', 'endorsement_letter', 'performance_evaluation', 'final_evaluation'];
+  const requiredDocs: string[] = ['resume', 'endorsement', 'agreement', 'completion'];
 
   const docAccum = new Map<string, { pending: number; approved: number; rejected: number; uploadedTypes: Set<string>; total: number }>();
 

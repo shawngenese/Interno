@@ -2,10 +2,13 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { adminService } from '../services/adminService';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
 import { ActionsMenu } from '@/shared/components/ActionsMenu';
+import { useAuth } from '@/features/auth';
 import type { User, ListUsersParams } from '../types';
 
 interface CoordinatorListProps {
   onEdit?: (user: User) => void;
+  onView?: (user: User) => void;
+  onDelete?: (user: User) => void;
 }
 
 interface ResolvedCoordinator extends User {
@@ -13,7 +16,8 @@ interface ResolvedCoordinator extends User {
   departmentName?: string;
 }
 
-export function CoordinatorList({ onEdit }: CoordinatorListProps) {
+export function CoordinatorList({ onEdit, onView, onDelete }: CoordinatorListProps) {
+  const { role, user } = useAuth();
   const [coordinators, setCoordinators] = useState<ResolvedCoordinator[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +73,18 @@ export function CoordinatorList({ onEdit }: CoordinatorListProps) {
     setFilters(p => ({ ...p, page }));
   };
 
+  const handleDelete = async (coordinator: User) => {
+    if (!confirm('Delete this coordinator?')) return;
+    try {
+      await adminService.deleteUser(coordinator.id);
+      onDelete?.(coordinator);
+      fetchCoordinators();
+    } catch (err) {
+      console.error('Failed to delete coordinator:', err);
+      setError('Failed to delete coordinator');
+    }
+  };
+
   const totalPages = Math.ceil(total / (filters.limit || 10));
 
   if (loading && coordinators.length === 0) {
@@ -116,7 +132,7 @@ export function CoordinatorList({ onEdit }: CoordinatorListProps) {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">
+        <div role="alert" className="p-4 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">
           {error}
         </div>
       )}
@@ -169,13 +185,15 @@ export function CoordinatorList({ onEdit }: CoordinatorListProps) {
                           ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                           : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
                     }`}>
-                      {coordinator.status}
+                      {coordinator.status.charAt(0).toUpperCase() + coordinator.status.slice(1)}
                     </span>
                   </td>
                   <td className="px-4 py-4 text-right">
                     <ActionsMenu
                       items={[
+                        ...(onView ? [{ label: 'View', onClick: () => onView(coordinator) }] : []),
                         ...(onEdit ? [{ label: 'Edit', onClick: () => onEdit(coordinator) }] : []),
+                        ...(role === 'admin' ? [{ label: 'Delete', onClick: () => handleDelete(coordinator) }] : []),
                       ]}
                     />
                   </td>
@@ -195,14 +213,14 @@ export function CoordinatorList({ onEdit }: CoordinatorListProps) {
             <button
               onClick={() => handlePageChange((filters.page || 1) - 1)}
               disabled={(filters.page || 1) <= 1}
-              className="px-3 py-1 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-2 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
             <button
               onClick={() => handlePageChange((filters.page || 1) + 1)}
               disabled={(filters.page || 1) >= totalPages}
-              className="px-3 py-1 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-2 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
             </button>

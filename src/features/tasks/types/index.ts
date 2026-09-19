@@ -50,7 +50,7 @@ export interface TaskComment {
   id: string;
   taskId: string;
   userId: string;
-  text: string;
+  content: string;
   attachments?: string[];
   createdAt: number;
 }

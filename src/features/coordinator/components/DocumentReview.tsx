@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getFirestoreInstancePublic } from '@/config/firebase';
-import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp, getDoc, addDoc } from 'firebase/firestore';
 import { useAuth } from '@/features/auth';
 import type { Document } from '@/features/documents/types';
 
@@ -11,7 +11,7 @@ interface Trainee {
 }
 
 export function DocumentReview() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [documents, setDocuments] = useState<(Document & { traineeName?: string })[]>([]);
   const [trainees, setTrainees] = useState<Trainee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,11 +22,7 @@ export function DocumentReview() {
   const [reviewNotes, setReviewNotes] = useState('');
   const [processing, setProcessing] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-  }, [filterStatus, filterTrainee]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
     try {
@@ -36,6 +32,7 @@ export function DocumentReview() {
       if (!user) return;
       const userSnap = await getDoc(doc(db, 'users', user.uid));
       if (!userSnap.exists()) return;
+      if (signal?.aborted) return;
       const userData = userSnap.data() as { companyId?: string };
       const companyId = userData.companyId || '';
 
@@ -43,6 +40,7 @@ export function DocumentReview() {
       const traineeSnap = await getDocs(
         query(collection(db, 'trainees'), where('companyId', '==', companyId))
       );
+      if (signal?.aborted) return;
       const traineeMap = new Map<string, string>();
       const traineeList: Trainee[] = [];
       for (const t of traineeSnap.docs) {
@@ -59,27 +57,13 @@ export function DocumentReview() {
         return;
       }
 
-      // Batch fetch documents (Firestore IN max 30)
-      const chunks: string[][] = [];
-      for (let i = 0; i < traineeIds.length; i += 30) {
-        chunks.push(traineeIds.slice(i, i + 30));
-      }
-
       const allDocs: (Document & { traineeName?: string })[] = [];
-      for (const chunk of chunks) {
-        let q = query(
-          collection(db, 'documents'),
-          where('traineeId', 'in', chunk)
-        );
 
+      if (filterTrainee) {
+        let q = query(collection(db, 'documents'), where('traineeId', '==', filterTrainee));
         if (filterStatus) {
           q = query(q, where('status', '==', filterStatus));
         }
-
-        if (filterTrainee) {
-          q = query(q, where('traineeId', '==', filterTrainee));
-        }
-
         const docSnap = await getDocs(q);
         docSnap.docs.forEach(d => {
           const data = d.data() as Record<string, unknown>;
@@ -103,28 +87,83 @@ export function DocumentReview() {
             traineeName: traineeMap.get(data.traineeId as string),
           });
         });
+      } else {
+        const chunks: string[][] = [];
+        for (let i = 0; i < traineeIds.length; i += 30) {
+          chunks.push(traineeIds.slice(i, i + 30));
+        }
+        for (const chunk of chunks) {
+          let q = query(collection(db, 'documents'), where('traineeId', 'in', chunk));
+          if (filterStatus) {
+            q = query(q, where('status', '==', filterStatus));
+          }
+          const docSnap = await getDocs(q);
+          docSnap.docs.forEach(d => {
+            const data = d.data() as Record<string, unknown>;
+            allDocs.push({
+              id: d.id,
+              traineeId: data.traineeId as string,
+              companyId: data.companyId as string,
+              type: data.type as Document['type'],
+              fileName: data.fileName as string,
+              fileUrl: data.fileUrl as string,
+              fileSize: data.fileSize as number,
+              mimeType: data.mimeType as string,
+              storagePath: data.storagePath as string,
+              status: data.status as 'pending' | 'approved' | 'rejected',
+              uploadedBy: data.uploadedBy as string,
+              createdAt: data.createdAt as number,
+              updatedAt: data.updatedAt as number,
+              reviewedBy: data.reviewedBy as string,
+              reviewedAt: data.reviewedAt as number,
+              reviewNotes: data.reviewNotes as string,
+              traineeName: traineeMap.get(data.traineeId as string),
+            });
+          });
+        }
       }
 
       allDocs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-      setDocuments(allDocs);
+      if (!signal?.aborted) setDocuments(allDocs);
     } catch (err) {
-      console.error('Failed to load documents:', err);
-      setError('Failed to load documents');
+      if (!signal?.aborted) {
+        console.error('Failed to load documents:', err);
+        setError('Failed to load documents');
+      }
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
-  };
+  }, [user, filterStatus, filterTrainee]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchData(controller.signal);
+    return () => controller.abort();
+  }, [fetchData]);
 
   const handleApprove = async (docId: string) => {
     if (!user) return;
     setProcessing(true);
     try {
       const db = getFirestoreInstancePublic();
-      await updateDoc(doc(db, 'documents', docId), {
+      const docRef = doc(db, 'documents', docId);
+      const beforeSnap = await getDoc(docRef);
+      const beforeData = beforeSnap.data();
+      await updateDoc(docRef, {
         status: 'approved',
         reviewedBy: user.uid,
         reviewedAt: serverTimestamp(),
         reviewNotes: reviewNotes || null,
+      });
+      await addDoc(collection(db, 'audit_logs'), {
+        timestamp: Date.now(),
+        userId: user.uid,
+        action: 'update',
+        entityType: 'document',
+        entityId: docId,
+        originalValue: beforeData?.status,
+        newValue: 'approved',
+        metadata: { reviewNotes: reviewNotes || null },
       });
       setSelectedDoc(null);
       setReviewNotes('');
@@ -142,11 +181,24 @@ export function DocumentReview() {
     setProcessing(true);
     try {
       const db = getFirestoreInstancePublic();
-      await updateDoc(doc(db, 'documents', docId), {
+      const docRef = doc(db, 'documents', docId);
+      const beforeSnap = await getDoc(docRef);
+      const beforeData = beforeSnap.data();
+      await updateDoc(docRef, {
         status: 'rejected',
         reviewedBy: user.uid,
         reviewedAt: serverTimestamp(),
         reviewNotes: reviewNotes || null,
+      });
+      await addDoc(collection(db, 'audit_logs'), {
+        timestamp: Date.now(),
+        userId: user.uid,
+        action: 'update',
+        entityType: 'document',
+        entityId: docId,
+        originalValue: beforeData?.status,
+        newValue: 'rejected',
+        metadata: { reviewNotes: reviewNotes || null },
       });
       setSelectedDoc(null);
       setReviewNotes('');
@@ -335,20 +387,24 @@ export function DocumentReview() {
               >
                 Cancel
               </button>
-              <button
-                onClick={() => handleReject(selectedDoc.id)}
-                disabled={processing}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Reject
-              </button>
-              <button
-                onClick={() => handleApprove(selectedDoc.id)}
-                disabled={processing}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Approve
-              </button>
+              {(role === 'coordinator' || role === 'admin') && (
+                <>
+                  <button
+                    onClick={() => handleReject(selectedDoc.id)}
+                    disabled={processing}
+                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Reject
+                  </button>
+                  <button
+                    onClick={() => handleApprove(selectedDoc.id)}
+                    disabled={processing}
+                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Approve
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

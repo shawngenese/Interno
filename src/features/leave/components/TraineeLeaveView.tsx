@@ -45,7 +45,7 @@ export function TraineeLeaveView() {
   const [showForm, setShowForm] = useState(false);
   const [cancelling, setCancelling] = useState<string | null>(null);
 
-  const fetchLeaves = useCallback(async () => {
+  const fetchLeaves = useCallback(async (signal?: AbortSignal) => {
     if (!user?.uid) return;
     setLoading(true);
     try {
@@ -53,22 +53,26 @@ export function TraineeLeaveView() {
       const traineeSnap = await getDocs(
         query(collection(db, 'trainees'), where('userId', '==', user.uid), where('status', '==', 'active')),
       );
+      if (signal?.aborted) return;
       if (traineeSnap.empty) return;
       const traineeId = traineeSnap.docs[0].id;
       const data = await getTraineeLeaveRequests(traineeId);
-      setLeaves(data);
+      if (!signal?.aborted) setLeaves(data);
     } catch (err) {
-      console.error('Failed to load leave requests:', err);
+      if (!signal?.aborted) console.error('Failed to load leave requests:', err);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
-  }, [user?.uid]);
+  }, [user]);
 
   useEffect(() => {
-    fetchLeaves();
+    const controller = new AbortController();
+    fetchLeaves(controller.signal);
+    return () => controller.abort();
   }, [fetchLeaves]);
 
   const handleCancel = async (leaveId: string) => {
+    if (!confirm('Are you sure you want to cancel this leave request?')) return;
     setCancelling(leaveId);
     try {
       await cancelLeaveRequest(leaveId);

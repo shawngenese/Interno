@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { placementService } from '../services/placementService';
 import { useAuth } from '@/features/auth';
+import { getFirestoreInstancePublic } from '@/config/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import type { PlacementRequest, PlacementStatus } from '@/features/admin/types';
 
 interface PlacementRequestListProps {
@@ -8,7 +10,8 @@ interface PlacementRequestListProps {
 }
 
 export function PlacementRequestList({ onRefresh }: PlacementRequestListProps) {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const [companyId, setCompanyId] = useState<string | null>(null);
   const [requests, setRequests] = useState<PlacementRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,29 +20,54 @@ export function PlacementRequestList({ onRefresh }: PlacementRequestListProps) {
   const [reviewNotes, setReviewNotes] = useState('');
   const [processing, setProcessing] = useState(false);
 
-  const fetchRequests = async () => {
+  // Resolve coordinator's companyId
+  useEffect(() => {
+    if (!user?.uid) return;
+    let cancelled = false;
+    async function resolveCompanyId() {
+      try {
+        const db = getFirestoreInstancePublic();
+        const snap = await getDoc(doc(db, 'coordinators', user!.uid));
+        if (!cancelled && snap.exists()) {
+          setCompanyId(snap.data().companyId as string);
+        }
+      } catch (err) {
+        console.error('Failed to resolve coordinator companyId:', err);
+      }
+    }
+    resolveCompanyId();
+    return () => { cancelled = true; };
+  }, [user?.uid]);
+
+  const fetchRequests = useCallback(async (signal?: AbortSignal) => {
+    if (!companyId) return;
     setLoading(true);
     setError(null);
     try {
       const data = await placementService.getPlacementRequests(
-        undefined,
+        companyId,
         filterStatus as PlacementStatus || undefined,
       );
-      setRequests(data);
+      if (!signal?.aborted) setRequests(data);
     } catch (err) {
-      setError('Failed to load placement requests');
-      console.error(err);
+      if (!signal?.aborted) {
+        setError('Failed to load placement requests');
+        console.error(err);
+      }
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
-  };
+  }, [companyId, filterStatus]);
 
   useEffect(() => {
-    fetchRequests();
-  }, [filterStatus]);
+    const controller = new AbortController();
+    fetchRequests(controller.signal);
+    return () => controller.abort();
+  }, [fetchRequests]);
 
   const handleApprove = async (request: PlacementRequest) => {
     if (!user) return;
+    if (!confirm('Approve this placement request?')) return;
     setProcessing(true);
     try {
       await placementService.approvePlacementRequest(request.id, user.uid, reviewNotes);
@@ -57,6 +85,7 @@ export function PlacementRequestList({ onRefresh }: PlacementRequestListProps) {
 
   const handleReject = async (request: PlacementRequest) => {
     if (!user) return;
+    if (!confirm('Reject this placement request?')) return;
     setProcessing(true);
     try {
       await placementService.rejectPlacementRequest(request.id, user.uid, reviewNotes);
@@ -224,20 +253,24 @@ export function PlacementRequestList({ onRefresh }: PlacementRequestListProps) {
               >
                 Cancel
               </button>
-              <button
-                onClick={() => handleReject(selectedRequest)}
-                disabled={processing}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Reject
-              </button>
-              <button
-                onClick={() => handleApprove(selectedRequest)}
-                disabled={processing}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Approve
-              </button>
+              {(role === 'coordinator' || role === 'admin') && (
+                <>
+                  <button
+                    onClick={() => handleReject(selectedRequest)}
+                    disabled={processing}
+                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Reject
+                  </button>
+                  <button
+                    onClick={() => handleApprove(selectedRequest)}
+                    disabled={processing}
+                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Approve
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

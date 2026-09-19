@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getFirestoreInstancePublic } from '@/config/firebase';
-import { collection, getDocs, doc, updateDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, query, where, addDoc } from 'firebase/firestore';
 import { useAuth } from '@/features/auth';
 import { COMPANY_TYPES } from '@/config/constants';
 
@@ -16,18 +16,14 @@ interface Company {
 }
 
 export function CompanyVerification() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'verified' | 'unverified'>('unverified');
 
-  useEffect(() => {
-    fetchCompanies();
-  }, [filter]);
-
-  const fetchCompanies = async () => {
+  const fetchCompanies = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
     try {
@@ -52,21 +48,31 @@ export function CompanyVerification() {
         );
       }
       const snap = await getDocs(q);
+      if (signal?.aborted) return;
       const data = snap.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       })) as Company[];
       setCompanies(data);
     } catch (err) {
-      setError('Failed to load companies');
-      console.error(err);
+      if (!signal?.aborted) {
+        setError('Failed to load companies');
+        console.error(err);
+      }
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchCompanies(controller.signal);
+    return () => controller.abort();
+  }, [fetchCompanies]);
 
   const handleVerify = async (companyId: string) => {
     if (!user) return;
+    if (!confirm('Verify this company?')) return;
     setProcessing(companyId);
     try {
       const db = getFirestoreInstancePublic();
@@ -74,6 +80,16 @@ export function CompanyVerification() {
         verified: true,
         verifiedBy: user.uid,
         verifiedAt: new Date(),
+      });
+      await addDoc(collection(db, 'audit_logs'), {
+        timestamp: Date.now(),
+        userId: user.uid,
+        action: 'update',
+        entityType: 'company',
+        entityId: companyId,
+        originalValue: false,
+        newValue: true,
+        metadata: { field: 'verified' },
       });
       fetchCompanies();
     } catch (err) {
@@ -86,6 +102,7 @@ export function CompanyVerification() {
 
   const handleUnverify = async (companyId: string) => {
     if (!user) return;
+    if (!confirm('Revoke verification for this company? This may affect supervisor access.')) return;
     setProcessing(companyId);
     try {
       const db = getFirestoreInstancePublic();
@@ -93,6 +110,16 @@ export function CompanyVerification() {
         verified: false,
         verifiedBy: null,
         verifiedAt: null,
+      });
+      await addDoc(collection(db, 'audit_logs'), {
+        timestamp: Date.now(),
+        userId: user.uid,
+        action: 'update',
+        entityType: 'company',
+        entityId: companyId,
+        originalValue: true,
+        newValue: false,
+        metadata: { field: 'verified' },
       });
       fetchCompanies();
     } catch (err) {
@@ -178,22 +205,24 @@ export function CompanyVerification() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {company.verified ? (
-                      <button
-                        onClick={() => handleUnverify(company.id)}
-                        disabled={processing === company.id}
-                        className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        {processing === company.id ? 'Processing...' : 'Revoke Verification'}
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleVerify(company.id)}
-                        disabled={processing === company.id}
-                        className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        {processing === company.id ? 'Processing...' : 'Verify Company'}
-                      </button>
+                    {(role === 'coordinator' || role === 'admin') && (
+                      company.verified ? (
+                        <button
+                          onClick={() => handleUnverify(company.id)}
+                          disabled={processing === company.id}
+                          className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {processing === company.id ? 'Processing...' : 'Revoke Verification'}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleVerify(company.id)}
+                          disabled={processing === company.id}
+                          className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {processing === company.id ? 'Processing...' : 'Verify Company'}
+                        </button>
+                      )
                     )}
                   </div>
                 </div>

@@ -19,7 +19,7 @@ export function SupervisorTraineeList() {
       try {
         const sup = await getSupervisorByUserId(user.uid);
         if (sup) {
-          const assigned = await getAssignedTrainees(sup.id);
+          const assigned = await getAssignedTrainees(sup.id, sup.companyId);
           setTrainees(assigned);
           const att = assigned.length > 0
             ? await getTraineeAttendanceSummary(assigned.map(t => t.id)).catch(() => ({}))

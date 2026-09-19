@@ -449,6 +449,14 @@ export const adminService = {
       }
     }
 
+    // Clean up supervisor's own assignedTrainees subcollection
+    for (const supDoc of supervisorSnap.docs) {
+      const assignedSnap = await getDocs(collection(db, COLLECTIONS.SUPERVISORS, supDoc.id, 'assignedTrainees'));
+      for (const assignedDoc of assignedSnap.docs) {
+        batch.delete(assignedDoc.ref);
+      }
+    }
+
     supervisorSnap.docs.forEach((d) => batch.delete(d.ref));
     traineeSnap.docs.forEach((d) => batch.delete(d.ref));
     batch.delete(doc(db, COLLECTIONS.USERS, uid));
@@ -1046,6 +1054,7 @@ export const adminService = {
   async listOJTSchedules(params: ListOJTSchedulesParams = {}): Promise<PaginatedResponse<OJTSchedule>> {
     const filters: [string, string][] = [];
     if (params.companyId) filters.push(['companyId', params.companyId]);
+    if (params.status) filters.push(['status', params.status]);
     return listCollection<OJTSchedule>(COLLECTIONS.OJT_SCHEDULES, filters, ['name'], params);
   },
 

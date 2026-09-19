@@ -89,7 +89,7 @@ export function ActionsMenu({ items, align = 'right' }: ActionsMenuProps) {
       <button
         ref={buttonRef}
         onClick={() => setOpen(!open)}
-        className="p-1.5 rounded-lg text-[#9E9E9E] hover:text-[#555555] dark:hover:text-[#BDBDBD] hover:bg-[#EFEFEF] dark:hover:bg-[#3A3A3A] transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="p-2.5 rounded-lg text-[#9E9E9E] hover:text-[#555555] dark:hover:text-[#BDBDBD] hover:bg-[#EFEFEF] dark:hover:bg-[#3A3A3A] transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
         aria-label="Actions"
         aria-haspopup="true"
         aria-expanded={open}

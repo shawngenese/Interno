@@ -146,6 +146,11 @@ export function CompanyBrowser() {
                       <span className="font-medium">Email:</span> {company.contactEmail}
                     </p>
                   )}
+                  {company.contactPhone && (
+                    <p className="text-sm text-[#555555] dark:text-[#BDBDBD]">
+                      <span className="font-medium">Phone:</span> {company.contactPhone}
+                    </p>
+                  )}
                 </div>
 
                 <button

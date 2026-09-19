@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { LogoutButton } from '@/features/auth';
 import { ThemeToggle } from '@/shared/components/ThemeToggle';
+import { useAuth } from '@/features/auth';
 
 interface BottomNavItem {
   label: string;
@@ -14,11 +15,14 @@ const items: BottomNavItem[] = [
   { label: 'Tasks', href: '/trainee/tasks', icon: TasksIcon },
   { label: 'DTR', href: '/trainee/dtr', icon: DTRIcon },
   { label: 'Documents', href: '/trainee/documents', icon: DocumentsIcon },
-  { label: 'Leave', href: '/trainee/leave', icon: LeaveIcon },
+  { label: 'Companies', href: '/trainee/companies', icon: CompaniesIcon },
 ];
 
 export const BottomNav = React.memo(function BottomNav() {
   const [moreOpen, setMoreOpen] = useState(false);
+  const { role } = useAuth();
+
+  if (role !== 'trainee') return null;
 
   return (
     <>
@@ -128,6 +132,14 @@ function MoreIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM12.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM18.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+    </svg>
+  );
+}
+
+function CompaniesIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
     </svg>
   );
 }

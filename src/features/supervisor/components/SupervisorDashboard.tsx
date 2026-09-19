@@ -1,70 +1,78 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth';
-import { getSupervisorByUserId, getAssignedTrainees, getPendingDTRs, getTraineeAttendanceSummary } from '../services/supervisorService';
+import { useSupervisor } from '@/shared/hooks/useSupervisor';
+import { getAssignedTrainees, getPendingDTRs, getTraineeAttendanceSummary } from '../services/supervisorService';
 import { AnimatedCard } from '@/shared/components/AnimatedCard';
 import { AnimatedList, AnimatedListItem, listItemVariants } from '@/shared/components/AnimatedList';
 import type { Trainee } from '@/features/admin/types';
 import type { DTREntry } from '@/features/dtr/types';
 
-interface SupervisorInfo {
-  id: string;
-  userId: string;
-  companyId?: string;
-}
-
 export function SupervisorDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [supervisor, setSupervisor] = useState<SupervisorInfo | null>(null);
+  const { supervisor, loading: supLoading } = useSupervisor();
   const [trainees, setTrainees] = useState<Trainee[]>([]);
   const [pendingDTRs, setPendingDTRs] = useState<DTREntry[]>([]);
   const [attendance, setAttendance] = useState<Record<string, { hasTimeIn: boolean; hasTimeOut: boolean }>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const traineeNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const t of trainees) {
+      map.set(t.id, t.profile?.studentId || t.name || t.userId);
+    }
+    return map;
+  }, [trainees]);
+
   useEffect(() => {
-    if (!user) return;
+    if (!user || supLoading || !supervisor) {
+      if (!supLoading) setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
 
     const loadDashboard = async () => {
       setLoading(true);
       setError(null);
       try {
-        const sup = await getSupervisorByUserId(user.uid);
-        if (sup) {
-          setSupervisor(sup);
-          const assignedTrainees = await getAssignedTrainees(sup.id, sup.companyId);
-          setTrainees(assignedTrainees);
+        const assignedTrainees = await getAssignedTrainees(supervisor.id, supervisor.companyId);
+        if (cancelled) return;
+        setTrainees(assignedTrainees);
 
-          const traineeIds = assignedTrainees.map(t => t.id);
-          if (traineeIds.length > 0) {
-            const [pending, att] = await Promise.all([
-              getPendingDTRs(traineeIds).catch((err) => {
-                console.warn('[SupervisorDashboard] Pending DTRs query notice:', err);
-                return [];
-              }),
-              getTraineeAttendanceSummary(traineeIds).catch((err) => {
-                console.warn('[SupervisorDashboard] Attendance summary query notice (index building):', err);
-                return {};
-              }),
-            ]);
-            setPendingDTRs(pending);
-            setAttendance(att);
-          } else {
-            setPendingDTRs([]);
-            setAttendance({});
-          }
+        const traineeIds = assignedTrainees.map(t => t.id);
+        if (traineeIds.length > 0) {
+          const [pending, att] = await Promise.all([
+            getPendingDTRs(traineeIds).catch((err) => {
+              console.warn('[SupervisorDashboard] Pending DTRs query notice:', err);
+              return [];
+            }),
+            getTraineeAttendanceSummary(traineeIds).catch((err) => {
+              console.warn('[SupervisorDashboard] Attendance summary query notice (index building):', err);
+              return {};
+            }),
+          ]);
+          if (cancelled) return;
+          setPendingDTRs(pending);
+          setAttendance(att);
+        } else {
+          setPendingDTRs([]);
+          setAttendance({});
         }
       } catch (err) {
+        if (cancelled) return;
         console.error('Failed to load dashboard:', err);
         setError('Failed to load dashboard data');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     loadDashboard();
-  }, [user?.uid]);
+    return () => { cancelled = true; };
+  }, [user?.uid, supLoading, supervisor]);
 
   const { activeTrainees, todayPresent, todayWithTimeout } = useMemo(() => {
     let present = 0;
@@ -80,9 +88,9 @@ export function SupervisorDashboard() {
     };
   }, [trainees, attendance]);
 
-  const isExternal = Boolean(supervisor?.companyId && supervisor.companyId !== '');
+  const isExternal = !supervisor?.companyId || supervisor.companyId === '';
 
-  if (loading) {
+  if (loading || supLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <svg className="animate-spin h-8 w-8 text-blue-600" viewBox="0 0 24 24">
@@ -234,7 +242,7 @@ export function SupervisorDashboard() {
               <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
                 {pendingDTRs.slice(0, 5).map(dtr => (
                   <tr key={dtr.id}>
-                    <td className="py-3 text-sm text-[#121212] dark:text-white">{dtr.traineeId}</td>
+                    <td className="py-3 text-sm text-[#121212] dark:text-white">{traineeNameMap.get(dtr.traineeId) || dtr.traineeId}</td>
                     <td className="py-3 text-sm text-[#757575] dark:text-[#9E9E9E]">
                       {new Date(dtr.date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>

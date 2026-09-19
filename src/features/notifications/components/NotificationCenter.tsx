@@ -60,6 +60,7 @@ export function NotificationCenter() {
   const [filters, setFilters] = useState<ListNotificationsParams>({ page: 1, limit: 20 });
   const [total, setTotal] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const [showPreferences, setShowPreferences] = useState(false);
   const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
 
@@ -72,6 +73,7 @@ export function NotificationCenter() {
       setUnreadCount(result.unreadCount);
     } catch (err) {
       console.error('Failed to load notifications:', err);
+      setError('Failed to load notifications. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -88,9 +90,11 @@ export function NotificationCenter() {
   }, [fetchNotifications, fetchPreferences]);
 
   const handleMarkRead = async (id: string) => {
+    const notification = notifications.find(n => n.id === id);
+    if (!notification || notification.read) return;
     try {
       await markNotificationRead(id);
-      setNotifications(n => n.map(n => n.id === id ? { ...n, read: true } : n));
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
       setUnreadCount(c => Math.max(0, c - 1));
     } catch (err) {
       console.error('Mark read failed:', err);
@@ -100,7 +104,7 @@ export function NotificationCenter() {
   const handleMarkAllRead = async () => {
     try {
       await markAllNotificationsRead();
-      setNotifications(n => n.map(n => ({ ...n, read: true })));
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch (err) {
       console.error('Mark all read failed:', err);
@@ -111,15 +115,16 @@ export function NotificationCenter() {
     if (!confirm('Delete this notification?')) return;
     try {
       await deleteNotification(id);
-      setNotifications(n => n.filter(n => n.id !== id));
+      setNotifications(prev => prev.filter(n => n.id !== id));
       setTotal(t => t - 1);
     } catch (err) {
       console.error('Delete failed:', err);
     }
   };
 
-  const handlePreferenceChange = async (key: keyof NotificationPreferences, value: any) => {
-    const newPrefs = { ...preferences!, [key]: value };
+  const handlePreferenceChange = async (key: keyof NotificationPreferences, value: boolean) => {
+    if (!preferences) return;
+    const newPrefs = { ...preferences, [key]: value };
     setPreferences(newPrefs);
     try {
       await updateNotificationPreferences({ [key]: value });
@@ -191,6 +196,13 @@ export function NotificationCenter() {
                 <span className="text-sm text-[#3A3A3A] dark:text-[#BDBDBD]">Email Notifications</span>
               </label>
             </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm flex items-center justify-between">
+            <span>{error}</span>
+            <button onClick={() => { setError(null); fetchNotifications(); }} className="text-sm font-medium text-red-700 dark:text-red-400 hover:underline">Retry</button>
           </div>
         )}
 

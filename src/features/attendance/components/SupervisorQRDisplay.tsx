@@ -9,6 +9,7 @@ import { formatTime12 } from '@/shared/utils/dateUtils';
 interface SupervisorQRDisplayProps {
   action: 'time_in' | 'time_out';
   expirationSeconds?: 30 | 60 | 120 | 300;
+  isActive?: boolean;
   onGenerated?: (data: { token: string; expiresAt: number; sessionId: string }) => void;
 }
 
@@ -23,6 +24,7 @@ interface ScanNotification {
 export function SupervisorQRDisplay({
   action,
   expirationSeconds = 60,
+  isActive = false,
   onGenerated,
 }: SupervisorQRDisplayProps) {
   const { user } = useAuth();
@@ -37,15 +39,18 @@ export function SupervisorQRDisplay({
   const countdownRef = useRef<number | null>(null);
   const refreshTimerRef = useRef<number | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
-  const timeLeftRef = useRef<number>(expirationSeconds);
+  const generatingRef = useRef(false);
+  const retryCountRef = useRef(0);
+  const MAX_RETRIES = 3;
 
-  const generateQR = useCallback(async () => {
+  const generateQR = useCallback(async (isRetry = false) => {
     if (!user?.uid) return;
+    if (generatingRef.current && !isRetry) return;
+    generatingRef.current = true;
     setLoading(true);
     setError(null);
     setScans([]);
 
-    // Unsubscribe from previous session listener
     if (unsubscribeRef.current) {
       unsubscribeRef.current();
       unsubscribeRef.current = null;
@@ -67,10 +72,9 @@ export function SupervisorQRDisplay({
       setQrDataUrl(data.qrDataUrl);
       setExpiresAt(data.expiresAt);
       setSessionId(data.sessionId);
-      setTimeLeft(expirationSeconds);
+      retryCountRef.current = 0;
       onGenerated?.({ token: data.token, expiresAt: data.expiresAt, sessionId: data.sessionId });
 
-      // Subscribe to real-time scans for this session
       const db = getFirestoreInstancePublic();
       const scansQuery = query(
         collection(db, 'attendance_records'),
@@ -97,9 +101,17 @@ export function SupervisorQRDisplay({
       unsubscribeRef.current = unsubscribe;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to generate QR';
+      if (!isRetry && retryCountRef.current < MAX_RETRIES) {
+        retryCountRef.current++;
+        const delay = Math.min(1000 * 2 ** (retryCountRef.current - 1), 8000);
+        setTimeout(() => generateQR(true), delay);
+        return;
+      }
       setError(message);
+      retryCountRef.current = 0;
     } finally {
       setLoading(false);
+      generatingRef.current = false;
     }
   }, [user?.uid, action, expirationSeconds, onGenerated]);
 
@@ -109,41 +121,41 @@ export function SupervisorQRDisplay({
       if (unsubscribeRef.current) {
         unsubscribeRef.current();
       }
+      if (countdownRef.current) cancelAnimationFrame(countdownRef.current);
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     };
   }, []);
 
-  // Countdown timer — uses ref to avoid re-creating interval every tick
+  // Countdown timer — calculates from expiresAt to avoid drift
   useEffect(() => {
-    if (countdownRef.current) clearInterval(countdownRef.current);
+    if (countdownRef.current) cancelAnimationFrame(countdownRef.current);
 
-    timeLeftRef.current = expirationSeconds;
-    setTimeLeft(expirationSeconds);
-
-    if (expiresAt) {
-      countdownRef.current = window.setInterval(() => {
-        const next = timeLeftRef.current - 1;
-        timeLeftRef.current = next;
-        setTimeLeft(next);
-
-        if (next <= 0 && countdownRef.current) {
-          clearInterval(countdownRef.current);
-          countdownRef.current = null;
-        }
-      }, 1000);
+    if (!expiresAt) {
+      setTimeLeft(expirationSeconds);
+      return;
     }
 
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+      setTimeLeft(remaining);
+      if (remaining > 0) {
+        countdownRef.current = requestAnimationFrame(tick);
+      }
+    };
+
+    countdownRef.current = requestAnimationFrame(tick);
     return () => {
-      if (countdownRef.current) clearInterval(countdownRef.current);
+      if (countdownRef.current) cancelAnimationFrame(countdownRef.current);
     };
   }, [expiresAt, expirationSeconds]);
 
   // Auto-refresh 10 seconds before expiry
   useEffect(() => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-    if (expiresAt) {
+    if (isActive && expiresAt) {
       const msUntilRefresh = Math.max(0, expiresAt - Date.now() - 10_000);
       if (msUntilRefresh > 0) {
-        refreshTimerRef.current = window.setTimeout(() => {
+        refreshTimerRef.current = setTimeout(() => {
           generateQR();
         }, msUntilRefresh);
       }
@@ -151,12 +163,29 @@ export function SupervisorQRDisplay({
     return () => {
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     };
-  }, [expiresAt, generateQR]);
+  }, [isActive, expiresAt, generateQR]);
 
-  // Initial generation
+  // Initial generation — only when active and auth is ready
   useEffect(() => {
-    generateQR();
-  }, [generateQR]);
+    if (isActive && user?.uid) {
+      generateQR();
+    }
+    if (!isActive) {
+      if (countdownRef.current) cancelAnimationFrame(countdownRef.current);
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+      setToken(null);
+      setQrDataUrl(null);
+      setExpiresAt(null);
+      setSessionId(null);
+      setScans([]);
+      setError(null);
+      setTimeLeft(expirationSeconds);
+    }
+  }, [isActive, user?.uid, generateQR, expirationSeconds]);
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -219,13 +248,15 @@ export function SupervisorQRDisplay({
           <p>Expires: {expiresAt ? formatTime12(expiresAt) : '—'}</p>
         </div>
 
-        <button
-          onClick={generateQR}
-          disabled={loading}
-          className="w-full max-w-md px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {loading ? 'Generating...' : 'Refresh QR Code'}
-        </button>
+        {isActive && (
+          <button
+            onClick={generateQR}
+            disabled={loading}
+            className="w-full max-w-md px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Generating...' : 'Refresh QR Code'}
+          </button>
+        )}
       </div>
 
       {/* Real-time scan notifications */}

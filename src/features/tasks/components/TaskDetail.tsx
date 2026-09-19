@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getTask, getTaskApprovals, submitTask, reviewTask, addComment, getComments } from '../services/taskService';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { getStorageInstancePublic } from '@/config/firebase';
 import { TaskForm } from './TaskForm';
 import { formatDateTime12 } from '@/shared/utils/dateUtils';
 import type { Task, TaskApproval, SubmitTaskPayload, ReviewTaskPayload, TaskComment } from '../types';
@@ -56,10 +57,25 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
     loadTask();
   }, [taskId]);
 
+  const uploadFiles = async (files: File[], companyId: string, folder: 'submissions' | 'comments'): Promise<string[]> => {
+    if (files.length === 0) return [];
+    const storage = getStorageInstancePublic();
+    const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+    const urls: string[] = [];
+    for (const file of files) {
+      const path = `tasks/${companyId}/${taskId}/${folder}/${Date.now()}_${file.name}`;
+      const storageRef = ref(storage, path);
+      await uploadBytes(storageRef, file, { contentType: file.type });
+      const url = await getDownloadURL(storageRef);
+      urls.push(url);
+    }
+    return urls;
+  };
+
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      const attachmentUrls: string[] = [];
+      const attachmentUrls = await uploadFiles(submitFiles, task?.companyId || '', 'submissions');
       const payload: SubmitTaskPayload = { text: submitText, attachments: attachmentUrls };
       await submitTask(taskId, payload);
       setSubmitText('');
@@ -87,7 +103,7 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
     if (!commentText.trim() && commentFiles.length === 0) return;
     setSubmitting(true);
     try {
-      const attachmentUrls: string[] = [];
+      const attachmentUrls = await uploadFiles(commentFiles, task?.companyId || '', 'comments');
       await addComment(taskId, commentText, user!.uid, attachmentUrls);
       setCommentText('');
       setCommentFiles([]);
@@ -296,7 +312,7 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
                     {formatDateTime12(c.createdAt)}
                   </span>
                 </div>
-                <p className="text-sm text-[#3A3A3A] dark:text-[#BDBDBD] whitespace-pre-wrap">{c.text}</p>
+                <p className="text-sm text-[#3A3A3A] dark:text-[#BDBDBD] whitespace-pre-wrap">{c.content}</p>
                 {c.attachments && c.attachments.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-2">
                     {c.attachments.map((url, i) => (

@@ -18,7 +18,7 @@ const COLLECTION = 'announcements';
 
 export const announcementService = {
   async getAnnouncements(
-    companyId: string,
+    companyId: string | undefined,
     params: {
       status?: AnnouncementStatus;
       targetRole?: string;
@@ -26,11 +26,20 @@ export const announcementService = {
     } = {}
   ): Promise<Announcement[]> {
     const db = getFirestoreInstancePublic();
-    let q = query(
-      collection(db, COLLECTION),
-      where('companyId', '==', companyId),
-      orderBy('createdAt', 'desc')
-    );
+    let q;
+    if (companyId) {
+      q = query(
+        collection(db, COLLECTION),
+        where('companyId', '==', companyId),
+        orderBy('createdAt', 'desc')
+      );
+    } else {
+      // Admin: no companyId filter, get all
+      q = query(
+        collection(db, COLLECTION),
+        orderBy('createdAt', 'desc')
+      );
+    }
 
     if (params.status) {
       q = query(q, where('status', '==', params.status));
@@ -65,8 +74,12 @@ export const announcementService = {
 
   async createAnnouncement(data: AnnouncementFormData): Promise<Announcement> {
     const db = getFirestoreInstancePublic();
+    // Filter out undefined values (Firestore doesn't accept undefined)
+    const cleanData = Object.fromEntries(
+      Object.entries(data).filter(([, v]) => v !== undefined)
+    );
     const docRef = await addDoc(collection(db, COLLECTION), {
-      ...data,
+      ...cleanData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });

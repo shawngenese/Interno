@@ -21,6 +21,38 @@ export async function calculateDTR(params: CalculateDTRParams): Promise<Calculat
   return result.data;
 }
 
+/** Approve a DTR entry (calls Cloud Function with audit logging). */
+export async function approveDTR(dtrId: string, notes?: string): Promise<{ success: boolean; dtrId: string }> {
+  const functions = getFunctionsInstancePublic();
+  const fn = httpsCallable<{ dtrId: string; notes?: string }, { success: boolean; dtrId: string }>(functions, 'approveDTR');
+  const result = await fn({ dtrId, notes });
+  return result.data;
+}
+
+/** Reject a DTR entry (calls Cloud Function with audit logging). */
+export async function rejectDTR(dtrId: string, reason?: string): Promise<{ success: boolean; dtrId: string }> {
+  const functions = getFunctionsInstancePublic();
+  const fn = httpsCallable<{ dtrId: string; reason?: string }, { success: boolean; dtrId: string }>(functions, 'rejectDTR');
+  const result = await fn({ dtrId, reason });
+  return result.data;
+}
+
+/** Review a DTR correction request (calls Cloud Function with transaction + audit logging). */
+export async function reviewCorrectionRequest(
+  dtrId: string,
+  correctionRequestId: string,
+  action: 'approve' | 'reject',
+  notes?: string,
+): Promise<{ success: boolean; correctionRequestId: string }> {
+  const functions = getFunctionsInstancePublic();
+  const fn = httpsCallable<
+    { dtrId: string; correctionRequestId: string; action: 'approve' | 'reject'; notes?: string },
+    { success: boolean; correctionRequestId: string }
+  >(functions, 'reviewCorrectionRequest');
+  const result = await fn({ dtrId, correctionRequestId, action, notes });
+  return result.data;
+}
+
 /** Get a single DTR entry by ID. */
 export async function getDTR(id: string): Promise<DTREntry | null> {
   const { getFirestoreInstancePublic } = await import('@/config/firebase');

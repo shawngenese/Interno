@@ -130,7 +130,7 @@ export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: Wor
       </h2>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
+        <div role="alert" className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
           {error}
         </div>
       )}
@@ -141,6 +141,7 @@ export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: Wor
             Company <span className="text-red-500">*</span>
           </label>
           <select
+            autoFocus
             id="companyId"
             value={formData.companyId}
             onChange={(e) => handleChange('companyId', e.target.value)}
@@ -228,6 +229,7 @@ export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: Wor
             {DAY_OPTIONS.map(day => (
               <label
                 key={day.value}
+                title={formData.workDays.length === 1 && formData.workDays.includes(day.value) ? 'At least one work day is required' : undefined}
                 className={`inline-flex items-center px-3 py-2 border rounded-lg transition-colors ${
                   viewOnly
                     ? 'cursor-not-allowed opacity-50'

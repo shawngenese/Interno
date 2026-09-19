@@ -142,7 +142,7 @@ export function OJTScheduleForm({ editingId, viewOnly, onCancel, onSaved }: OJTS
       </h2>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
+        <div role="alert" className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
           {error}
         </div>
       )}
@@ -153,6 +153,7 @@ export function OJTScheduleForm({ editingId, viewOnly, onCancel, onSaved }: OJTS
             Company <span className="text-red-500">*</span>
           </label>
           <select
+            autoFocus
             id="companyId"
             value={formData.companyId}
             onChange={(e) => handleChange('companyId', e.target.value)}

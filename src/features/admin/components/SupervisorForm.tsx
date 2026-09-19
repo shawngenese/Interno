@@ -99,18 +99,11 @@ export function SupervisorForm({ editingId, editingSupervisorId, onCancel, onSav
 
     try {
       if (isEditing && editingSupervisorId) {
-        // Update existing supervisor's company/department
+        // updateSupervisor internally syncs the users doc and custom claims
         await adminService.updateSupervisor(editingSupervisorId, {
           companyId: formData.companyId,
           departmentId: formData.departmentId,
         });
-        // Update user's company/department too
-        if (editingId) {
-          await adminService.updateUser(editingId, {
-            companyId: formData.companyId,
-            departmentId: formData.departmentId,
-          });
-        }
       } else if (useExistingUser) {
         if (!formData.userId) throw new Error('Select a user');
         await adminService.createSupervisor({
@@ -180,6 +173,7 @@ export function SupervisorForm({ editingId, editingSupervisorId, onCancel, onSav
           <div className="flex items-center gap-3 mb-4">
             <label className="flex items-center gap-2 text-sm text-[#3A3A3A] dark:text-[#BDBDBD]">
               <input
+                autoFocus
                 type="checkbox"
                 checked={useExistingUser}
                 onChange={(e) => setUseExistingUser(e.target.checked)}

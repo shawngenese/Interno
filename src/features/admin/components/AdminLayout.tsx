@@ -15,6 +15,7 @@ const navigation = [
   { name: 'Work Schedules', href: '/admin/work-schedules', icon: CalendarIcon },
   { name: 'OJT Schedules', href: '/admin/ojt-schedules', icon: ClockIcon },
   { name: 'Audit Logs', href: '/admin/audit-logs', icon: ClipboardDocumentListIcon },
+  { name: 'Announcements', href: '/admin/announcements', icon: BellIcon },
 ];
 
 function HomeIcon({ className }: { className?: string }) {
@@ -97,6 +98,14 @@ function ClipboardDocumentListIcon({ className }: { className?: string }) {
   );
 }
 
+function BellIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+    </svg>
+  );
+}
+
 export function AdminLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -124,7 +133,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                 <ThemeToggle />
                 <button
                   type="button"
-                  className="p-2 rounded-lg text-[#757575] hover:bg-[#EFEFEF] dark:text-[#9E9E9E] dark:hover:bg-[#3A3A3A] lg:hidden"
+                  className="p-2.5 rounded-lg text-[#757575] hover:bg-[#EFEFEF] dark:text-[#9E9E9E] dark:hover:bg-[#3A3A3A] lg:hidden"
                   onClick={() => setSidebarOpen(false)}
                   aria-label="Close navigation menu"
                 >
@@ -141,7 +150,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                   to={item.href}
                   end={item.href === '/admin'}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    `flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors ${
                       isActive
                         ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
                         : 'text-[#3A3A3A] dark:text-[#BDBDBD] hover:bg-[#EFEFEF] dark:hover:bg-[#3A3A3A]'
@@ -169,7 +178,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  className="p-2 rounded-lg text-[#757575] hover:bg-[#EFEFEF] dark:text-[#9E9E9E] dark:hover:bg-[#3A3A3A] lg:hidden"
+                  className="p-2.5 rounded-lg text-[#757575] hover:bg-[#EFEFEF] dark:text-[#9E9E9E] dark:hover:bg-[#3A3A3A] lg:hidden"
                   onClick={() => setSidebarOpen(true)}
                   aria-label="Open navigation menu"
                 >
@@ -178,7 +187,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                   </svg>
                 </button>
                 <h2 className="text-xl font-semibold text-[#121212] dark:text-white">
-                  {navigation.find(n => location.pathname === n.href || location.pathname.startsWith(n.href + '/'))?.name || 'Admin'}
+                  {[...navigation].sort((a, b) => b.href.length - a.href.length).find(n => location.pathname === n.href || location.pathname.startsWith(n.href + '/'))?.name || 'Admin'}
                 </h2>
               </div>
             </div>

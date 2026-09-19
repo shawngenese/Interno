@@ -34,6 +34,7 @@ export function EvaluationReview({ evaluationId, onClose }: EvaluationReviewProp
 
   const handleReview = async (action: 'review' | 'finalize') => {
     if (!user || !evaluation) return;
+    if (action === 'finalize' && !confirm('Are you sure you want to finalize this evaluation?')) return;
     setSaving(true);
 
     try {

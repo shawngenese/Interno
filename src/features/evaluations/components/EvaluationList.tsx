@@ -1,12 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { evaluationService } from '../services/evaluationService';
 import { EVALUATION_TYPE_LABELS } from '../types';
 import type { Evaluation, EvaluationStatus, EvaluationType } from '../types';
 import { EvaluationForm } from './EvaluationForm';
+import { EvaluationReview } from './EvaluationReview';
+import { useAuth } from '@/features/auth';
+import { getFirestoreInstancePublic } from '@/config/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+
+const FIRESTORE_IN_LIMIT = 30;
+
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+  return chunks;
+}
 
 interface EvaluationListProps {
-  companyId: string;
-  role: 'admin' | 'coordinator' | 'supervisor' | 'trainee';
+  companyId?: string;
+  role?: 'admin' | 'coordinator' | 'supervisor' | 'trainee';
   userId?: string;
   traineeId?: string;
 }
@@ -18,37 +32,94 @@ const STATUS_LABELS: Record<EvaluationStatus, { label: string; color: string }> 
   finalized: { label: 'Finalized', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
 };
 
-export function EvaluationList({ companyId, role, userId, traineeId }: EvaluationListProps) {
+export function EvaluationList({ companyId: companyIdProp, role, userId: userIdProp, traineeId: traineeIdProp }: EvaluationListProps) {
+  const { user } = useAuth();
+  const companyId = companyIdProp || user?.companyId || '';
+  const userId = userIdProp || user?.uid || '';
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [selectedEvaluation, setSelectedEvaluation] = useState<Evaluation | null>(null);
+  const [selectedTraineeId, setSelectedTraineeId] = useState<string>(traineeIdProp || '');
+  const [selectedTraineeName, setSelectedTraineeName] = useState<string>('');
   const [filterType, setFilterType] = useState<EvaluationType | ''>('');
   const [filterStatus, setFilterStatus] = useState<EvaluationStatus | ''>('');
+  const [trainees, setTrainees] = useState<{ id: string; name: string }[]>([]);
+  const abortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    loadEvaluations();
-  }, [companyId, userId, traineeId]);
-
-  const loadEvaluations = async () => {
+  const loadEvaluations = useCallback(async (signal?: AbortSignal) => {
     try {
       setLoading(true);
       let data: Evaluation[] = [];
 
-      if (role === 'trainee' && traineeId) {
-        data = await evaluationService.getTraineeEvaluations(traineeId);
+      if (role === 'trainee' && traineeIdProp) {
+        data = await evaluationService.getTraineeEvaluations(traineeIdProp);
       } else if (role === 'supervisor' && userId) {
         data = await evaluationService.getSupervisorEvaluations(userId);
       } else {
         data = await evaluationService.getEvaluations(companyId);
       }
 
-      setEvaluations(data);
+      if (!signal?.aborted) setEvaluations(data);
     } catch (error) {
-      console.error('Failed to load evaluations:', error);
+      if (!signal?.aborted) console.error('Failed to load evaluations:', error);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
-  };
+  }, [companyId, role, userId, traineeIdProp]);
+
+  useEffect(() => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    loadEvaluations(controller.signal);
+    return () => controller.abort();
+  }, [loadEvaluations]);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadTrainees() {
+      if (!user?.uid || role !== 'supervisor') return;
+      try {
+        const db = getFirestoreInstancePublic();
+        const userSnap = await getDocs(
+          query(collection(db, 'users'), where('__name__', '==', user.uid))
+        );
+        if (!isMounted || userSnap.empty) return;
+        const resolvedCompanyId = userSnap.docs[0].data().companyId || '';
+        if (!resolvedCompanyId) return;
+
+        const traineeSnap = await getDocs(
+          query(collection(db, 'trainees'), where('status', '==', 'active'), where('companyId', '==', resolvedCompanyId))
+        );
+        if (!isMounted) return;
+
+        const traineeData = traineeSnap.docs.map((d) => ({ id: d.id, userId: d.data().userId }));
+        const uids = [...new Set(traineeData.map((t) => t.userId).filter(Boolean))];
+        const userMap = new Map<string, string>();
+
+        const chunks = chunkArray(uids, FIRESTORE_IN_LIMIT);
+        for (const chunk of chunks) {
+          const usersSnap = await getDocs(
+            query(collection(db, 'users'), where('__name__', 'in', chunk))
+          );
+          usersSnap.docs.forEach((doc) => {
+            userMap.set(doc.id, doc.data().displayName || doc.id);
+          });
+        }
+        if (!isMounted) return;
+
+        setTrainees(traineeData.map((t) => ({
+          id: t.id,
+          name: userMap.get(t.userId) || t.id,
+        })));
+      } catch (err) {
+        if (isMounted) console.error('Failed to load trainees:', err);
+      }
+    }
+    loadTrainees();
+    return () => { isMounted = false; };
+  }, [user?.uid, role]);
 
   const filtered = evaluations.filter((e) => {
     if (filterType && e.type !== filterType) return false;
@@ -57,6 +128,20 @@ export function EvaluationList({ companyId, role, userId, traineeId }: Evaluatio
   });
 
   const getRatingBarWidth = (rating: number) => `${(rating / 5) * 100}%`;
+
+  if (selectedEvaluation) {
+    return (
+      <div className="space-y-4">
+        <button
+          onClick={() => { setSelectedEvaluation(null); loadEvaluations(); }}
+          className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700"
+        >
+          ← Back to evaluations
+        </button>
+        <EvaluationReview evaluationId={selectedEvaluation.id} onClose={() => { setSelectedEvaluation(null); loadEvaluations(); }} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -70,7 +155,7 @@ export function EvaluationList({ companyId, role, userId, traineeId }: Evaluatio
               value={filterType}
               onChange={(e) => setFilterType(e.target.value as EvaluationType | '')}
               aria-label="Filter by evaluation type"
-              className="px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
+              className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">All Types</option>
               {Object.entries(EVALUATION_TYPE_LABELS).map(([value, label]) => (
@@ -81,7 +166,7 @@ export function EvaluationList({ companyId, role, userId, traineeId }: Evaluatio
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value as EvaluationStatus | '')}
               aria-label="Filter by status"
-              className="px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
+              className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">All Status</option>
               <option value="draft">Draft</option>
@@ -91,25 +176,51 @@ export function EvaluationList({ companyId, role, userId, traineeId }: Evaluatio
             </select>
             {role === 'supervisor' && (
               <button
-                onClick={() => setShowForm(!showForm)}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                onClick={() => { setShowForm(!showForm); setSelectedTraineeId(''); setSelectedTraineeName(''); }}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                New Evaluation
+                {showForm ? 'Cancel' : 'New Evaluation'}
               </button>
             )}
           </div>
         </div>
 
-        {showForm && traineeId && (
+        {showForm && role === 'supervisor' && (
+          <div className="mb-6 p-4 bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 rounded-lg">
+            <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-2">
+              Select Trainee
+            </label>
+            <select
+              value={selectedTraineeId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setSelectedTraineeId(id);
+                const found = trainees.find((t) => t.id === id);
+                setSelectedTraineeName(found?.name || '');
+              }}
+              aria-label="Select trainee to evaluate"
+              className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">-- Choose a trainee --</option>
+              {trainees.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {showForm && selectedTraineeId && selectedTraineeName && (
           <EvaluationForm
-            traineeId={traineeId}
-            traineeName="Trainee"
+            traineeId={selectedTraineeId}
+            traineeName={selectedTraineeName}
             companyId={companyId}
             onSuccess={() => {
               setShowForm(false);
+              setSelectedTraineeId('');
+              setSelectedTraineeName('');
               loadEvaluations();
             }}
-            onCancel={() => setShowForm(false)}
+            onCancel={() => { setShowForm(false); setSelectedTraineeId(''); setSelectedTraineeName(''); }}
           />
         )}
 
@@ -128,9 +239,10 @@ export function EvaluationList({ companyId, role, userId, traineeId }: Evaluatio
             {filtered.map((evaluation) => {
               const statusInfo = STATUS_LABELS[evaluation.status];
               return (
-                <div
+                <button
                   key={evaluation.id}
-                  className="p-4 bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 rounded-lg hover:bg-[#EFEFEF] dark:hover:bg-[#3A3A3A] transition-colors"
+                  onClick={() => setSelectedEvaluation(evaluation)}
+                  className="w-full text-left p-4 bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 rounded-lg hover:bg-[#EFEFEF] dark:hover:bg-[#3A3A3A] transition-colors"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div className="flex-1">
@@ -170,7 +282,7 @@ export function EvaluationList({ companyId, role, userId, traineeId }: Evaluatio
                       {evaluation.overallComments}
                     </p>
                   )}
-                </div>
+                </button>
               );
             })}
           </div>

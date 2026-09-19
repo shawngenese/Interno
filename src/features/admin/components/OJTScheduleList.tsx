@@ -2,11 +2,13 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { adminService } from '../services/adminService';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
 import { ActionsMenu } from '@/shared/components/ActionsMenu';
+import { useAuth } from '@/features/auth';
 import type { OJTSchedule, ListOJTSchedulesParams } from '../types';
 
 interface OJTScheduleListProps {
   onEdit?: (schedule: OJTSchedule) => void;
   onView?: (schedule: OJTSchedule) => void;
+  onDelete?: (schedule: OJTSchedule) => void;
 }
 
 interface ResolvedOJTSchedule extends OJTSchedule {
@@ -14,13 +16,15 @@ interface ResolvedOJTSchedule extends OJTSchedule {
   workScheduleName?: string;
 }
 
-export function OJTScheduleList({ onEdit, onView }: OJTScheduleListProps) {
+export function OJTScheduleList({ onEdit, onView, onDelete }: OJTScheduleListProps) {
+  const { role, user } = useAuth();
   const [schedules, setSchedules] = useState<ResolvedOJTSchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ListOJTSchedulesParams>({ page: 1, limit: 10 });
   const [total, setTotal] = useState(0);
   const [searchValue, setSearchValue] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Cleanup debounce timer
@@ -34,7 +38,11 @@ export function OJTScheduleList({ onEdit, onView }: OJTScheduleListProps) {
     setLoading(true);
     setError(null);
     try {
-      const result = await adminService.listOJTSchedules(filters);
+      const params: ListOJTSchedulesParams = { ...filters };
+      if (filterStatus) {
+        params.status = filterStatus;
+      }
+      const result = await adminService.listOJTSchedules(params);
       const resolved = await Promise.all(
         result.data.map(async (s) => {
           const [companyName, workScheduleName] = await Promise.all([
@@ -52,7 +60,7 @@ export function OJTScheduleList({ onEdit, onView }: OJTScheduleListProps) {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, filterStatus]);
 
   useEffect(() => {
     fetchSchedules();
@@ -68,6 +76,18 @@ export function OJTScheduleList({ onEdit, onView }: OJTScheduleListProps) {
 
   const handlePageChange = (page: number) => {
     setFilters(p => ({ ...p, page }));
+  };
+
+  const handleDelete = async (schedule: OJTSchedule) => {
+    if (!confirm('Delete this OJT schedule?')) return;
+    try {
+      await adminService.deleteOJTSchedule(schedule.id);
+      onDelete?.(schedule);
+      fetchSchedules();
+    } catch (err) {
+      console.error('Failed to delete schedule:', err);
+      setError('Failed to delete schedule');
+    }
   };
 
   const totalPages = Math.ceil(total / (filters.limit || 10));
@@ -92,6 +112,16 @@ export function OJTScheduleList({ onEdit, onView }: OJTScheduleListProps) {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <h2 className="text-lg font-semibold text-[#121212] dark:text-white">OJT Schedules</h2>
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Status</option>
+                <option value="active">Active</option>
+                <option value="upcoming">Upcoming</option>
+                <option value="completed">Completed</option>
+              </select>
               <input
                 type="text"
                 placeholder="Search schedules..."
@@ -115,10 +145,20 @@ export function OJTScheduleList({ onEdit, onView }: OJTScheduleListProps) {
   return (
     <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
       <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h2 className="text-lg font-semibold text-[#121212] dark:text-white">OJT Schedules</h2>
-          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            <input
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <h2 className="text-lg font-semibold text-[#121212] dark:text-white">OJT Schedules</h2>
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Status</option>
+                <option value="active">Active</option>
+                <option value="upcoming">Upcoming</option>
+                <option value="completed">Completed</option>
+              </select>
+              <input
               type="text"
               placeholder="Search schedules..."
               value={searchValue}
@@ -130,7 +170,7 @@ export function OJTScheduleList({ onEdit, onView }: OJTScheduleListProps) {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">
+        <div role="alert" className="p-4 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">
           {error}
         </div>
       )}
@@ -187,6 +227,7 @@ export function OJTScheduleList({ onEdit, onView }: OJTScheduleListProps) {
                       items={[
                         ...(onView ? [{ label: 'View', onClick: () => onView(schedule) }] : []),
                         ...(onEdit ? [{ label: 'Edit', onClick: () => onEdit(schedule) }] : []),
+                        ...(role === 'admin' ? [{ label: 'Delete', onClick: () => handleDelete(schedule) }] : []),
                       ]}
                     />
                   </td>
@@ -206,14 +247,14 @@ export function OJTScheduleList({ onEdit, onView }: OJTScheduleListProps) {
             <button
               onClick={() => handlePageChange((filters.page || 1) - 1)}
               disabled={(filters.page || 1) <= 1}
-              className="px-3 py-1 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-2 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
             <button
               onClick={() => handlePageChange((filters.page || 1) + 1)}
               disabled={(filters.page || 1) >= totalPages}
-              className="px-3 py-1 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-2 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
             </button>

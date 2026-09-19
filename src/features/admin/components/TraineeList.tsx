@@ -58,26 +58,80 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
     try {
       const result = await adminService.listTrainees(filters);
       const db = getFirestoreInstancePublic();
-      const resolved = await Promise.all(
-        result.data.map(async (t) => {
-          const [userName, companyName, departmentName] = await Promise.all([
-            resolveDocName('users', t.userId, 'displayName'),
-            resolveDocName('companies', t.companyId, 'name'),
-            resolveDocName('departments', t.departmentId, 'name'),
-          ]);
-          let supervisorName = '-';
-          if (t.supervisorId) {
-            const supDoc = await getDoc(doc(db, 'supervisors', t.supervisorId));
-            if (supDoc.exists()) {
-              const supUserId = (supDoc.data() as Record<string, unknown>).userId as string;
-              if (supUserId) {
-                supervisorName = await resolveDocName('users', supUserId, 'displayName') || '-';
-              }
-            }
+
+      const userIds = new Set<string>();
+      const companyIds = new Set<string>();
+      const departmentIds = new Set<string>();
+      const supervisorUserIds = new Map<string, string>();
+
+      for (const t of result.data) {
+        if (t.userId) userIds.add(t.userId);
+        if (t.companyId) companyIds.add(t.companyId);
+        if (t.departmentId) departmentIds.add(t.departmentId);
+      }
+
+      const supervisorIds = result.data
+        .filter(t => t.supervisorId)
+        .map(t => t.supervisorId!);
+
+      const supDocs = await Promise.all(
+        supervisorIds.map(async (supId) => {
+          const supDoc = await getDoc(doc(db, 'supervisors', supId));
+          if (supDoc.exists()) {
+            const supUserId = (supDoc.data() as Record<string, unknown>).userId as string;
+            return { supId, supUserId };
           }
-          return { ...t, userName, companyName, departmentName, supervisorName };
+          return { supId, supUserId: '' };
         }),
       );
+
+      for (const { supId, supUserId } of supDocs) {
+        if (supUserId) {
+          supervisorUserIds.set(supId, supUserId);
+          userIds.add(supUserId);
+        }
+      }
+
+      const [userNames, companyNames, departmentNames, supervisorNames] = await Promise.all([
+        Promise.all(
+          Array.from(userIds).map(async (id) => {
+            const name = await resolveDocName('users', id, 'displayName');
+            return { id, name };
+          }),
+        ),
+        Promise.all(
+          Array.from(companyIds).map(async (id) => {
+            const name = await resolveDocName('companies', id, 'name');
+            return { id, name };
+          }),
+        ),
+        Promise.all(
+          Array.from(departmentIds).map(async (id) => {
+            const name = await resolveDocName('departments', id, 'name');
+            return { id, name };
+          }),
+        ),
+        Promise.all(
+          Array.from(supervisorUserIds.entries()).map(async ([supId, userId]) => {
+            const name = await resolveDocName('users', userId, 'displayName');
+            return { supId, name };
+          }),
+        ),
+      ]);
+
+      const userNameMap = new Map(userNames.map(u => [u.id, u.name]));
+      const companyNameMap = new Map(companyNames.map(c => [c.id, c.name]));
+      const departmentNameMap = new Map(departmentNames.map(d => [d.id, d.name]));
+      const supervisorNameMap = new Map(supervisorNames.map(s => [s.supId, s.name]));
+
+      const resolved = result.data.map((t) => ({
+        ...t,
+        userName: userNameMap.get(t.userId) || '',
+        companyName: companyNameMap.get(t.companyId) || '',
+        departmentName: departmentNameMap.get(t.departmentId) || '',
+        supervisorName: t.supervisorId ? (supervisorNameMap.get(t.supervisorId) || '-') : '-',
+      }));
+
       setTrainees(resolved);
       setTotal(result.total);
     } catch (err) {
@@ -246,7 +300,7 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">
+        <div role="alert" className="p-4 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">
           {error}
         </div>
       )}
@@ -370,14 +424,14 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
             <button
               onClick={() => handlePageChange((filters.page || 1) - 1)}
               disabled={(filters.page || 1) <= 1}
-              className="px-3 py-1 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-2 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
             <button
               onClick={() => handlePageChange((filters.page || 1) + 1)}
               disabled={(filters.page || 1) >= totalPages}
-              className="px-3 py-1 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-2 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
             </button>

@@ -42,6 +42,12 @@ export function TraineeAttendance() {
     refreshStatus();
   }, [refreshStatus]);
 
+  useEffect(() => {
+    if (!lastAction) return;
+    const t = setTimeout(() => setLastAction(null), 5000);
+    return () => clearTimeout(t);
+  }, [lastAction]);
+
   const handleScanResult = (result: { action: string; timestamp: number; message: string }) => {
     setLastAction(result);
     refreshStatus();
@@ -58,6 +64,21 @@ export function TraineeAttendance() {
   const timeOutLabel = todayStatus.timeOutRecord
     ? `Timed out at ${formatTime12(todayStatus.timeOutRecord.timestamp)}`
     : 'Not timed out yet';
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
+          <div className="flex items-center justify-center py-12">
+            <svg className="animate-spin h-8 w-8 text-blue-600" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -90,7 +111,7 @@ export function TraineeAttendance() {
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium text-green-800 dark:text-green-200">
-                {lastAction.action === 'time_in' ? '✓ Time In' : '✓ Time Out'} Recorded
+                {lastAction.action === 'time_in' ? 'Time In' : ' Time Out'} Recorded
               </p>
               <p className="text-sm text-green-600 dark:text-green-400">
                 {formatDateTime12(lastAction.timestamp)}
@@ -103,18 +124,6 @@ export function TraineeAttendance() {
       <QRScanner onScanResult={handleScanResult} onError={handleError} />
 
       <AttendanceHistoryCalendar />
-
-      {loading && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-[#1E1E1E] rounded-xl p-6 text-center">
-            <svg className="animate-spin mx-auto h-8 w-8 text-blue-600" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-            <p className="mt-2 text-[#555555] dark:text-[#9E9E9E]">Loading attendance...</p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -54,8 +54,37 @@ export const placementService = {
     let q = query(collection(db, 'placement_requests'), orderBy('createdAt', 'desc'));
     
     if (companyId) {
-      q = query(q, where('externalCompanyId', '==', companyId));
+      // Coordinator scoping: get trainee IDs in this company, then filter requests
+      const traineeSnap = await getDocs(
+        query(collection(db, 'trainees'), where('companyId', '==', companyId)),
+      );
+      const traineeIds = traineeSnap.docs.map((d) => d.id);
+      if (traineeIds.length === 0) return [];
+
+      // Firestore `in` query supports max 30 items per batch
+      const results: PlacementRequest[] = [];
+      for (let i = 0; i < traineeIds.length; i += 30) {
+        const batch = traineeIds.slice(i, i + 30);
+        let batchQ = query(
+          collection(db, 'placement_requests'),
+          where('traineeId', 'in', batch),
+          orderBy('createdAt', 'desc'),
+        );
+        if (status) {
+          batchQ = query(batchQ, where('status', '==', status));
+        }
+        const snap = await getDocs(batchQ);
+        results.push(...snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as PlacementRequest)));
+      }
+      // Sort combined results by createdAt desc
+      results.sort((a, b) => {
+        const aTime = a.createdAt?.seconds ?? 0;
+        const bTime = b.createdAt?.seconds ?? 0;
+        return bTime - aTime;
+      });
+      return results;
     }
+    
     if (status) {
       q = query(q, where('status', '==', status));
     }

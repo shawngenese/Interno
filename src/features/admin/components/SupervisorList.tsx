@@ -2,10 +2,13 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { adminService } from '../services/adminService';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
 import { ActionsMenu } from '@/shared/components/ActionsMenu';
+import { useAuth } from '@/features/auth';
 import type { Supervisor, ListSupervisorsParams } from '../types';
 
 interface SupervisorListProps {
   onEdit?: (supervisor: Supervisor) => void;
+  onView?: (supervisor: Supervisor) => void;
+  onDelete?: (supervisor: Supervisor) => void;
   onAssignTrainees?: (supervisor: Supervisor) => void;
 }
 
@@ -16,7 +19,8 @@ interface ResolvedSupervisor extends Supervisor {
   departmentName?: string;
 }
 
-export function SupervisorList({ onEdit, onAssignTrainees }: SupervisorListProps) {
+export function SupervisorList({ onEdit, onView, onDelete, onAssignTrainees }: SupervisorListProps) {
+  const { role, user } = useAuth();
   const [supervisors, setSupervisors] = useState<ResolvedSupervisor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,12 +43,12 @@ export function SupervisorList({ onEdit, onAssignTrainees }: SupervisorListProps
       const result = await adminService.listSupervisors(filters);
       const resolved = await Promise.all(
         result.data.map(async (s) => {
-          const [userName, companyName, departmentName] = await Promise.all([
+          const [userName, companyName, departmentName, userEmail] = await Promise.all([
             resolveDocName('users', s.userId, 'displayName'),
             resolveDocName('companies', s.companyId, 'name'),
             resolveDocName('departments', s.departmentId, 'name'),
+            resolveDocName('users', s.userId, 'email'),
           ]);
-          const userEmail = await resolveDocName('users', s.userId, 'email');
           return { ...s, userName, userEmail, companyName, departmentName };
         }),
       );
@@ -72,6 +76,18 @@ export function SupervisorList({ onEdit, onAssignTrainees }: SupervisorListProps
 
   const handlePageChange = (page: number) => {
     setFilters(p => ({ ...p, page }));
+  };
+
+  const handleDelete = async (supervisor: ResolvedSupervisor) => {
+    if (!confirm('Delete this supervisor?')) return;
+    try {
+      await adminService.deleteUser(supervisor.userId);
+      onDelete?.(supervisor);
+      fetchSupervisors();
+    } catch (err) {
+      console.error('Failed to delete supervisor:', err);
+      setError('Failed to delete supervisor');
+    }
   };
 
   const totalPages = Math.ceil(total / (filters.limit || 10));
@@ -121,7 +137,7 @@ export function SupervisorList({ onEdit, onAssignTrainees }: SupervisorListProps
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">
+        <div role="alert" className="p-4 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">
           {error}
         </div>
       )}
@@ -181,7 +197,9 @@ export function SupervisorList({ onEdit, onAssignTrainees }: SupervisorListProps
                       )}
                       <ActionsMenu
                         items={[
+                          ...(onView ? [{ label: 'View', onClick: () => onView(supervisor) }] : []),
                           ...(onEdit ? [{ label: 'Edit', onClick: () => onEdit(supervisor) }] : []),
+                          ...(role === 'admin' ? [{ label: 'Delete', onClick: () => handleDelete(supervisor) }] : []),
                         ]}
                       />
                     </div>
@@ -202,14 +220,14 @@ export function SupervisorList({ onEdit, onAssignTrainees }: SupervisorListProps
             <button
               onClick={() => handlePageChange((filters.page || 1) - 1)}
               disabled={(filters.page || 1) <= 1}
-              className="px-3 py-1 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-2 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
             <button
               onClick={() => handlePageChange((filters.page || 1) + 1)}
               disabled={(filters.page || 1) >= totalPages}
-              className="px-3 py-1 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-2 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
             </button>

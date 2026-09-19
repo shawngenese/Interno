@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { getTraineeTasks, getTraineeTaskCounts } from '../services/taskService';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { getFirestoreInstancePublic } from '@/config/firebase';
@@ -7,6 +7,14 @@ import { TaskDetail } from './TaskDetail';
 import { EmptyState, ClipboardIcon } from '@/shared/components/EmptyState';
 import type { Task, TaskStatus } from '../types';
 import { TASK_STATUS_LABELS, TASK_STATUS_COLORS, TASK_PRIORITY_LABELS, TASK_PRIORITY_COLORS } from '../types';
+
+const getDueMs = (d: unknown): number => {
+  if (!d) return Infinity;
+  if (typeof d === 'number') return d;
+  if (d instanceof Date) return d.getTime();
+  if (typeof d === 'object' && d !== null && 'toMillis' in d) return (d as { toMillis: () => number }).toMillis();
+  return Infinity;
+};
 
 export function MyTasks() {
   const { user } = useAuth();
@@ -22,31 +30,35 @@ export function MyTasks() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
   const [traineeId, setTraineeId] = useState<string | null>(null);
+  const resolvedRef = useRef(false);
 
-  const fetchTasks = useCallback(async () => {
-    if (!user?.uid) return;
-    setLoading(true);
-    try {
-      let resolvedTraineeId = traineeId;
-
-      if (!resolvedTraineeId) {
+  useEffect(() => {
+    if (!user?.uid || resolvedRef.current) return;
+    const resolveTrainee = async () => {
+      try {
         const db = getFirestoreInstancePublic();
         const traineeSnap = await getDocs(
           query(collection(db, 'trainees'), where('userId', '==', user.uid), where('status', '==', 'active'))
         );
-
-        if (traineeSnap.empty) {
-          setTasks([]);
-          return;
+        if (!traineeSnap.empty) {
+          setTraineeId(traineeSnap.docs[0].id);
         }
-
-        resolvedTraineeId = traineeSnap.docs[0].id;
-        setTraineeId(resolvedTraineeId);
+        resolvedRef.current = true;
+      } catch (err) {
+        console.error('Failed to resolve trainee ID:', err);
+        resolvedRef.current = true;
       }
+    };
+    resolveTrainee();
+  }, [user?.uid]);
 
+  const fetchTasks = useCallback(async () => {
+    if (!user?.uid || !traineeId) return;
+    setLoading(true);
+    try {
       const [allTasks, taskCounts] = await Promise.all([
-        getTraineeTasks(resolvedTraineeId),
-        getTraineeTaskCounts(resolvedTraineeId),
+        getTraineeTasks(traineeId),
+        getTraineeTaskCounts(traineeId),
       ]);
 
       setTasks(allTasks);
@@ -112,7 +124,7 @@ export function MyTasks() {
       ) : (
         <div className="grid grid-cols-1 gap-3">
           {filteredTasks.map((task) => {
-            const isOverdue = task.dueDate < Date.now() && task.status !== 'approved';
+            const isOverdue = getDueMs(task.dueDate) < Date.now() && task.status !== 'approved';
             return (
               <button
                 key={task.id}
@@ -141,7 +153,7 @@ export function MyTasks() {
                   </div>
                 </div>
                 <div className="mt-2 flex items-center gap-4 text-xs text-[#757575] dark:text-[#9E9E9E]">
-                  <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
+                  <span>Due: {new Date(getDueMs(task.dueDate)).toLocaleDateString()}</span>
                   {task.returnCount > 0 && (
                     <span className="text-red-500">Returned {task.returnCount}x</span>
                   )}

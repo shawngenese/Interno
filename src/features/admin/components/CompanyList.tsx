@@ -68,7 +68,7 @@ export function CompanyList({ onEdit }: CompanyListProps) {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm">
+        <div role="alert" className="p-4 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm">
           {error}
         </div>
       )}
@@ -89,7 +89,7 @@ export function CompanyList({ onEdit }: CompanyListProps) {
           <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
             {loading ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">
+                <td colSpan={7} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">
                   <div className="flex items-center justify-center gap-2">
                     <svg className="animate-spin h-5 w-5 text-blue-600" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -101,7 +101,7 @@ export function CompanyList({ onEdit }: CompanyListProps) {
               </tr>
             ) : companies.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">
+                <td colSpan={7} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">
                   No companies found
                 </td>
               </tr>
@@ -172,14 +172,14 @@ export function CompanyList({ onEdit }: CompanyListProps) {
             <button
               onClick={() => handlePageChange(pagination.page - 1)}
               disabled={pagination.page === 1}
-              className="px-3 py-1 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-2 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
             <button
               onClick={() => handlePageChange(pagination.page + 1)}
               disabled={pagination.page === pagination.totalPages}
-              className="px-3 py-1 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-2 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
             </button>

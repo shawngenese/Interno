@@ -1,23 +1,27 @@
 import { useState, useEffect } from 'react';
 import { announcementService } from '../services/announcementService';
 import { useAuth } from '@/features/auth';
+import { getFirestoreInstancePublic } from '@/config/firebase';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { ANNOUNCEMENT_PRIORITY_LABELS, ROLE_LABELS } from '../types';
 import type { Announcement, AnnouncementFormData, AnnouncementPriority } from '../types';
 
 interface AnnouncementFormProps {
-  companyId: string;
+  companyId?: string;
   announcement?: Announcement | null;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
 
 export function AnnouncementForm({
-  companyId,
+  companyId: companyIdProp,
   announcement,
   onSuccess,
   onCancel,
 }: AnnouncementFormProps) {
   const { user } = useAuth();
+  const [selectedCompanyId, setSelectedCompanyId] = useState(companyIdProp || user?.companyId || '');
+  const [companies, setCompanies] = useState<{ id: string; name: string }[]>([]);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [priority, setPriority] = useState<AnnouncementPriority>('normal');
@@ -27,6 +31,23 @@ export function AnnouncementForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const needsCompanySelection = !companyIdProp && !user?.companyId;
+
+  useEffect(() => {
+    if (needsCompanySelection) {
+      const loadCompanies = async () => {
+        try {
+          const db = getFirestoreInstancePublic();
+          const snap = await getDocs(query(collection(db, 'companies'), orderBy('name')));
+          setCompanies(snap.docs.map(d => ({ id: d.id, name: d.data().name as string })));
+        } catch (err) {
+          console.error('Failed to load companies:', err);
+        }
+      };
+      loadCompanies();
+    }
+  }, [needsCompanySelection]);
+
   useEffect(() => {
     if (announcement) {
       setTitle(announcement.title);
@@ -34,6 +55,7 @@ export function AnnouncementForm({
       setPriority(announcement.priority);
       setTargetRoles(announcement.targetRoles);
       setPinned(announcement.pinned);
+      setSelectedCompanyId(announcement.companyId);
       setExpiresAt(
         announcement.expiresAt
           ? new Date(announcement.expiresAt).toISOString().split('T')[0]
@@ -53,6 +75,13 @@ export function AnnouncementForm({
     setSaving(true);
     setError(null);
 
+    const companyId = companyIdProp || user?.companyId || selectedCompanyId;
+    if (!companyId) {
+      setError('Please select a company');
+      setSaving(false);
+      return;
+    }
+
     try {
       const data: AnnouncementFormData = {
         title,
@@ -64,7 +93,7 @@ export function AnnouncementForm({
         status: asDraft ? 'draft' : 'published',
         targetRoles: targetRoles as ('admin' | 'coordinator' | 'supervisor' | 'trainee')[],
         pinned,
-        expiresAt: expiresAt ? new Date(expiresAt).getTime() : undefined,
+        ...(expiresAt ? { expiresAt: new Date(expiresAt).getTime() } : {}),
       };
 
       if (announcement) {
@@ -93,6 +122,24 @@ export function AnnouncementForm({
         {error && (
           <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
             {error}
+          </div>
+        )}
+
+        {needsCompanySelection && (
+          <div>
+            <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+              Company
+            </label>
+            <select
+              value={selectedCompanyId}
+              onChange={(e) => setSelectedCompanyId(e.target.value)}
+              className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Select Company</option>
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
           </div>
         )}
 
@@ -204,14 +251,14 @@ export function AnnouncementForm({
           )}
           <button
             onClick={() => handleSave(true)}
-            disabled={saving || !title.trim()}
+            disabled={saving || !title.trim() || !content.trim() || (needsCompanySelection && !selectedCompanyId)}
             className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#555555] disabled:opacity-50"
           >
             {saving ? 'Saving...' : 'Save Draft'}
           </button>
           <button
             onClick={() => handleSave(false)}
-            disabled={saving || !title.trim()}
+            disabled={saving || !title.trim() || !content.trim() || (needsCompanySelection && !selectedCompanyId)}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
           >
             {saving ? 'Publishing...' : 'Publish'}

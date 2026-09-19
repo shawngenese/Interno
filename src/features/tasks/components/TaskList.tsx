@@ -20,8 +20,8 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
 }
 
 interface TaskFilters {
-  status: TaskStatus[];
-  priority: TaskPriority[];
+  status: TaskStatus | '';
+  priority: TaskPriority | '';
   traineeId: string;
   dueDateFrom: string;
   dueDateTo: string;
@@ -29,16 +29,17 @@ interface TaskFilters {
 }
 
 export function TaskList() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [companyId, setCompanyId] = useState<string>('');
   const [filters, setFilters] = useState<TaskFilters>({
-    status: [],
-    priority: [],
+    status: '',
+    priority: '',
     traineeId: '',
     dueDateFrom: '',
     dueDateTo: '',
@@ -55,8 +56,8 @@ export function TaskList() {
     setLoading(true);
     try {
       const result = await listTasks({
-        status: filters.status.length > 0 ? filters.status : undefined,
-        priority: filters.priority.length > 0 ? filters.priority : undefined,
+        status: filters.status ? [filters.status] : undefined,
+        priority: filters.priority ? [filters.priority] : undefined,
         search: filters.search || undefined,
         createdBy: user?.uid,
         traineeId: filters.traineeId || undefined,
@@ -66,6 +67,7 @@ export function TaskList() {
       setTasks(result.data);
     } catch (err) {
       console.error('Failed to load tasks:', err);
+      setError('Failed to load tasks. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -82,6 +84,7 @@ export function TaskList() {
   }, [fetchTasks]);
 
   useEffect(() => {
+    let isMounted = true;
     async function loadCompanyId() {
       if (!user?.uid) return;
       try {
@@ -89,18 +92,24 @@ export function TaskList() {
         const snap = await getDocs(
           query(collection(db, 'users'), where('__name__', '==', user.uid))
         );
+        if (!isMounted) return;
         if (!snap.empty) {
           setCompanyId(snap.docs[0].data().companyId || '');
         }
 
-        const traineeSnap = await getDocs(
-          query(collection(db, 'trainees'), where('status', '==', 'active'))
-        );
+        const resolvedCompanyId = snap.empty ? '' : (snap.docs[0].data().companyId || '');
 
-        const traineeIds = traineeSnap.docs.map((d) => d.id);
+        const traineeQuery = resolvedCompanyId
+          ? query(collection(db, 'trainees'), where('status', '==', 'active'), where('companyId', '==', resolvedCompanyId))
+          : query(collection(db, 'trainees'), where('status', '==', 'active'));
+        const traineeSnap = await getDocs(traineeQuery);
+        if (!isMounted) return;
+
+        const traineeData = traineeSnap.docs.map((d) => ({ id: d.id, userId: d.data().userId }));
+        const userIds = [...new Set(traineeData.map((t) => t.userId).filter(Boolean))];
         const userMap = new Map<string, string>();
 
-        const chunks = chunkArray(traineeIds, FIRESTORE_IN_LIMIT);
+        const chunks = chunkArray(userIds, FIRESTORE_IN_LIMIT);
         for (const chunk of chunks) {
           const userSnap = await getDocs(
             query(collection(db, 'users'), where('__name__', 'in', chunk))
@@ -109,17 +118,19 @@ export function TaskList() {
             userMap.set(doc.id, doc.data().displayName || doc.id);
           });
         }
+        if (!isMounted) return;
 
-        const tOptions = traineeIds.map((id) => ({
-          id,
-          name: userMap.get(id) || id,
+        const tOptions = traineeData.map((t) => ({
+          id: t.id,
+          name: userMap.get(t.userId) || t.id,
         }));
         setTrainees(tOptions);
       } catch (err) {
-        console.error('Failed to load company:', err);
+        if (isMounted) console.error('Failed to load company:', err);
       }
     }
     loadCompanyId();
+    return () => { isMounted = false; };
   }, [user?.uid]);
 
   const handleBulkReview = async (action: 'approved' | 'returned') => {
@@ -185,85 +196,99 @@ export function TaskList() {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-lg font-semibold text-[#121212] dark:text-white">Tasks</h2>
-        <button
-          onClick={() => setShowForm(true)}
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          + Create Task
-        </button>
+        {(role === 'supervisor' || role === 'admin') && (
+          <button
+            onClick={() => setShowForm(true)}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            + Create Task
+          </button>
+        )}
       </div>
 
-      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-4">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <input
-              type="text"
-              placeholder="Search tasks..."
-              value={filters.search}
-              onChange={(e) => updateFilter('search', e.target.value)}
-              aria-label="Search tasks"
-              className="flex-1 px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <select
-              multiple
-              value={filters.status}
-              onChange={(e) => updateFilter('status', Array.from(e.target.selectedOptions, (o) => o.value as TaskStatus))}
-              aria-label="Filter by status"
-              className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[140px]"
-              size={1}
-            >
-              <option value="">All Status</option>
-              {Object.entries(TASK_STATUS_LABELS).map(([key, label]) => (
-                <option key={key} value={key}>{label}</option>
-              ))}
-            </select>
-            <select
-              multiple
-              value={filters.priority}
-              onChange={(e) => updateFilter('priority', Array.from(e.target.selectedOptions, (o) => o.value as TaskPriority))}
-              aria-label="Filter by priority"
-              className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[140px]"
-              size={1}
-            >
-              <option value="">All Priority</option>
-              {Object.entries(TASK_PRIORITY_LABELS).map(([key, label]) => (
-                <option key={key} value={key}>{label}</option>
-              ))}
-            </select>
+      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm flex items-center justify-between">
+            <span>{error}</span>
+            <button onClick={() => { setError(null); fetchTasks(); }} className="text-sm font-medium text-red-700 dark:text-red-400 hover:underline">Retry</button>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <select
-              value={filters.traineeId}
-              onChange={(e) => updateFilter('traineeId', e.target.value)}
-              aria-label="Filter by trainee"
-              className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[180px]"
+        )}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+          <input
+            type="text"
+            placeholder="Search tasks..."
+            value={filters.search}
+            onChange={(e) => updateFilter('search', e.target.value)}
+            aria-label="Search tasks"
+            className="w-full sm:w-64 px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <select
+            value={filters.status}
+            onChange={(e) => updateFilter('status', e.target.value as TaskStatus | '')}
+            aria-label="Filter by status"
+            className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">All Status</option>
+            {Object.entries(TASK_STATUS_LABELS).map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+
+          <select
+            value={filters.priority}
+            onChange={(e) => updateFilter('priority', e.target.value as TaskPriority | '')}
+            aria-label="Filter by priority"
+            className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">All Priority</option>
+            {Object.entries(TASK_PRIORITY_LABELS).map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+
+          <select
+            value={filters.traineeId}
+            onChange={(e) => updateFilter('traineeId', e.target.value)}
+            aria-label="Filter by trainee"
+            className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">All Trainees</option>
+            {trainees.map((t) => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+
+          <input
+            type="date"
+            value={filters.dueDateFrom}
+            onChange={(e) => updateFilter('dueDateFrom', e.target.value)}
+            aria-label="Due date from"
+            className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+
+          <input
+            type="date"
+            value={filters.dueDateTo}
+            onChange={(e) => updateFilter('dueDateTo', e.target.value)}
+            aria-label="Due date to"
+            className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+
+          {(filters.status || filters.priority || filters.traineeId || filters.dueDateFrom || filters.dueDateTo) && (
+            <button
+              onClick={() => setFilters({ status: '', priority: '', traineeId: '', dueDateFrom: '', dueDateTo: '', search: filters.search })}
+              className="px-3 py-2 text-xs font-medium text-[#555555] dark:text-[#9E9E9E] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]"
             >
-              <option value="">All Trainees</option>
-              {trainees.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
-            <input
-              type="date"
-              value={filters.dueDateFrom}
-              onChange={(e) => updateFilter('dueDateFrom', e.target.value)}
-              placeholder="Due from"
-              aria-label="Due date from"
-              className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <input
-              type="date"
-              value={filters.dueDateTo}
-              onChange={(e) => updateFilter('dueDateTo', e.target.value)}
-              placeholder="Due to"
-              aria-label="Due date to"
-              className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+              Clear Filters
+            </button>
+          )}
         </div>
       </div>
 
-      {selectedIds.size > 0 && (
+      {selectedIds.size > 0 && (role === 'supervisor' || role === 'admin') && (
         <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
           <span className="text-sm text-blue-700 dark:text-blue-300">{selectedIds.size} selected</span>
           <button onClick={() => handleBulkReview('approved')} className="px-3 py-1 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700">
@@ -345,15 +370,17 @@ export function TaskList() {
                     {new Date(task.dueDate).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => handleDelete(task.id)}
-                      className="text-[#9E9E9E] hover:text-red-500"
-                      aria-label="Delete task"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
+                    {(role === 'supervisor' || role === 'admin') && (
+                      <button
+                        onClick={() => handleDelete(task.id)}
+                        className="text-[#9E9E9E] hover:text-red-500"
+                        aria-label="Delete task"
+                      >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

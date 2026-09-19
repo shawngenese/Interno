@@ -3,11 +3,6 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { getCoordinatorDashboardData } from '../services/coordinatorService';
 import { SkeletonCard } from '@/shared/components/Skeleton';
 import { AnimatedCard } from '@/shared/components/AnimatedCard';
-import { PlacementRequestList } from './PlacementRequestList';
-import { CompanyVerification } from './CompanyVerification';
-import { SupervisorInvite } from './SupervisorInvite';
-import { CoordinatorTraineeList } from './CoordinatorTraineeList';
-import { DocumentReview } from './DocumentReview';
 import type { CoordinatorDashboardData } from '../types';
 
 type TabType = 'overview' | 'placements' | 'companies' | 'invitations' | 'trainees' | 'documents';
@@ -24,17 +19,12 @@ export function CoordinatorDashboard() {
       end: new Date(now.getFullYear(), now.getMonth() + 1, 0).getTime(),
     };
   });
-  const [activeTab, setActiveTab] = useState<TabType>('overview');
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (signal?: AbortSignal) => {
     if (!user) return;
     setLoading(true);
     try {
       if (!companyIdRef.current) {
-        // Read companyId from ID token custom claims — already set by the
-        // setUserRole Cloud Function, so no Firestore round-trip is needed
-        // and we avoid a permission check on users/{uid} that can fail if
-        // the token hasn't propagated yet.
         const tokenResult = await user.getIdTokenResult();
         companyIdRef.current = (tokenResult.claims.companyId as string) || '';
       }
@@ -45,16 +35,18 @@ export function CoordinatorDashboard() {
         period.start,
         period.end,
       );
-      setData(dashboardData);
+      if (!signal?.aborted) setData(dashboardData);
     } catch (err) {
-      console.error('Failed to load coordinator dashboard:', err);
+      if (!signal?.aborted) console.error('Failed to load coordinator dashboard:', err);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, [user, period]);
 
   useEffect(() => {
-    fetchData();
+    const controller = new AbortController();
+    fetchData(controller.signal);
+    return () => controller.abort();
   }, [fetchData]);
 
   const { attendanceMap, tasksMap, documentsMap, ojtMap } = useMemo(() => {
@@ -123,77 +115,8 @@ export function CoordinatorDashboard() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
-        <nav className="flex gap-4 -mb-px overflow-x-auto">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-              activeTab === 'overview'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-[#757575] dark:text-[#9E9E9E] hover:text-[#3A3A3A] dark:hover:text-[#BDBDBD] hover:border-[#BDBDBD]'
-            }`}
-          >
-            Overview
-          </button>
-          <button
-            onClick={() => setActiveTab('trainees')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-              activeTab === 'trainees'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-[#757575] dark:text-[#9E9E9E] hover:text-[#3A3A3A] dark:hover:text-[#BDBDBD] hover:border-[#BDBDBD]'
-            }`}
-          >
-            Trainees
-          </button>
-          <button
-            onClick={() => setActiveTab('placements')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-              activeTab === 'placements'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-[#757575] dark:text-[#9E9E9E] hover:text-[#3A3A3A] dark:hover:text-[#BDBDBD] hover:border-[#BDBDBD]'
-            }`}
-          >
-            Placement Requests
-          </button>
-          <button
-            onClick={() => setActiveTab('documents')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-              activeTab === 'documents'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-[#757575] dark:text-[#9E9E9E] hover:text-[#3A3A3A] dark:hover:text-[#BDBDBD] hover:border-[#BDBDBD]'
-            }`}
-          >
-            Documents
-          </button>
-          <button
-            onClick={() => setActiveTab('companies')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-              activeTab === 'companies'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-[#757575] dark:text-[#9E9E9E] hover:text-[#3A3A3A] dark:hover:text-[#BDBDBD] hover:border-[#BDBDBD]'
-            }`}
-          >
-            Verify Companies
-          </button>
-          <button
-            onClick={() => setActiveTab('invitations')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-              activeTab === 'invitations'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-[#757575] dark:text-[#9E9E9E] hover:text-[#3A3A3A] dark:hover:text-[#BDBDBD] hover:border-[#BDBDBD]'
-            }`}
-          >
-            Invite Supervisors
-          </button>
-        </nav>
-      </div>
-
-      {/* Tab Content */}
-      {activeTab === 'overview' && (
-        <>
-          {/* Summary Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <AnimatedCard delay={0} className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4">
           <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Total Trainees</p>
           <p className="text-2xl font-bold text-blue-600">{totalTrainees}</p>
@@ -298,16 +221,8 @@ export function CoordinatorDashboard() {
               })}
             </tbody>
           </table>
-          </div>
-        </AnimatedCard>
-        </>
-      )}
-
-      {activeTab === 'placements' && <PlacementRequestList />}
-      {activeTab === 'trainees' && <CoordinatorTraineeList />}
-      {activeTab === 'documents' && <DocumentReview />}
-      {activeTab === 'companies' && <CompanyVerification />}
-      {activeTab === 'invitations' && <SupervisorInvite />}
+        </div>
+      </AnimatedCard>
     </div>
   );
 }

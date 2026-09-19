@@ -40,7 +40,7 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
   return (
     <button
       onClick={toggle}
-      className={`p-2 rounded-lg text-[#757575] hover:text-[#3A3A3A] dark:text-[#9E9E9E] dark:hover:text-[#D5D5D5] hover:bg-[#EFEFEF] dark:hover:bg-[#3A3A3A] transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
+      className={`p-2.5 rounded-lg text-[#757575] hover:text-[#3A3A3A] dark:text-[#9E9E9E] dark:hover:text-[#D5D5D5] hover:bg-[#EFEFEF] dark:hover:bg-[#3A3A3A] transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
       aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
     >
       {theme === 'dark' ? (

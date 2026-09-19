@@ -261,6 +261,7 @@ export interface ListOJTSchedulesParams {
   limit?: number;
   companyId?: string;
   search?: string;
+  status?: string;
 }
 
 export interface PlacementRequest {

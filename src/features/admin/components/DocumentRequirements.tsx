@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { listDocuments } from '@/features/documents/services/documentService';
 import type { Document, DocumentType } from '@/features/documents/types';
 
@@ -22,7 +22,7 @@ export function DocumentRequirements({ traineeId, companyId }: DocumentRequireme
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadDocuments = async () => {
+  const loadDocuments = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -38,11 +38,11 @@ export function DocumentRequirements({ traineeId, companyId }: DocumentRequireme
     } finally {
       setLoading(false);
     }
-  };
+  }, [traineeId, companyId]);
 
   useEffect(() => {
     loadDocuments();
-  }, [traineeId, companyId]);
+  }, [loadDocuments]);
 
   const getDocumentForType = (type: DocumentType): Document | undefined => {
     return documents.find(doc => doc.type === type && doc.status !== 'archived');

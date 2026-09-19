@@ -3,4 +3,5 @@ export { ProtectedRoute, AdminRoute, SupervisorRoute, CoordinatorRoute, TraineeR
 export { LoginPage } from './components/LoginPage';
 export { LogoutButton } from './components/LogoutButton';
 export { UnauthorizedPage } from './components/UnauthorizedPage';
+export { NotFoundPage } from './components/NotFoundPage';
 export type { UserRole } from './AuthProvider';

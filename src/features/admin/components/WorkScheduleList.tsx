@@ -129,7 +129,7 @@ export function WorkScheduleList({ onEdit, onView, onDelete }: WorkScheduleListP
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">
+        <div role="alert" className="p-4 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">
           {error}
         </div>
       )}
@@ -186,7 +186,7 @@ export function WorkScheduleList({ onEdit, onView, onDelete }: WorkScheduleListP
                       items={[
                         ...(onView ? [{ label: 'View', onClick: () => onView(schedule) }] : []),
                         ...(onEdit ? [{ label: 'Edit', onClick: () => onEdit(schedule) }] : []),
-                        ...(onDelete ? [{ label: 'Delete', onClick: () => onDelete(schedule), danger: true }] : []),
+                        ...(onDelete ? [{ label: 'Delete', onClick: () => { if (confirm('Delete this work schedule?')) onDelete(schedule); }, danger: true }] : []),
                       ]}
                     />
                   </td>
@@ -206,14 +206,14 @@ export function WorkScheduleList({ onEdit, onView, onDelete }: WorkScheduleListP
             <button
               onClick={() => handlePageChange((filters.page || 1) - 1)}
               disabled={(filters.page || 1) <= 1}
-              className="px-3 py-1 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-2 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
             <button
               onClick={() => handlePageChange((filters.page || 1) + 1)}
               disabled={(filters.page || 1) >= totalPages}
-              className="px-3 py-1 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-2 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
             </button>

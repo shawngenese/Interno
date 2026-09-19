@@ -4,6 +4,7 @@ import { SupervisorQRDisplay } from './SupervisorQRDisplay';
 export function SupervisorQRPage() {
   const [action, setAction] = useState<'time_in' | 'time_out'>('time_in');
   const [expiration, setExpiration] = useState<30 | 60 | 120 | 300>(60);
+  const [isActive, setIsActive] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -44,13 +45,29 @@ export function SupervisorQRPage() {
           </div>
         </div>
 
-        <p className="text-sm text-[#757575] dark:text-[#9E9E9E] mb-4">
+        <div className="flex items-center gap-4 mb-4">
+          <button
+            onClick={() => setIsActive(!isActive)}
+            className={`px-6 py-2.5 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+              isActive
+                ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
+                : 'bg-green-600 hover:bg-green-700 focus:ring-green-500'
+            }`}
+          >
+            {isActive ? 'Stop QR' : 'Start QR'}
+          </button>
+          <span className="text-sm text-[#757575] dark:text-[#9E9E9E]">
+            {isActive ? 'QR is active — trainees can scan' : 'QR is stopped — trainees cannot scan'}
+          </span>
+        </div>
+
+        <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">
           Show this QR code to trainees. It auto-refreshes 10 seconds before expiry.
           Trainees scan with the mobile app to record their {action === 'time_in' ? 'time in' : 'time out'}.
         </p>
       </div>
 
-      <SupervisorQRDisplay action={action} expirationSeconds={expiration} />
+      <SupervisorQRDisplay action={action} expirationSeconds={expiration} isActive={isActive} />
     </div>
   );
 }
