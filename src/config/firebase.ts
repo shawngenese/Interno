@@ -11,10 +11,11 @@ import {
 import {
   getFirestore,
   type Firestore,
-  enableIndexedDbPersistence,
+  initializeFirestore,
   enableNetwork,
   disableNetwork,
   connectFirestoreEmulator,
+  persistentLocalCache,
 } from 'firebase/firestore';
 import {
   getStorage,
@@ -22,7 +23,7 @@ import {
   connectStorageEmulator,
 } from 'firebase/storage';
 import { getFunctions as getFirebaseFunctions, type Functions, connectFunctionsEmulator } from 'firebase/functions';
-import { getMessaging, type Messaging, isSupported } from 'firebase/messaging';
+import { type Messaging } from 'firebase/messaging';
 import { initializeAppCheck, type AppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 
 /**
@@ -66,14 +67,27 @@ export function initializeFirebase(): FirebaseApp {
 
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
+  
+  // Initialize Firestore with offline persistence BEFORE getFirestore
+  if (import.meta.env.VITE_ENABLE_OFFLINE_PERSISTENCE === 'true') {
+    try {
+      initializeFirestore(app, {
+        localCache: persistentLocalCache(),
+      });
+      console.log('[Firebase] Offline persistence configured');
+    } catch (error: unknown) {
+      console.warn('[Firebase] Firestore cache configuration failed:', error);
+    }
+  }
+  
   db = getFirestore(app);
   storage = getStorage(app);
   functions = getFirebaseFunctions(app, 'asia-southeast1');
 
   configureAuth();
-  configureFirestore();
   configureAppCheck();
-  configureMessaging();
+  // FCM is initialized on-demand by initializeFCM() in notificationService.ts
+  // after service worker registration — do NOT initialize here.
   configureEmulators();
 
   return app;
@@ -140,28 +154,6 @@ function configureAuth(): void {
   });
 }
 
-async function configureFirestore(): Promise<void> {
-  if (import.meta.env.VITE_ENABLE_OFFLINE_PERSISTENCE === 'true') {
-    try {
-      await enableIndexedDbPersistence(getDbInstance());
-      console.log('[Firebase] Offline persistence enabled');
-    } catch (error: unknown) {
-      if (error instanceof Error && 'code' in error) {
-        const firebaseError = error as { code: string };
-        if (firebaseError.code === 'failed-precondition') {
-          console.warn('[Firebase] Offline persistence failed: multiple tabs open');
-        } else if (firebaseError.code === 'unimplemented') {
-          console.warn('[Firebase] Offline persistence not supported in this browser');
-        } else {
-          console.error('[Firebase] Offline persistence error:', error);
-        }
-      } else {
-        console.error('[Firebase] Offline persistence error:', error);
-      }
-    }
-  }
-}
-
 function configureAppCheck(): void {
   if (import.meta.env.VITE_ENABLE_APP_CHECK === 'false') {
     console.info('[Firebase] App Check skipped (VITE_ENABLE_APP_CHECK is false)');
@@ -200,22 +192,6 @@ function configureAppCheck(): void {
     }
   } else {
     console.warn('[Firebase] App Check not configured (missing reCAPTCHA site key)');
-  }
-}
-
-async function configureMessaging(): Promise<void> {
-  if (import.meta.env.VITE_ENABLE_FCM === 'true') {
-    const supported = await isSupported();
-    if (supported) {
-      try {
-        messaging = getMessaging(getApp());
-        console.log('[Firebase] FCM messaging initialized');
-      } catch (error: unknown) {
-        console.error('[Firebase] FCM initialization failed:', error);
-      }
-    } else {
-      console.warn('[Firebase] FCM not supported in this environment');
-    }
   }
 }
 
@@ -285,9 +261,11 @@ export function getAppCheckInstance(): AppCheck | null {
   return appCheck;
 }
 
-export async function enableOfflineSupport(): Promise<void> {
+export function enableOfflineSupport(): void {
   try {
-    await enableIndexedDbPersistence(getDbInstance());
+    initializeFirestore(getApp(), {
+      localCache: persistentLocalCache(),
+    });
     console.log('[Firebase] Offline support enabled');
   } catch (error: unknown) {
     console.error('[Firebase] Failed to enable offline support:', error);

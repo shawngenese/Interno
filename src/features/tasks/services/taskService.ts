@@ -185,7 +185,11 @@ export async function listTasks(
       const snap = await getDocs(q);
       all.push(...snap.docs.map((d) => toEntity<Task>(d.id, d.data() as Record<string, unknown>)));
     }
-    all.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+    all.sort((a, b) => {
+      const aTime = typeof a.createdAt === 'number' ? a.createdAt : ((a.createdAt as { seconds?: number })?.seconds ?? 0) * 1000;
+      const bTime = typeof b.createdAt === 'number' ? b.createdAt : ((b.createdAt as { seconds?: number })?.seconds ?? 0) * 1000;
+      return bTime - aTime;
+    });
   } else {
     const q = query(
       collection(db, COLLECTIONS.TASKS),

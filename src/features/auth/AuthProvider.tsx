@@ -107,6 +107,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(currentUser);
       if (currentUser) {
         await refreshUserRole(currentUser);
+        // Initialize FCM for push notifications (non-blocking)
+        if (import.meta.env.VITE_ENABLE_FCM === 'true') {
+          import('@/features/notifications/services/notificationService')
+            .then(({ initializeFCM }) => initializeFCM())
+            .catch(() => {});
+        }
       } else {
         setRole(null);
         setCompanyId(null);

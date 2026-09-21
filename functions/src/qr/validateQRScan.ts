@@ -152,31 +152,41 @@ export async function validateQRScanHandler(
 
   const now = Date.now();
   const attendanceRef = db.collection(COLLECTIONS.ATTENDANCE_RECORDS).doc();
+  const traineeDocRef = db.collection(COLLECTIONS.TRAINEES).doc(traineeId);
+
+  // All reads must happen outside transaction (Firestore v2 txns only allow tx.get() for reads)
+  const { start: dayStart, end: dayEnd } = getTodayRange();
+  const todayAttendance = await db.collection(COLLECTIONS.ATTENDANCE_RECORDS)
+    .where('traineeId', '==', traineeId)
+    .where('timestamp', '>=', dayStart)
+    .where('timestamp', '<=', dayEnd)
+    .get();
+
+  const hasTimeIn = todayAttendance.docs.some((d) => d.data().type === 'time_in');
+  const hasTimeOut = todayAttendance.docs.some((d) => d.data().type === 'time_out');
+
+  if (action === 'time_in' && hasTimeIn) {
+    throw new HttpsError('failed-precondition', 'Already timed in today');
+  }
+  if (action === 'time_out') {
+    if (!hasTimeIn) {
+      throw new HttpsError('failed-precondition', 'Must time in before timing out');
+    }
+    if (hasTimeOut) {
+      throw new HttpsError('failed-precondition', 'Already timed out today');
+    }
+  }
+
+  let shouldAutoActivate = false;
+  if (action === 'time_in') {
+    const traineeDoc = await traineeDocRef.get();
+    if (traineeDoc.exists) {
+      shouldAutoActivate = traineeDoc.data()!.ojtStatus === 'pending';
+    }
+  }
 
   await db.runTransaction(async (tx) => {
     tx.update(sessionDoc.ref, { used: true, usedAt: now, usedBy: traineeUid });
-
-    const { start: dayStart, end: dayEnd } = getTodayRange();
-    const todayAttendance = await db.collection(COLLECTIONS.ATTENDANCE_RECORDS)
-      .where('traineeId', '==', traineeId)
-      .where('timestamp', '>=', dayStart)
-      .where('timestamp', '<=', dayEnd)
-      .get();
-
-    const hasTimeIn = todayAttendance.docs.some((d) => d.data().type === 'time_in');
-    const hasTimeOut = todayAttendance.docs.some((d) => d.data().type === 'time_out');
-
-    if (action === 'time_in' && hasTimeIn) {
-      throw new HttpsError('failed-precondition', 'Already timed in today');
-    }
-    if (action === 'time_out') {
-      if (!hasTimeIn) {
-        throw new HttpsError('failed-precondition', 'Must time in before timing out');
-      }
-      if (hasTimeOut) {
-        throw new HttpsError('failed-precondition', 'Already timed out today');
-      }
-    }
 
     tx.set(attendanceRef, {
       traineeId,
@@ -187,6 +197,13 @@ export async function validateQRScanHandler(
       location: location ?? null,
       createdAt: Timestamp.fromMillis(now),
     });
+
+    if (shouldAutoActivate) {
+      tx.update(traineeDocRef, {
+        ojtStatus: 'active',
+        updatedAt: Timestamp.fromMillis(now),
+      });
+    }
 
     const auditRef = db.collection(COLLECTIONS.AUDIT_LOGS).doc();
     tx.set(auditRef, {

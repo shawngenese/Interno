@@ -4,9 +4,33 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts';
 import { getFirestoreInstancePublic } from '@/config/firebase';
-import { collection, getDocs, query, limit as firestoreLimit, orderBy, type QuerySnapshot } from 'firebase/firestore';
+import { collection, getDocs, query, limit as firestoreLimit, orderBy, where, type QuerySnapshot } from 'firebase/firestore';
 import { AnimatedCard } from '@/shared/components/AnimatedCard';
 import { AnimatedList, AnimatedListItem, listItemVariants } from '@/shared/components/AnimatedList';
+
+/** One-time sync: activate trainees with attendance but ojtStatus still pending. */
+async function syncOJTStatuses(db: ReturnType<typeof getFirestoreInstancePublic>) {
+  try {
+    const traineesSnap = await getDocs(
+      query(collection(db, 'trainees'), where('status', '==', 'active'), firestoreLimit(500))
+    );
+    for (const traineeDoc of traineesSnap.docs) {
+      const data = traineeDoc.data();
+      const ojtStatus = data.ojtStatus as string | undefined;
+      if (ojtStatus && ojtStatus !== 'pending') continue;
+
+      const attendanceSnap = await getDocs(
+        query(collection(db, 'attendance_records'), where('traineeId', '==', traineeDoc.id), firestoreLimit(1))
+      );
+      if (!attendanceSnap.empty) {
+        const { updateDoc, serverTimestamp } = await import('firebase/firestore');
+        await updateDoc(traineeDoc.ref, { ojtStatus: 'active', updatedAt: serverTimestamp() });
+      }
+    }
+  } catch {
+    // Non-critical background sync — ignore errors
+  }
+}
 
 interface OverviewData {
   totalUsers: number;
@@ -45,6 +69,9 @@ export function AdminOverview() {
     setLoading(true);
     try {
       const db = getFirestoreInstancePublic();
+
+      // Background sync — activate trainees who have attendance but ojtStatus is still pending
+      syncOJTStatuses(db);
 
       const [usersSnap, supervisorsSnap, traineesSnap, companiesSnap, departmentsSnap, auditSnap] = await Promise.all([
         getDocs(query(collection(db, 'users'), firestoreLimit(500))),

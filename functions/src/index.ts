@@ -232,4 +232,58 @@ export const deleteUserAccount = onCall<{ uid: string }>({ region: REGION }, asy
   return { success: true };
 });
 
+/** One-time migration: activate trainees who have attendance records but ojtStatus is still pending. */
+export const syncTraineeOJTStatus = onCall<{ dryRun?: boolean }>({ region: REGION }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Must be signed in');
+  }
+
+  const db = getAdminDb();
+
+  const traineesSnap = await db.collection(COLLECTIONS.TRAINEES)
+    .where('status', '==', 'active')
+    .get();
+
+  const results: { traineeId: string; oldStatus: string; newStatus: string }[] = [];
+
+  for (const traineeDoc of traineesSnap.docs) {
+    const traineeData = traineeDoc.data();
+    const currentStatus = traineeData.ojtStatus as string | undefined;
+
+    if (currentStatus && currentStatus !== 'pending') continue;
+
+    const attendanceSnap = await db.collection(COLLECTIONS.ATTENDANCE_RECORDS)
+      .where('traineeId', '==', traineeDoc.id)
+      .limit(1)
+      .get();
+
+    if (!attendanceSnap.empty) {
+      results.push({
+        traineeId: traineeDoc.id,
+        oldStatus: currentStatus ?? 'missing',
+        newStatus: 'active',
+      });
+
+      if (!request.data.dryRun) {
+        await traineeDoc.ref.update({
+          ojtStatus: 'active',
+          updatedAt: Timestamp.now(),
+        });
+      }
+    }
+  }
+
+  await logAction({
+    userId: request.auth.uid,
+    action: 'update',
+    entityType: 'trainee',
+    entityId: 'batch',
+    originalValue: { count: results.length },
+    newValue: { results: results as unknown as Record<string, unknown> },
+    metadata: { via: 'syncTraineeOJTStatus', dryRun: request.data.dryRun ?? false },
+  });
+
+  return { updated: results.length, details: results };
+});
+
 

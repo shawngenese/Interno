@@ -189,7 +189,7 @@ export function SupervisorLeaveList() {
           <button
             onClick={() => setFilters((f) => ({ ...f, page: Math.max(1, (f.page || 1) - 1) }))}
             disabled={(filters.page || 1) <= 1}
-            className="rounded-lg border border-[#BDBDBD] dark:border-[#555555] px-3 py-1.5 text-sm disabled:opacity-50"
+            className="rounded-lg border border-[#BDBDBD] dark:border-[#555555] px-3 py-1.5 text-sm text-[#121212] dark:text-white hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50"
           >
             Previous
           </button>
@@ -199,7 +199,7 @@ export function SupervisorLeaveList() {
           <button
             onClick={() => setFilters((f) => ({ ...f, page: (f.page || 1) + 1 }))}
             disabled={(filters.page || 1) >= Math.ceil(total / 20)}
-            className="rounded-lg border border-[#BDBDBD] dark:border-[#555555] px-3 py-1.5 text-sm disabled:opacity-50"
+            className="rounded-lg border border-[#BDBDBD] dark:border-[#555555] px-3 py-1.5 text-sm text-[#121212] dark:text-white hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50"
           >
             Next
           </button>

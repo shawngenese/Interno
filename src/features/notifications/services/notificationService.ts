@@ -12,6 +12,19 @@ import type { QueryConstraint } from 'firebase/firestore';
 
 const LIST_FETCH_CAP = 500;
 
+/** Register the Firebase messaging service worker. Returns the registration or null. */
+async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
+  if (!('serviceWorker' in navigator)) return null;
+  try {
+    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    console.log('[FCM] Service worker registered');
+    return registration;
+  } catch (err) {
+    console.error('[FCM] Service worker registration failed:', err);
+    return null;
+  }
+}
+
 /** Initialize FCM and request permission (call on app startup for authenticated users). */
 export async function initializeFCM(): Promise<string | null> {
   if (!('Notification' in window) || !('serviceWorker' in navigator)) {
@@ -26,22 +39,58 @@ export async function initializeFCM(): Promise<string | null> {
       return null;
     }
 
-    const { getMessaging, getToken } = await import('firebase/messaging');
+    const { getMessaging, getToken, deleteToken } = await import('firebase/messaging');
     const app = initializeFirebase();
-    const messaging = getMessaging(app);
+    const messagingInstance = getMessaging(app);
 
     const vapidKey = import.meta.env.VITE_FIREBASE_FCM_VAPID_KEY;
-    if (!vapidKey) {
+    if (!vapidKey || vapidKey === 'your-vapid-key') {
       console.warn('VITE_FIREBASE_FCM_VAPID_KEY not set');
       return null;
     }
 
-    const token = await getToken(messaging, { vapidKey });
-    if (token) {
-      await saveFCMToken(token);
-      console.log('FCM token registered:', token.slice(0, 20) + '...');
+    // Register service worker and pass it to getToken()
+    const swRegistration = await registerServiceWorker();
+    if (!swRegistration) {
+      console.warn('[FCM] No service worker registration');
+      return null;
     }
-    return token;
+
+    // Wait for the service worker to be active
+    if (swRegistration.installing || swRegistration.waiting) {
+      await new Promise<void>((resolve) => {
+        const sw = swRegistration.installing || swRegistration.waiting;
+        if (!sw) return resolve();
+        sw.addEventListener('statechange', (e) => {
+          if ((e.target as ServiceWorker).state === 'activated') resolve();
+        });
+      });
+    }
+
+    const tokenOptions = { vapidKey, serviceWorkerRegistration: swRegistration };
+
+    try {
+      const token = await getToken(messagingInstance, tokenOptions);
+      if (token) {
+        await saveFCMToken(token);
+        console.log('FCM token registered:', token.slice(0, 20) + '...');
+      }
+      return token;
+    } catch (getTokenErr) {
+      // If getToken fails, try deleting stale token and retrying once
+      console.warn('[FCM] getToken failed, clearing stale token and retrying:', getTokenErr);
+      try {
+        await deleteToken(messagingInstance);
+      } catch {
+        // Ignore deleteToken errors
+      }
+      const token = await getToken(messagingInstance, tokenOptions);
+      if (token) {
+        await saveFCMToken(token);
+        console.log('FCM token registered (after retry):', token.slice(0, 20) + '...');
+      }
+      return token;
+    }
   } catch (err) {
     console.error('FCM initialization failed:', err);
     return null;
@@ -56,12 +105,8 @@ export async function saveFCMToken(token: string): Promise<void> {
   if (!currentUser) throw new Error('Not authenticated');
 
 const { getFirestoreInstancePublic } = await import('@/config/firebase');
-const { doc, getDoc, setDoc, serverTimestamp } = await import('firebase/firestore');
+const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
 const db = getFirestoreInstancePublic();
-
-// Check if token already exists
-const existingSnap = await getDoc(doc(db, 'fcm_tokens', token));
-  if (existingSnap.exists()) return;
 
   await setDoc(doc(db, 'fcm_tokens', token), {
     userId: currentUser.uid,

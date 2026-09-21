@@ -282,14 +282,14 @@ export function NotificationCenter() {
                 <button
                   onClick={() => setFilters(f => ({ ...f, page: (f.page ?? 1) - 1 }))}
                   disabled={(filters.page ?? 1) <= 1}
-                  className="px-3 py-1 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg disabled:opacity-50"
+                  className="px-3 py-1 text-sm text-[#121212] dark:text-white border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50"
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => setFilters(f => ({ ...f, page: (f.page ?? 1) + 1 }))}
                   disabled={(filters.page ?? 1) >= Math.ceil(total / (filters.limit || 20))}
-                  className="px-3 py-1 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg disabled:opacity-50"
+                  className="px-3 py-1 text-sm text-[#121212] dark:text-white border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50"
                 >
                   Next
                 </button>
