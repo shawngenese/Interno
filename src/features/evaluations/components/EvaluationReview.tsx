@@ -16,10 +16,6 @@ export function EvaluationReview({ evaluationId, onClose }: EvaluationReviewProp
   const [reviewComments, setReviewComments] = useState('');
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadEvaluation();
-  }, [evaluationId]);
-
   const loadEvaluation = async () => {
     try {
       const data = await evaluationService.getEvaluation(evaluationId);
@@ -31,6 +27,11 @@ export function EvaluationReview({ evaluationId, onClose }: EvaluationReviewProp
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadEvaluation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [evaluationId]);
 
   const handleReview = async (action: 'review' | 'finalize') => {
     if (!user || !evaluation) return;
@@ -158,10 +159,11 @@ export function EvaluationReview({ evaluationId, onClose }: EvaluationReviewProp
 
         {evaluation.status === 'submitted' && (
           <div>
-            <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-2">
+            <label htmlFor="review-comments" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-2">
               Coordinator Review Comments
             </label>
             <textarea
+              id="review-comments"
               value={reviewComments}
               onChange={(e) => setReviewComments(e.target.value)}
               rows={3}

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { listDocuments, updateDocumentStatus, deleteDocument } from '../services/documentService';
-import { DocumentUploader } from './DocumentUploader';
 import { DocumentChecklist } from './DocumentChecklist';
 import { useToast } from '@/shared/components/Toast';
 import { useAuth } from '@/features/auth';
@@ -83,11 +82,12 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
   const [filters, setFilters] = useState<ListDocumentsParams>({ page: 1, limit: 20 });
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [showUploader, setShowUploader] = useState(false);
   const [traineeNameMap, setTraineeNameMap] = useState<Map<string, string>>(new Map());
 
   const fetchDocuments = useCallback(async () => {
+    if (role === 'trainee' && !traineeId) return;
     setLoading(true);
+    setError(null);
     try {
       const params: ListDocumentsParams = { ...filters };
       if (traineeId) params.traineeId = traineeId;
@@ -104,21 +104,28 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
           const { doc, getDoc } = await import('firebase/firestore');
           const db = getFirestoreInstancePublic();
           const traineeSnap = await getDoc(doc(db, 'trainees', id));
-          if (!traineeSnap.exists()) return { id, name: '-' };
+          if (!traineeSnap.exists()) return { id, name: id.slice(0, 8) + '...' };
           const userId = traineeSnap.data()?.userId;
-          if (!userId) return { id, name: '-' };
+          if (!userId) return { id, name: id.slice(0, 8) + '...' };
           const name = await resolveDocName('users', userId, 'displayName');
-          return { id, name };
+          if (name) return { id, name };
+          const email = await resolveDocName('users', userId, 'email');
+          return { id, name: email || id.slice(0, 8) + '...' };
         }),
       );
       setTraineeNameMap(new Map(nameEntries.map(e => [e.id, e.name])));
     } catch (err) {
       console.error('Failed to load documents:', err);
-      setError('Failed to load documents. Please try again.');
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes('permissions') || message.includes('insufficient')) {
+        setError('Permission denied. Ensure you are assigned as a trainee and Firebase emulators are running.');
+      } else {
+        setError('Failed to load documents. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
-  }, [filters, traineeId, companyId]);
+  }, [filters, traineeId, companyId, role]);
 
   useEffect(() => {
     fetchDocuments();
@@ -156,23 +163,19 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
     }
   };
 
-  const handleUploadSuccess = async () => {
-    setShowUploader(false);
-    await fetchDocuments();
-  };
-
   const totalPages = Math.max(1, Math.ceil(total / (filters.limit || 20)));
 
   return (
     <div className="space-y-6">
       {traineeId && role === 'trainee' && (
-        <DocumentChecklist traineeId={traineeId} />
+        <DocumentChecklist traineeId={traineeId} companyId={companyId} />
       )}
 
+      {role !== 'trainee' && (
       <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <h2 className="text-lg font-semibold text-[#121212] dark:text-white">
-            {traineeId ? 'Trainee Documents' : isSupervisor ? 'Assigned Trainees\' Documents' : 'All Documents'}
+            {isSupervisor ? 'Assigned Trainees\' Documents' : 'All Documents'}
           </h2>
           <div className="flex flex-wrap gap-3">
             <select
@@ -203,24 +206,8 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
               <option value="completion">Completion</option>
               <option value="other">Other</option>
             </select>
-            <button
-              onClick={() => setShowUploader(!showUploader)}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-            >
-              Upload Document
-            </button>
           </div>
         </div>
-
-        {showUploader && (
-          <DocumentUploader
-            bucket="documents"
-            resourceId={traineeId || ''}
-            metadata={{ traineeId: traineeId || '', companyId: companyId || '', bucket: 'documents' }}
-            onSuccess={handleUploadSuccess}
-            onError={(err) => addToast('error', err)}
-          />
-        )}
 
         {error && (
           <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm flex items-center justify-between">
@@ -332,6 +319,7 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }

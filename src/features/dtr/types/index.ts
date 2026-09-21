@@ -65,6 +65,7 @@ export interface CalculateDTRParams {
   startDate: number;
   endDate: number;
   forceRecalc?: boolean;
+  timezoneOffsetMinutes?: number;
 }
 
 export interface CalculateDTRResult {

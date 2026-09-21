@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getFirestoreInstancePublic } from '@/config/firebase';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, limit } from 'firebase/firestore';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -255,7 +255,7 @@ export function AdminReportDashboard() {
                   paddingAngle={5}
                   dataKey="count"
                   nameKey="status"
-                  label={({ status, count }) => `${status}: ${count}`}
+                  label={(props: { name?: string; value?: number }) => `${props.name}: ${props.value}`}
                 >
                   {stats.traineesByStatus.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

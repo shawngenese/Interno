@@ -4,6 +4,7 @@ import { logAction, getAuditLogs, getUserAuditLogs } from './audit/auditLog';
 import { getAdminDb, getAdminAuth, COLLECTIONS, type AuditAction, type EntityType } from './config';
 import { generateQRTokenHandler } from './qr/generateQRToken';
 import { validateQRScanHandler } from './qr/validateQRScan';
+import { qrJwtSecret } from './secrets';
 import { calculateDTRHandler } from './dtr/calculateDTR';
 import { approveDTRHandler } from './dtr/approveDTR';
 import { rejectDTRHandler } from './dtr/rejectDTR';
@@ -129,12 +130,12 @@ export const cleanupExpiredQRSessions = onCall({ region: REGION }, async (reques
 });
 
 export const generateQRToken = onCall<{ action: 'time_in' | 'time_out'; expirationSeconds?: 30 | 60 | 120 | 300 }>(
-  { region: REGION },
+  { region: REGION, secrets: [qrJwtSecret] },
   generateQRTokenHandler
 );
 
 export const validateQRScan = onCall<{ token: string; deviceInfo?: Record<string, unknown>; location?: { latitude: number; longitude: number; accuracy?: number } }>(
-  { region: REGION },
+  { region: REGION, secrets: [qrJwtSecret] },
   validateQRScanHandler
 );
 
@@ -230,3 +231,5 @@ export const deleteUserAccount = onCall<{ uid: string }>({ region: REGION }, asy
 
   return { success: true };
 });
+
+

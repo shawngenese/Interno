@@ -2,8 +2,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCoordinatorTrainees, updateTraineeAssignment, getSupervisors } from '../services/coordinatorService';
 import { useAuth } from '@/features/auth';
-import { getFirestoreInstancePublic } from '@/config/firebase';
-import { doc, getDoc } from 'firebase/firestore';
 import type { CoordinatorTrainee } from '../types';
 
 interface Supervisor {
@@ -32,11 +30,8 @@ export function CoordinatorTraineeList() {
     setLoading(true);
     setError(null);
     try {
-      const db = getFirestoreInstancePublic();
-      const userSnap = await getDoc(doc(db, 'users', user.uid));
-      if (!userSnap.exists() || signal?.aborted) return;
-      const userData = userSnap.data() as { companyId?: string };
-      const cid = userData.companyId || '';
+      const tokenResult = await user.getIdTokenResult();
+      const cid = (tokenResult.claims.companyId as string) || '';
 
       const [traineeData, supervisorData] = await Promise.all([
         getCoordinatorTrainees(user.uid, cid),
@@ -76,7 +71,7 @@ export function CoordinatorTraineeList() {
     setSaving(true);
     try {
       await updateTraineeAssignment(selectedTrainee.traineeId, {
-        supervisorId: selectedSupervisorId || undefined,
+        supervisorId: selectedSupervisorId,
       });
       setAssigning(false);
       setSelectedTrainee(null);

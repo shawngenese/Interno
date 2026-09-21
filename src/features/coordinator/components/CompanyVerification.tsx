@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getFirestoreInstancePublic } from '@/config/firebase';
-import { collection, getDocs, doc, updateDoc, query, where, addDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/features/auth';
 import { COMPANY_TYPES } from '@/config/constants';
 
@@ -82,7 +82,7 @@ export function CompanyVerification() {
         verifiedAt: new Date(),
       });
       await addDoc(collection(db, 'audit_logs'), {
-        timestamp: Date.now(),
+        timestamp: serverTimestamp(),
         userId: user.uid,
         action: 'update',
         entityType: 'company',
@@ -112,7 +112,7 @@ export function CompanyVerification() {
         verifiedAt: null,
       });
       await addDoc(collection(db, 'audit_logs'), {
-        timestamp: Date.now(),
+        timestamp: serverTimestamp(),
         userId: user.uid,
         action: 'update',
         entityType: 'company',

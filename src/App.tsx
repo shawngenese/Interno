@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/features/auth';
 import { LoginPage, UnauthorizedPage } from '@/features/auth';
 import { NotFoundPage } from '@/features/auth';
@@ -34,7 +34,7 @@ import { AnnouncementList } from '@/features/announcements/components/Announceme
 import { AnnouncementForm } from '@/features/announcements/components/AnnouncementForm';
 import { CompanyBrowser } from '@/features/trainee/components/CompanyBrowser';
 import { ExternalPlacementRequest } from '@/features/trainee/components/ExternalPlacementRequest';
-import { NetworkStatusIndicator } from '@/shared/components/NetworkStatus';
+
 import { SkipToContent } from '@/shared/components/SkipToContent';
 import { BottomNav } from '@/shared/components/BottomNav';
 import { DashboardRedirect } from '@/shared/components/DashboardRedirect';
@@ -79,7 +79,8 @@ function App() {
             <AdminRoute>
               <AdminLayout>
                 <PageTransition>
-                  <AnnouncementList role="admin" />
+                   {/* eslint-disable-next-line jsx-a11y/aria-role */}
+                   <AnnouncementList role="admin" />
                 </PageTransition>
               </AdminLayout>
             </AdminRoute>
@@ -179,7 +180,19 @@ function App() {
             <SupervisorRoute>
               <SupervisorLayout>
                 <PageTransition>
-                  <EvaluationList role="supervisor" />
+                   {/* eslint-disable-next-line jsx-a11y/aria-role */}
+                   <EvaluationList role="supervisor" />
+                </PageTransition>
+              </SupervisorLayout>
+            </SupervisorRoute>
+          } />
+
+          <Route path="/supervisor/announcements" element={
+            <SupervisorRoute>
+              <SupervisorLayout>
+                <PageTransition>
+                  {/* eslint-disable-next-line jsx-a11y/aria-role */}
+                  <AnnouncementList role="supervisor" />
                 </PageTransition>
               </SupervisorLayout>
             </SupervisorRoute>
@@ -279,7 +292,8 @@ function App() {
             <CoordinatorRoute>
               <CoordinatorLayout>
                 <PageTransition>
-                  <EvaluationList role="coordinator" />
+                   {/* eslint-disable-next-line jsx-a11y/aria-role */}
+                   <EvaluationList role="coordinator" />
                 </PageTransition>
               </CoordinatorLayout>
             </CoordinatorRoute>
@@ -289,7 +303,8 @@ function App() {
             <CoordinatorRoute>
               <CoordinatorLayout>
                 <PageTransition>
-                  <AnnouncementList role="coordinator" />
+                   {/* eslint-disable-next-line jsx-a11y/aria-role */}
+                   <AnnouncementList role="coordinator" />
                 </PageTransition>
               </CoordinatorLayout>
             </CoordinatorRoute>
@@ -361,6 +376,15 @@ function App() {
             </TraineeRoute>
           } />
 
+          <Route path="/trainee/announcements" element={
+            <TraineeRoute>
+              <PrivateLayout>
+                {/* eslint-disable-next-line jsx-a11y/aria-role */}
+                <AnnouncementList role="trainee" />
+              </PrivateLayout>
+            </TraineeRoute>
+          } />
+
           <Route path="/trainee/companies" element={
             <TraineeRoute>
               <PrivateLayout>
@@ -392,6 +416,7 @@ const PAGE_NAMES: Record<string, string> = {
   '/trainee/tasks': 'Tasks',
   '/trainee/dtr': 'DTR',
   '/trainee/documents': 'Documents',
+  '/trainee/announcements': 'Announcements',
   '/trainee/leave': 'Leave',
   '/trainee/companies': 'Companies',
   '/trainee/placement': 'Placement',
@@ -409,7 +434,6 @@ function PrivateLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center justify-between h-16">
             <h1 className="text-xl font-bold text-[#121212] dark:text-white">Interno</h1>
             <div className="flex items-center gap-2">
-              <NetworkStatusIndicator />
               <ThemeToggle />
               <span className="text-sm text-[#555555] dark:text-[#9E9E9E] hidden sm:inline">{pageName}</span>
               <LogoutButton />

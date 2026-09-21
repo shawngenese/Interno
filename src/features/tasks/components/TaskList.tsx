@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { listTasks, deleteTask, bulkReviewTasks } from '../services/taskService';
+import { listTasks, deleteTask } from '../services/taskService';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -35,7 +35,6 @@ export function TaskList() {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [companyId, setCompanyId] = useState<string>('');
   const [filters, setFilters] = useState<TaskFilters>({
     status: '',
@@ -55,12 +54,16 @@ export function TaskList() {
   const fetchTasks = useCallback(async () => {
     setLoading(true);
     try {
+      const traineeIds = filters.traineeId
+        ? [filters.traineeId]
+        : trainees.map((t) => t.id);
+
       const result = await listTasks({
         status: filters.status ? [filters.status] : undefined,
         priority: filters.priority ? [filters.priority] : undefined,
         search: filters.search || undefined,
-        createdBy: user?.uid,
-        traineeId: filters.traineeId || undefined,
+        createdBy: role === 'admin' ? user?.uid : undefined,
+        traineeIds: traineeIds.length > 0 ? traineeIds : undefined,
         dueDateFrom: filters.dueDateFrom ? new Date(filters.dueDateFrom).getTime() : undefined,
         dueDateTo: filters.dueDateTo ? new Date(filters.dueDateTo).getTime() + 86400000 : undefined,
       });
@@ -71,7 +74,7 @@ export function TaskList() {
     } finally {
       setLoading(false);
     }
-  }, [filters, user]);
+  }, [filters, user, role, trainees]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -86,22 +89,18 @@ export function TaskList() {
   useEffect(() => {
     let isMounted = true;
     async function loadCompanyId() {
-      if (!user?.uid) return;
+      if (!user) return;
       try {
+        const tokenResult = await user.getIdTokenResult();
+        const resolvedCompanyId = (tokenResult.claims.companyId as string) || '';
+        if (isMounted) setCompanyId(resolvedCompanyId);
+
         const db = getFirestoreInstancePublic();
-        const snap = await getDocs(
-          query(collection(db, 'users'), where('__name__', '==', user.uid))
+        const traineeQuery = query(
+          collection(db, 'trainees'),
+          where('supervisorId', '==', user.uid),
+          where('status', '==', 'active')
         );
-        if (!isMounted) return;
-        if (!snap.empty) {
-          setCompanyId(snap.docs[0].data().companyId || '');
-        }
-
-        const resolvedCompanyId = snap.empty ? '' : (snap.docs[0].data().companyId || '');
-
-        const traineeQuery = resolvedCompanyId
-          ? query(collection(db, 'trainees'), where('status', '==', 'active'), where('companyId', '==', resolvedCompanyId))
-          : query(collection(db, 'trainees'), where('status', '==', 'active'));
         const traineeSnap = await getDocs(traineeQuery);
         if (!isMounted) return;
 
@@ -131,45 +130,15 @@ export function TaskList() {
     }
     loadCompanyId();
     return () => { isMounted = false; };
-  }, [user?.uid]);
+  }, [user]);
 
-  const handleBulkReview = async (action: 'approved' | 'returned') => {
-    if (selectedIds.size === 0) return;
-    if (!confirm(`${action === 'approved' ? 'Approve' : 'Return'} ${selectedIds.size} task(s)?`)) return;
-
-    try {
-      await bulkReviewTasks(Array.from(selectedIds), action);
-      setSelectedIds(new Set());
-      fetchTasks();
-    } catch (err) {
-      console.error('Bulk review failed:', err);
-    }
-  };
-
-  const handleDelete = async (taskId: string) => {
+  const handleArchive = async (taskId: string) => {
     if (!confirm('Archive this task?')) return;
     try {
       await deleteTask(taskId);
       fetchTasks();
     } catch (err) {
-      console.error('Delete failed:', err);
-    }
-  };
-
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedIds.size === tasks.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(tasks.map((t) => t.id)));
+      console.error('Archive failed:', err);
     }
   };
 
@@ -288,21 +257,6 @@ export function TaskList() {
         </div>
       </div>
 
-      {selectedIds.size > 0 && (role === 'supervisor' || role === 'admin') && (
-        <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-          <span className="text-sm text-blue-700 dark:text-blue-300">{selectedIds.size} selected</span>
-          <button onClick={() => handleBulkReview('approved')} className="px-3 py-1 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700">
-            Approve All
-          </button>
-          <button onClick={() => handleBulkReview('returned')} className="px-3 py-1 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700">
-            Return All
-          </button>
-          <button onClick={() => setSelectedIds(new Set())} className="text-xs text-[#757575] hover:text-[#3A3A3A]">
-            Clear
-          </button>
-        </div>
-      )}
-
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" />
@@ -318,15 +272,6 @@ export function TaskList() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[#D5D5D5] dark:border-[#3A3A3A] bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
-                <th className="w-10 px-4 py-3">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.size === tasks.length && tasks.length > 0}
-                    onChange={toggleSelectAll}
-                    aria-label="Select all tasks"
-                    className="h-4 w-4 text-blue-600 border-[#BDBDBD] rounded focus:ring-blue-500"
-                  />
-                </th>
                 <th className="text-left px-4 py-3 font-medium text-[#3A3A3A] dark:text-[#BDBDBD]">Task</th>
                 <th className="text-center px-4 py-3 font-medium text-[#3A3A3A] dark:text-[#BDBDBD] hidden sm:table-cell">Status</th>
                 <th className="text-center px-4 py-3 font-medium text-[#3A3A3A] dark:text-[#BDBDBD] hidden md:table-cell">Priority</th>
@@ -341,15 +286,6 @@ export function TaskList() {
                   className="border-b border-gray-100 dark:border-[#3A3A3A]/50 hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/30 cursor-pointer"
                   onClick={() => setSelectedTask(task)}
                 >
-                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(task.id)}
-                      onChange={() => toggleSelect(task.id)}
-                      aria-label={`Select ${task.title}`}
-                      className="h-4 w-4 text-blue-600 border-[#BDBDBD] rounded focus:ring-blue-500"
-                    />
-                  </td>
                   <td className="px-4 py-3">
                     <div>
                       <p className="font-medium text-[#121212] dark:text-white">{task.title}</p>
@@ -372,12 +308,13 @@ export function TaskList() {
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     {(role === 'supervisor' || role === 'admin') && (
                       <button
-                        onClick={() => handleDelete(task.id)}
-                        className="text-[#9E9E9E] hover:text-red-500"
-                        aria-label="Delete task"
+                        onClick={() => handleArchive(task.id)}
+                        className="text-[#9E9E9E] hover:text-orange-500"
+                        aria-label="Archive task"
+                        title="Archive task"
                       >
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                         </svg>
                       </button>
                     )}

@@ -197,7 +197,7 @@ export function generatePDFReport(
 
 /** Generate Excel report using SheetJS/xlsx. */
 export function generateExcelReport(
-  sheets: { name: string; headers: string[][]; data: any[][] }[],
+  sheets: { name: string; headers: string[][]; data: unknown[][] }[],
 ): Blob {
   const workbook = XLSX.utils.book_new();
 

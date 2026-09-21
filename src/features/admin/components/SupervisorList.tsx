@@ -20,7 +20,7 @@ interface ResolvedSupervisor extends Supervisor {
 }
 
 export function SupervisorList({ onEdit, onView, onDelete, onAssignTrainees }: SupervisorListProps) {
-  const { role, user } = useAuth();
+  const { role } = useAuth();
   const [supervisors, setSupervisors] = useState<ResolvedSupervisor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

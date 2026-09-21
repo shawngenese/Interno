@@ -37,6 +37,7 @@ export function PlacementRequestList({ onRefresh }: PlacementRequestListProps) {
     }
     resolveCompanyId();
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.uid]);
 
   const fetchRequests = useCallback(async (signal?: AbortSignal) => {
@@ -231,10 +232,11 @@ export function PlacementRequestList({ onRefresh }: PlacementRequestListProps) {
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+                <label htmlFor="placement-review-notes" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
                   Review Notes (optional)
                 </label>
                 <textarea
+                  id="placement-review-notes"
                   value={reviewNotes}
                   onChange={(e) => setReviewNotes(e.target.value)}
                   rows={3}

@@ -62,7 +62,7 @@ export function DocumentUploader({
       if (bucket === 'documents') {
         await uploadAndCreateDocument(
           file,
-          { ...metadata, traineeId: resourceId, bucket: 'documents' },
+          { ...metadata, traineeId: resourceId, bucket: 'documents', documentType },
           { type: documentType as DocumentType, status: 'pending', companyId: metadata.companyId || '', traineeId: resourceId },
         );
       } else if (bucket === 'tasks') {

@@ -19,19 +19,19 @@ export function AnnouncementForm({
   onSuccess,
   onCancel,
 }: AnnouncementFormProps) {
-  const { user } = useAuth();
-  const [selectedCompanyId, setSelectedCompanyId] = useState(companyIdProp || user?.companyId || '');
+  const { user, companyId: userCompanyId } = useAuth();
+  const [selectedCompanyId, setSelectedCompanyId] = useState(companyIdProp || userCompanyId || '');
   const [companies, setCompanies] = useState<{ id: string; name: string }[]>([]);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [priority, setPriority] = useState<AnnouncementPriority>('normal');
-  const [targetRoles, setTargetRoles] = useState<string[]>(['trainee', 'supervisor', 'coordinator']);
+  const [targetRoles, setTargetRoles] = useState<string[]>([]);
   const [pinned, setPinned] = useState(false);
   const [expiresAt, setExpiresAt] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const needsCompanySelection = !companyIdProp && !user?.companyId;
+  const needsCompanySelection = !companyIdProp && !userCompanyId;
 
   useEffect(() => {
     if (needsCompanySelection) {
@@ -75,7 +75,7 @@ export function AnnouncementForm({
     setSaving(true);
     setError(null);
 
-    const companyId = companyIdProp || user?.companyId || selectedCompanyId;
+    const companyId = companyIdProp || userCompanyId || selectedCompanyId;
     if (!companyId) {
       setError('Please select a company');
       setSaving(false);
@@ -127,10 +127,11 @@ export function AnnouncementForm({
 
         {needsCompanySelection && (
           <div>
-            <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+            <label htmlFor="company-select" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Company
             </label>
             <select
+              id="company-select"
               value={selectedCompanyId}
               onChange={(e) => setSelectedCompanyId(e.target.value)}
               className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -144,10 +145,11 @@ export function AnnouncementForm({
         )}
 
         <div>
-          <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+          <label htmlFor="announcement-title" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Title
           </label>
           <input
+            id="announcement-title"
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -157,10 +159,11 @@ export function AnnouncementForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+          <label htmlFor="announcement-content" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Content
           </label>
           <textarea
+            id="announcement-content"
             value={content}
             onChange={(e) => setContent(e.target.value)}
             rows={6}
@@ -171,9 +174,9 @@ export function AnnouncementForm({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+            <span className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Priority
-            </label>
+            </span>
             <div className="flex gap-2">
               {Object.entries(ANNOUNCEMENT_PRIORITY_LABELS).map(([value, { label, color }]) => (
                 <button
@@ -193,10 +196,11 @@ export function AnnouncementForm({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+            <label htmlFor="announcement-expires" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Expires At (optional)
             </label>
             <input
+              id="announcement-expires"
               type="date"
               value={expiresAt}
               onChange={(e) => setExpiresAt(e.target.value)}
@@ -206,9 +210,9 @@ export function AnnouncementForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-2">
+          <span className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-2">
             Target Roles
-          </label>
+          </span>
           <div className="flex flex-wrap gap-2">
             {Object.entries(ROLE_LABELS).map(([role, label]) => (
               <button

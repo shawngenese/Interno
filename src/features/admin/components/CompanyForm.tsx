@@ -110,7 +110,6 @@ export function CompanyForm({ editingId, onCancel, onSaved }: CompanyFormProps) 
             Company Name <span className="text-red-500">*</span>
           </label>
           <input
-            autoFocus
             type="text"
             id="name"
             value={formData.name}

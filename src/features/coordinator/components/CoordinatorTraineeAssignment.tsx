@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getCoordinatorTrainees, getSupervisors, updateTraineeAssignment } from '../services/coordinatorService';
 import { useAuth } from '@/features/auth';
-import { getFirestoreInstancePublic } from '@/config/firebase';
-import { doc, getDoc } from 'firebase/firestore';
 import type { CoordinatorTrainee } from '../types';
 
 interface Supervisor {
@@ -20,7 +18,9 @@ export function CoordinatorTraineeAssignment() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [draggedTrainee, setDraggedTrainee] = useState<CoordinatorTrainee | null>(null);
+  const [dragSource, setDragSource] = useState<string | null>(null);
   const [dragOverSupervisor, setDragOverSupervisor] = useState<string | null>(null);
+  const [dragOverUnassigned, setDragOverUnassigned] = useState(false);
   const [saving, setSaving] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -29,11 +29,8 @@ export function CoordinatorTraineeAssignment() {
     setLoading(true);
     setError(null);
     try {
-      const db = getFirestoreInstancePublic();
-      const userSnap = await getDoc(doc(db, 'users', user.uid));
-      if (!userSnap.exists() || signal?.aborted) return;
-      const userData = userSnap.data() as { companyId?: string };
-      const cid = userData.companyId || '';
+      const tokenResult = await user.getIdTokenResult();
+      const cid = (tokenResult.claims.companyId as string) || '';
 
       const [traineeData, supervisorData] = await Promise.all([
         getCoordinatorTrainees(user.uid, cid),
@@ -64,6 +61,7 @@ export function CoordinatorTraineeAssignment() {
 
   const handleDragStart = (trainee: CoordinatorTrainee) => {
     setDraggedTrainee(trainee);
+    setDragSource(trainee.supervisorId || 'unassigned');
   };
 
   const handleDragOver = (e: React.DragEvent, supervisorId: string) => {
@@ -73,39 +71,60 @@ export function CoordinatorTraineeAssignment() {
 
   const handleDragLeave = () => {
     setDragOverSupervisor(null);
+    setDragOverUnassigned(false);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedTrainee(null);
+    setDragSource(null);
+    setDragOverSupervisor(null);
+    setDragOverUnassigned(false);
   };
 
   const handleDrop = async (e: React.DragEvent, supervisorId: string) => {
     e.preventDefault();
     setDragOverSupervisor(null);
+    setDragOverUnassigned(false);
 
-    if (!draggedTrainee) return;
+    const target = supervisorId || 'unassigned';
+    if (!draggedTrainee || dragSource === target) {
+      setDraggedTrainee(null);
+      setDragSource(null);
+      return;
+    }
+
+    const traineeId = draggedTrainee.traineeId;
+    setDraggedTrainee(null);
+    setDragSource(null);
+
+    setTrainees(prev => prev.map(t =>
+      t.traineeId === traineeId ? { ...t, supervisorId: supervisorId || undefined } : t
+    ));
 
     setSaving(true);
     try {
-      await updateTraineeAssignment(draggedTrainee.traineeId, {
-        supervisorId: supervisorId || undefined,
-      });
-      setDraggedTrainee(null);
-      fetchData();
+      await updateTraineeAssignment(traineeId, { supervisorId });
     } catch (err) {
       setError('Failed to update assignment');
       console.error(err);
+      fetchData();
     } finally {
       setSaving(false);
     }
   };
 
   const handleRemoveAssignment = async (trainee: CoordinatorTrainee) => {
+    setTrainees(prev => prev.map(t =>
+      t.traineeId === trainee.traineeId ? { ...t, supervisorId: undefined } : t
+    ));
+
     setSaving(true);
     try {
-      await updateTraineeAssignment(trainee.traineeId, {
-        supervisorId: undefined,
-      });
-      fetchData();
+      await updateTraineeAssignment(trainee.traineeId, { supervisorId: '' });
     } catch (err) {
       setError('Failed to remove assignment');
       console.error(err);
+      fetchData();
     } finally {
       setSaving(false);
     }
@@ -116,7 +135,7 @@ export function CoordinatorTraineeAssignment() {
   };
 
   const getUnassignedTrainees = () => {
-    return trainees.filter(t => !t.supervisorId && t.status === 'active');
+    return trainees.filter(t => !t.supervisorId);
   };
 
   if (loading) {
@@ -147,7 +166,16 @@ export function CoordinatorTraineeAssignment() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Unassigned Trainees */}
-        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragOverUnassigned(true); }}
+          onDragLeave={() => setDragOverUnassigned(false)}
+          onDrop={(e) => { handleDrop(e, ''); setDragOverUnassigned(false); }}
+          className={`bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border transition-colors ${
+            dragOverUnassigned
+              ? 'border-2 border-dashed border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+              : 'border border-[#D5D5D5] dark:border-[#3A3A3A]'
+          }`}
+        >
           <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
             <h3 className="font-semibold text-[#121212] dark:text-white">
               Unassigned Trainees ({getUnassignedTrainees().length})
@@ -164,6 +192,7 @@ export function CoordinatorTraineeAssignment() {
                   key={trainee.traineeId}
                   draggable
                   onDragStart={() => handleDragStart(trainee)}
+                  onDragEnd={handleDragEnd}
                   className="p-3 bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 rounded-lg border border-[#D5D5D5] dark:border-[#555555] cursor-move hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
                 >
                   <div className="font-medium text-[#121212] dark:text-white text-sm">{trainee.name}</div>
@@ -195,10 +224,10 @@ export function CoordinatorTraineeAssignment() {
                     onDragOver={(e) => handleDragOver(e, supervisor.id)}
                     onDragLeave={handleDragLeave}
                     onDrop={(e) => handleDrop(e, supervisor.id)}
-                    className={`p-4 rounded-lg border-2 border-dashed transition-colors ${
+                    className={`p-4 rounded-xl border transition-colors ${
                       isDragOver
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-[#D5D5D5] dark:border-[#3A3A3A] bg-[#F5F5F5] dark:bg-[#3A3A3A]/30'
+                        ? 'border-2 border-dashed border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border border-[#D5D5D5] dark:border-[#3A3A3A] bg-[#F5F5F5] dark:bg-[#3A3A3A]/30'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-3">
@@ -206,8 +235,8 @@ export function CoordinatorTraineeAssignment() {
                         <h4 className="font-medium text-[#121212] dark:text-white">{supervisor.name}</h4>
                         <p className="text-xs text-[#757575] dark:text-[#9E9E9E]">{supervisor.email}</p>
                       </div>
-                      <span className="text-xs text-[#757575] dark:text-[#9E9E9E]">
-                        {assignedTrainees.length} trainee(s)
+                      <span className="inline-flex items-center justify-center w-6 h-6 text-xs font-medium text-[#757575] dark:text-[#9E9E9E] bg-[#EFEFEF] dark:bg-[#555555] rounded-full">
+                        {assignedTrainees.length}
                       </span>
                     </div>
 
@@ -220,15 +249,19 @@ export function CoordinatorTraineeAssignment() {
                         assignedTrainees.map((trainee) => (
                           <div
                             key={trainee.traineeId}
-                            className="flex items-center justify-between p-2 bg-white dark:bg-[#1E1E1E] rounded border border-[#D5D5D5] dark:border-[#555555]"
+                            draggable
+                            onDragStart={() => handleDragStart(trainee)}
+                            onDragEnd={handleDragEnd}
+                            className="flex items-center justify-between p-3 bg-white dark:bg-[#1E1E1E] rounded-lg border border-[#D5D5D5] dark:border-[#555555] cursor-move hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
                           >
-                            <div>
-                              <div className="text-sm font-medium text-[#121212] dark:text-white">{trainee.name}</div>
-                              <div className="text-xs text-[#757575] dark:text-[#9E9E9E]">{trainee.email}</div>
+                            <div className="min-w-0">
+                              <div className="text-sm font-medium text-[#121212] dark:text-white truncate">{trainee.name}</div>
+                              <div className="text-xs text-[#757575] dark:text-[#9E9E9E] truncate">{trainee.email}</div>
                             </div>
                             <button
                               onClick={() => handleRemoveAssignment(trainee)}
-                              className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                              className="ml-2 shrink-0 p-1 text-[#757575] hover:text-red-600 dark:text-[#9E9E9E] dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                              title="Remove assignment"
                             >
                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

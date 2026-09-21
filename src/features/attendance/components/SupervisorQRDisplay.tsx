@@ -42,6 +42,7 @@ export function SupervisorQRDisplay({
   const generatingRef = useRef(false);
   const retryCountRef = useRef(0);
   const MAX_RETRIES = 3;
+  const generateQRRef = useRef<((isRetry?: boolean) => Promise<void>) | null>(null);
 
   const generateQR = useCallback(async (isRetry = false) => {
     if (!user?.uid) return;
@@ -104,7 +105,7 @@ export function SupervisorQRDisplay({
       if (!isRetry && retryCountRef.current < MAX_RETRIES) {
         retryCountRef.current++;
         const delay = Math.min(1000 * 2 ** (retryCountRef.current - 1), 8000);
-        setTimeout(() => generateQR(true), delay);
+        setTimeout(() => generateQRRef.current?.(true), delay);
         return;
       }
       setError(message);
@@ -114,6 +115,10 @@ export function SupervisorQRDisplay({
       generatingRef.current = false;
     }
   }, [user?.uid, action, expirationSeconds, onGenerated]);
+
+  useEffect(() => {
+    generateQRRef.current = generateQR;
+  });
 
   // Cleanup listener on unmount
   useEffect(() => {
@@ -156,19 +161,19 @@ export function SupervisorQRDisplay({
       const msUntilRefresh = Math.max(0, expiresAt - Date.now() - 10_000);
       if (msUntilRefresh > 0) {
         refreshTimerRef.current = setTimeout(() => {
-          generateQR();
+          generateQRRef.current?.();
         }, msUntilRefresh);
       }
     }
     return () => {
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     };
-  }, [isActive, expiresAt, generateQR]);
+  }, [isActive, expiresAt]);
 
   // Initial generation — only when active and auth is ready
   useEffect(() => {
     if (isActive && user?.uid) {
-      generateQR();
+      generateQRRef.current?.();
     }
     if (!isActive) {
       if (countdownRef.current) cancelAnimationFrame(countdownRef.current);
@@ -185,7 +190,7 @@ export function SupervisorQRDisplay({
       setError(null);
       setTimeLeft(expirationSeconds);
     }
-  }, [isActive, user?.uid, generateQR, expirationSeconds]);
+  }, [isActive, user?.uid, expirationSeconds]);
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -213,53 +218,68 @@ export function SupervisorQRDisplay({
       )}
 
       <div className="flex flex-col items-center gap-4">
-        {token && qrDataUrl && (
-          <div className="relative">
-            <div className="bg-white p-4 rounded-lg shadow-inner border border-[#D5D5D5] dark:border-[#3A3A3A]">
-              <QRCodeSVG
-                value={token}
-                size={256}
-                level="M"
-                includeMargin={true}
-                bgColor="#ffffff"
-                fgColor="#000000"
-              />
-            </div>
-            <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#121212] dark:bg-[#EFEFEF] text-white dark:text-[#121212] text-xs px-2 py-1 rounded whitespace-nowrap">
-              Expires in {formatTime(timeLeft)}
-            </div>
-          </div>
+        {!token && !loading && isActive && (
+          <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">
+            Generating QR code...
+          </p>
         )}
 
-        <div className="w-full max-w-md text-center">
-          <div className="h-3 bg-[#D5D5D5] dark:bg-[#3A3A3A] rounded-full overflow-hidden">
-            <div
-              className={`h-full transition-all duration-1000 ease-linear ${actionColor} ${actionColorDark}`}
-              style={{ width: `${Math.max(0, (timeLeft / expirationSeconds) * 100)}%` }}
-            />
-          </div>
-          <p className="mt-2 text-sm font-mono text-[#555555] dark:text-[#9E9E9E]">
-            {formatTime(timeLeft)} remaining
+        {token && qrDataUrl && (
+          <>
+            <div className="relative">
+              <div className="bg-white p-4 rounded-lg shadow-inner border border-[#D5D5D5] dark:border-[#3A3A3A]">
+                <QRCodeSVG
+                  value={token}
+                  size={256}
+                  level="M"
+                  includeMargin={true}
+                  bgColor="#ffffff"
+                  fgColor="#000000"
+                />
+              </div>
+              <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#121212] dark:bg-[#EFEFEF] text-white dark:text-[#121212] text-xs px-2 py-1 rounded whitespace-nowrap">
+                Expires in {formatTime(timeLeft)}
+              </div>
+            </div>
+
+            <div className="w-full max-w-md text-center">
+              <div className="h-3 bg-[#D5D5D5] dark:bg-[#3A3A3A] rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-1000 ease-linear ${actionColor} ${actionColorDark}`}
+                  style={{ width: `${Math.max(0, (timeLeft / expirationSeconds) * 100)}%` }}
+                />
+              </div>
+              <p className="mt-2 text-sm font-mono text-[#555555] dark:text-[#9E9E9E]">
+                {formatTime(timeLeft)} remaining
+              </p>
+            </div>
+
+            <div className="w-full max-w-md space-y-2 text-xs text-[#757575] dark:text-[#9E9E9E]">
+              <p>Session ID: <code className="font-mono">{sessionId?.slice(0, 8)}...</code></p>
+              <p>Expires: {expiresAt ? formatTime12(expiresAt) : '—'}</p>
+            </div>
+
+            {isActive && (
+              <button
+                onClick={() => generateQR()}
+                disabled={loading}
+                className="w-full max-w-md px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Generating...' : 'Refresh QR Code'}
+              </button>
+            )}
+          </>
+        )}
+
+        {!isActive && !token && (
+          <p className="text-sm text-[#757575] dark:text-[#9E9E9E] text-center py-4">
+            Click &quot;Start QR&quot; above to generate a QR code for trainees to scan.
           </p>
-        </div>
-
-        <div className="w-full max-w-md space-y-2 text-xs text-[#757575] dark:text-[#9E9E9E]">
-          <p>Session ID: <code className="font-mono">{sessionId?.slice(0, 8)}...</code></p>
-          <p>Expires: {expiresAt ? formatTime12(expiresAt) : '—'}</p>
-        </div>
-
-        {isActive && (
-          <button
-            onClick={generateQR}
-            disabled={loading}
-            className="w-full max-w-md px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Generating...' : 'Refresh QR Code'}
-          </button>
         )}
       </div>
 
       {/* Real-time scan notifications */}
+      {token && (
       <div className="mt-6 w-full max-w-md">
         <h3 className="text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-3">
           Active Scans
@@ -305,6 +325,7 @@ export function SupervisorQRDisplay({
           </div>
         )}
       </div>
+      )}
 
       {token && (
         <details className="mt-4 w-full max-w-md">

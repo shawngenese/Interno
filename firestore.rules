@@ -95,7 +95,8 @@ service cloud.firestore {
       allow read: if isSignedIn() && (
         isOwner(userId) ||
         isAdmin() ||
-        isCoordinator()
+        isCoordinator() ||
+        isSupervisor()
       );
       
       allow create: if isSignedIn() && isAdmin() && 
@@ -120,10 +121,7 @@ service cloud.firestore {
         isCoordinator() ||
         isSupervisor() ||
         isAssignedTrainee(traineeId) ||
-        (isTrainee() && resource.data.userId == request.auth.uid) ||
-        isSupervisorOf(traineeId) ||
-        (isSupervisor() && resource.data.supervisorId == request.auth.uid) ||
-        sameCompany(resource.data.companyId)
+        (isTrainee() && resource.data.userId == request.auth.uid)
       );
       
       allow create: if isSignedIn() && isAdmin() &&
@@ -157,7 +155,8 @@ service cloud.firestore {
       
       allow update: if isSignedIn() && (
         isAdmin() ||
-        ((isOwner(supervisorId) || resource.data.userId == request.auth.uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['profile']))
+        ((isOwner(supervisorId) || resource.data.userId == request.auth.uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['profile'])) ||
+        (isCoordinator() && sameCompany(resource.data.companyId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['assignedTrainees', 'updatedAt']))
       );
       
       allow delete: if isSignedIn() && isAdmin();
@@ -331,11 +330,11 @@ service cloud.firestore {
       
       allow update: if isSignedIn() && (
         (isAssignedTrainee(resource.data.traineeId) && 
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'progress', 'submission', 'attachments']) &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'progress', 'submission', 'attachments', 'updatedAt']) &&
          request.resource.data.status in ['in_progress', 'submitted']) ||
         (isSupervisorOf(resource.data.traineeId) &&
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'feedback', 'approvedAt', 'approvedBy']) &&
-         request.resource.data.status in ['approved', 'returned']) ||
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'feedback', 'approvedAt', 'approvedBy', 'returnedBy', 'returnedAt', 'returnCount', 'updatedAt']) &&
+         request.resource.data.status in ['approved', 'returned', 'archived']) ||
         isAdmin()
       );
       
@@ -368,9 +367,7 @@ service cloud.firestore {
         isAdmin() ||
         isSupervisor() ||
         isCoordinator() ||
-        isAssignedTrainee(resource.data.traineeId) ||
-        isSupervisorOf(resource.data.traineeId) ||
-        isSupervisorOfByField(resource.data.traineeId)
+        isTrainee()
       );
       
       allow create: if isSignedIn() && (
@@ -415,10 +412,10 @@ service cloud.firestore {
          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) &&
          resource.data.status == 'pending') ||
         (isSupervisorOf(resource.data.traineeId) &&
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedBy', 'reviewedAt', 'reviewNotes']) &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedBy', 'reviewedAt', 'reviewNotes', 'updatedAt']) &&
          resource.data.status == 'pending') ||
         (isCoordinator() && sameCompany(resource.data.companyId) &&
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedBy', 'reviewedAt', 'reviewNotes'])) ||
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedBy', 'reviewedAt', 'reviewNotes', 'updatedAt'])) ||
         isAdmin()
       );
       
@@ -580,17 +577,13 @@ service cloud.firestore {
     match /task_comments/{commentId} {
       allow read: if isSignedIn() && (
         isAdmin() ||
-        isAssignedTrainee(resource.data.traineeId) ||
-        isSupervisorOf(resource.data.traineeId) ||
-        isSupervisorOfByField(resource.data.traineeId) ||
-        (isCoordinator() && sameCompany(resource.data.companyId))
+        isSupervisor() ||
+        isCoordinator() ||
+        isTrainee()
       );
       
-      allow create: if isSignedIn() && (
-        isAssignedTrainee(resource.data.traineeId) ||
-        isSupervisorOf(resource.data.traineeId) ||
-        (isCoordinator() && sameCompany(resource.data.companyId))
-      ) && request.resource.data.keys().hasAll(['traineeId', 'taskId', 'userId', 'content']);
+      allow create: if isSignedIn() && isOwner(resource.data.userId) &&
+        request.resource.data.keys().hasAll(['taskId', 'userId', 'content']);
       
       allow update: if isSignedIn() && isOwner(resource.data.userId) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content']);
@@ -735,7 +728,7 @@ service cloud.firestore {
     // ANNOUNCEMENTS Collection
     // ============================================
     match /announcements/{announcementId} {
-      allow read: if isSignedIn() && (isAdmin() || sameCompany(resource.data.companyId));
+      allow read: if isSignedIn();
       
       allow create: if isSignedIn() && (
         isAdmin() ||

@@ -1,4 +1,4 @@
-import { getFirestoreInstancePublic } from '@/config/firebase';
+import { getFirestoreInstancePublic, getAuthInstancePublic } from '@/config/firebase';
 import {
   collection,
   query,
@@ -35,13 +35,33 @@ const COLLECTIONS = {
 } as const;
 
 function toEntity<T>(id: string, data: Record<string, unknown>): T {
-  return { id, ...data } as T;
+  const converted: Record<string, unknown> = { id };
+  for (const [key, value] of Object.entries(data)) {
+    if (value && typeof value === 'object' && 'seconds' in value && 'nanoseconds' in value) {
+      converted[key] = (value as { seconds: number; nanoseconds: number }).seconds * 1000;
+    } else {
+      converted[key] = value;
+    }
+  }
+  return converted as T;
+}
+
+const FIRESTORE_IN_MAX = 30;
+
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    out.push(arr.slice(i, i + size));
+  }
+  return out;
 }
 
 /** Create a new task (supervisor/admin). */
 export async function createTask(payload: CreateTaskPayload): Promise<Task> {
   const db = getFirestoreInstancePublic();
   const now = serverTimestamp();
+  const uid = getAuthInstancePublic().currentUser?.uid;
+  if (!uid) throw new Error('You must be signed in to create a task.');
 
   return writeWithOfflineFallback(
     async () => {
@@ -54,9 +74,14 @@ export async function createTask(payload: CreateTaskPayload): Promise<Task> {
         }
       }
 
+      const cleanPayload = Object.fromEntries(
+        Object.entries(payload).filter(([, v]) => v !== undefined),
+      );
+
       const docRef = await addDoc(collection(db, COLLECTIONS.TASKS), {
-        ...payload,
+        ...cleanPayload,
         traineeName,
+        createdBy: uid,
         status: 'pending',
         progress: 0,
         returnCount: 0,
@@ -138,34 +163,43 @@ export async function listTasks(
   const page = options.page ?? 1;
   const pageLimit = options.limit ?? 20;
 
-  const constraints: ReturnType<typeof where>[] = [];
-
-  if (filters.status && filters.status.length > 0) {
-    if (filters.status.length === 1) {
-      constraints.push(where('status', '==', filters.status[0]));
-    }
-  }
+  let all: Task[] = [];
 
   if (filters.traineeId) {
-    constraints.push(where('traineeId', '==', filters.traineeId));
+    const q = query(
+      collection(db, COLLECTIONS.TASKS),
+      where('traineeId', '==', filters.traineeId),
+      orderBy('createdAt', 'desc'),
+      limit(500),
+    );
+    const snap = await getDocs(q);
+    all = snap.docs.map((d) => toEntity<Task>(d.id, d.data() as Record<string, unknown>));
+  } else if (filters.traineeIds && filters.traineeIds.length > 0) {
+    for (const batch of chunk(filters.traineeIds, FIRESTORE_IN_MAX)) {
+      const q = query(
+        collection(db, COLLECTIONS.TASKS),
+        where('traineeId', 'in', batch),
+        orderBy('createdAt', 'desc'),
+        limit(500),
+      );
+      const snap = await getDocs(q);
+      all.push(...snap.docs.map((d) => toEntity<Task>(d.id, d.data() as Record<string, unknown>)));
+    }
+    all.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+  } else {
+    const q = query(
+      collection(db, COLLECTIONS.TASKS),
+      orderBy('createdAt', 'desc'),
+      limit(500),
+    );
+    const snap = await getDocs(q);
+    all = snap.docs.map((d) => toEntity<Task>(d.id, d.data() as Record<string, unknown>));
   }
 
-  if (filters.createdBy) {
-    constraints.push(where('createdBy', '==', filters.createdBy));
-  }
-
-  const q = query(
-    collection(db, COLLECTIONS.TASKS),
-    ...constraints,
-    orderBy('createdAt', 'desc'),
-    limit(500),
-  );
-
-  const snap = await getDocs(q);
-  let all = snap.docs.map((d) => toEntity<Task>(d.id, d.data() as Record<string, unknown>));
-
-  if (filters.status && filters.status.length > 1) {
+  if (filters.status && filters.status.length > 0) {
     all = all.filter((t) => filters.status!.includes(t.status));
+  } else {
+    all = all.filter((t) => t.status !== 'archived');
   }
 
   if (filters.priority && filters.priority.length > 0) {
@@ -212,6 +246,19 @@ export async function startTask(taskId: string): Promise<void> {
 export async function submitTask(taskId: string, payload: SubmitTaskPayload): Promise<void> {
   const db = getFirestoreInstancePublic();
   const taskRef = doc(db, COLLECTIONS.TASKS, taskId);
+
+  // Check attendance: trainee must have scanned QR (time in) today
+  const { getTodayAttendance } = await import('@/features/attendance/services/attendanceService');
+  const taskSnap = await getDoc(taskRef);
+  if (!taskSnap.exists()) throw new Error('Task not found');
+  const taskData = taskSnap.data();
+  const traineeId = taskData.traineeId as string;
+
+  const attendance = await getTodayAttendance(traineeId);
+  if (!attendance.hasTimeIn) {
+    throw new Error('You must scan QR (time in) before submitting a task.');
+  }
+
   await writeWithOfflineFallback(
     () => updateDoc(taskRef, {
       status: 'submitted',
@@ -226,12 +273,8 @@ export async function submitTask(taskId: string, payload: SubmitTaskPayload): Pr
   );
 
   // Notify supervisor
-  const taskSnap = await getDoc(taskRef);
-  if (taskSnap.exists()) {
-    const taskData = taskSnap.data();
-    const traineeName = (taskData.traineeName as string) || 'Trainee';
-    notifyTaskSubmitted(taskData.createdBy, traineeName, taskData.title, taskId).catch(console.error);
-  }
+  const traineeName = (taskData.traineeName as string) || 'Trainee';
+  notifyTaskSubmitted(taskData.createdBy, traineeName, taskData.title, taskId).catch(console.error);
 }
 
 /** Supervisor: approve or return task. */
@@ -241,15 +284,20 @@ export async function reviewTask(taskId: string, payload: ReviewTaskPayload): Pr
 
   const updateData: Record<string, unknown> = {
     status: payload.action === 'approved' ? 'approved' : 'returned',
-    feedback: payload.feedback,
     updatedAt: serverTimestamp(),
   };
 
+  if (payload.feedback) {
+    updateData.feedback = payload.feedback;
+  }
+
   if (payload.action === 'approved') {
-    updateData.approvedBy = (await import('@/config/firebase')).getAuthInstancePublic().currentUser?.uid;
+    const uid = (await import('@/config/firebase')).getAuthInstancePublic().currentUser?.uid;
+    if (uid) updateData.approvedBy = uid;
     updateData.approvedAt = Date.now();
   } else {
-    updateData.returnedBy = (await import('@/config/firebase')).getAuthInstancePublic().currentUser?.uid;
+    const uid = (await import('@/config/firebase')).getAuthInstancePublic().currentUser?.uid;
+    if (uid) updateData.returnedBy = uid;
     updateData.returnedAt = Date.now();
     // Use transaction for atomic returnCount increment
     await runTransaction(db, async (transaction) => {
@@ -262,6 +310,18 @@ export async function reviewTask(taskId: string, payload: ReviewTaskPayload): Pr
     if (taskSnap.exists()) {
       const taskData = taskSnap.data();
       notifyTaskReturned(taskData.traineeId, taskData.title, taskId).catch(console.error);
+
+      const returnApprovalData: Record<string, unknown> = {
+        taskId,
+        traineeId: taskData.traineeId,
+        status: 'returned',
+        action: 'returned',
+        performedBy: (await import('@/config/firebase')).getAuthInstancePublic().currentUser?.uid,
+        timestamp: Date.now(),
+        createdAt: serverTimestamp(),
+      };
+      if (payload.feedback) returnApprovalData.feedback = payload.feedback;
+      await addDoc(collection(db, COLLECTIONS.TASK_APPROVALS), returnApprovalData);
     }
     return;
   }
@@ -282,14 +342,20 @@ export async function reviewTask(taskId: string, payload: ReviewTaskPayload): Pr
     }
   }
 
-  const approvalRef = await addDoc(collection(db, COLLECTIONS.TASK_APPROVALS), {
+  const taskSnap2 = await getDoc(taskRef);
+  const approvalTraineeId = taskSnap2.exists() ? taskSnap2.data().traineeId : '';
+
+  const approvalData: Record<string, unknown> = {
     taskId,
+    traineeId: approvalTraineeId,
+    status: payload.action,
     action: payload.action,
     performedBy: (await import('@/config/firebase')).getAuthInstancePublic().currentUser?.uid,
-    feedback: payload.feedback,
     timestamp: Date.now(),
     createdAt: serverTimestamp(),
-  });
+  };
+  if (payload.feedback) approvalData.feedback = payload.feedback;
+  const approvalRef = await addDoc(collection(db, COLLECTIONS.TASK_APPROVALS), approvalData);
 
   return approvalRef.id as unknown as void;
 }
@@ -381,6 +447,7 @@ export async function getTraineeTaskCounts(
     submitted: 0,
     approved: 0,
     returned: 0,
+    archived: 0,
   };
   snap.docs.forEach((d) => {
     const status = d.data().status as TaskStatus;
@@ -392,13 +459,14 @@ export async function getTraineeTaskCounts(
 }
 
 /** Add a comment to a task. */
-export async function addComment(taskId: string, content: string, userId: string, attachments: string[] = []): Promise<void> {
+export async function addComment(taskId: string, content: string, userId: string, attachments: string[] = [], traineeId?: string): Promise<void> {
   const db = getFirestoreInstancePublic();
   await addDoc(collection(db, 'task_comments'), {
     taskId,
     userId,
     content,
     attachments,
+    ...(traineeId ? { traineeId } : {}),
     createdAt: Date.now(),
   });
 }

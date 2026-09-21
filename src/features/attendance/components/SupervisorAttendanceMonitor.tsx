@@ -41,7 +41,7 @@ export function SupervisorAttendanceMonitor() {
     async function setup() {
       try {
         setError(null);
-        const trainees = await getAssignedTrainees(supervisor.id, supervisor.companyId);
+        const trainees = await getAssignedTrainees(supervisor!.id, supervisor!.companyId);
         if (!mounted) return;
 
         const db = getFirestoreInstancePublic();

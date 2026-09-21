@@ -138,12 +138,10 @@ export function DashboardCharts({ traineeId, startDate, endDate }: DashboardChar
       // Summary
       let totalRegular = 0;
       let totalOvertime = 0;
-      let totalLate = 0;
       dtrSnap.docs.forEach((doc) => {
         const d = doc.data();
         totalRegular += (d.regularMinutes || 0) / 60;
         totalOvertime += (d.overtimeMinutes || 0) / 60;
-        totalLate += d.lateMinutes || 0;
       });
 
       let tasksCompleted = 0;

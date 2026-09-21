@@ -167,12 +167,18 @@ export function QRScanner({ onScanResult, onError }: QRScannerProps) {
 
   useEffect(() => {
     if (user?.uid && !manualMode) {
-      startScanning();
+      if (!window.isSecureContext) {
+        setPermissionDenied(true);
+        onError?.('Camera requires HTTPS. Use localhost or ask admin to enable HTTPS.');
+        return;
+      }
+      startScanningRef.current?.();
     }
     return () => {
       stopScanning();
     };
-  }, [user?.uid, startScanning, stopScanning, manualMode]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid, manualMode]);
 
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -188,6 +194,7 @@ export function QRScanner({ onScanResult, onError }: QRScannerProps) {
   };
 
   if (permissionDenied && !manualMode) {
+    const isInsecureContext = !window.isSecureContext;
     return (
       <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6 text-center">
         <svg className="mx-auto h-12 w-12 text-[#9E9E9E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -195,9 +202,15 @@ export function QRScanner({ onScanResult, onError }: QRScannerProps) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
         </svg>
         <h3 className="mt-4 text-lg font-medium text-[#121212] dark:text-white">Camera Permission Required</h3>
-        <p className="mt-2 text-[#757575] dark:text-[#9E9E9E]">
-          Please enable camera access in your browser settings to scan QR codes.
-        </p>
+        {isInsecureContext ? (
+          <p className="mt-2 text-[#757575] dark:text-[#9E9E9E]">
+            Camera requires HTTPS. Access this page from <strong>localhost</strong> or ask your admin to enable HTTPS.
+          </p>
+        ) : (
+          <p className="mt-2 text-[#757575] dark:text-[#9E9E9E]">
+            Please enable camera access in your browser settings to scan QR codes.
+          </p>
+        )}
         <div className="mt-4 flex justify-center gap-3">
           <button
             onClick={startScanning}
@@ -250,7 +263,6 @@ export function QRScanner({ onScanResult, onError }: QRScannerProps) {
               onChange={(e) => setManualToken(e.target.value)}
               placeholder="Paste or type the QR code token..."
               className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-              autoFocus
             />
           </div>
 
@@ -294,7 +306,8 @@ export function QRScanner({ onScanResult, onError }: QRScannerProps) {
         </div>
       </div>
 
-      <div className="relative aspect-square max-w-xs mx-auto bg-[#EFEFEF] dark:bg-[#121212]">
+      <div className="relative aspect-square max-w-xs mx-auto">
+        <style>{`#qr-reader { border: none !important; padding: 0 !important; margin: 0 !important; } #qr-reader video { width: 100% !important; height: 100% !important; object-fit: cover !important; } #qr-reader__scan_region { min-height: 0 !important; } #qr-reader img[alt="Info icon"] { display: none !important; } #qr-reader__dashboard { display: none !important; }`}</style>
         <div id="qr-reader" aria-label="QR code scanner camera view" className="w-full h-full" ref={videoRef as React.RefObject<HTMLDivElement>} />
         {scanning && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

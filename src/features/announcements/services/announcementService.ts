@@ -26,38 +26,74 @@ export const announcementService = {
     } = {}
   ): Promise<Announcement[]> {
     const db = getFirestoreInstancePublic();
-    let q;
+    const announcements: Announcement[] = [];
+
     if (companyId) {
-      q = query(
+      // Fetch company-specific announcements
+      const companyQ = query(
         collection(db, COLLECTION),
         where('companyId', '==', companyId),
         orderBy('createdAt', 'desc')
       );
+      const companySnap = await getDocs(companyQ);
+      announcements.push(...companySnap.docs.map(d => ({ id: d.id, ...d.data() } as Announcement)));
+
+      // Also fetch system-wide announcements (no companyId)
+      try {
+        const systemQ = query(
+          collection(db, COLLECTION),
+          where('status', '!=', 'archived'),
+          orderBy('createdAt', 'desc')
+        );
+        const systemSnap = await getDocs(systemQ);
+        for (const d of systemSnap.docs) {
+          const data = d.data() as Announcement;
+          if (!data.companyId && !announcements.some(a => a.id === d.id)) {
+            announcements.push({ ...data, id: d.id } as Announcement);
+          }
+        }
+      } catch {
+        // System-wide query may fail if rules don't allow it yet; skip silently
+      }
+      // Re-sort by createdAt desc
+      announcements.sort((a, b) => {
+        const aTime = (a as unknown as Record<string, unknown>).createdAt as { toMillis?: () => number } | undefined;
+        const bTime = (b as unknown as Record<string, unknown>).createdAt as { toMillis?: () => number } | undefined;
+        return (bTime?.toMillis?.() ?? 0) - (aTime?.toMillis?.() ?? 0);
+      });
     } else {
-      // Admin: no companyId filter, get all
-      q = query(
+      // Admin or trainee without companyId: get all published + system-wide
+      const q = query(
         collection(db, COLLECTION),
+        where('status', '==', 'published'),
         orderBy('createdAt', 'desc')
       );
+      const snap = await getDocs(q);
+      announcements.push(...snap.docs.map(d => ({ id: d.id, ...d.data() } as Announcement)));
     }
 
     if (params.status) {
-      q = query(q, where('status', '==', params.status));
+      for (let i = announcements.length - 1; i >= 0; i--) {
+        if (announcements[i].status !== params.status) {
+          announcements.splice(i, 1);
+        }
+      }
     }
 
-    const snap = await getDocs(q);
-    let announcements = snap.docs.map(d => ({ id: d.id, ...d.data() } as Announcement));
-
     if (params.targetRole) {
-      announcements = announcements.filter(a =>
-        a.targetRoles.includes(params.targetRole as 'admin' | 'coordinator' | 'supervisor' | 'trainee')
-      );
+      for (let i = announcements.length - 1; i >= 0; i--) {
+        if (!announcements[i].targetRoles.includes(params.targetRole as 'admin' | 'coordinator' | 'supervisor' | 'trainee')) {
+          announcements.splice(i, 1);
+        }
+      }
     }
 
     if (params.departmentId) {
-      announcements = announcements.filter(a =>
-        !a.departmentId || a.departmentId === params.departmentId
-      );
+      for (let i = announcements.length - 1; i >= 0; i--) {
+        if (announcements[i].departmentId && announcements[i].departmentId !== params.departmentId) {
+          announcements.splice(i, 1);
+        }
+      }
     }
 
     return announcements;
@@ -125,17 +161,39 @@ export const announcementService = {
 
   async getActiveAnnouncements(companyId: string, userRole: string): Promise<Announcement[]> {
     const db = getFirestoreInstancePublic();
-    const q = query(
+    const all: Announcement[] = [];
+
+    // Company-specific published announcements
+    const companyQ = query(
       collection(db, COLLECTION),
       where('companyId', '==', companyId),
       where('status', '==', 'published'),
       orderBy('pinned', 'desc'),
       orderBy('createdAt', 'desc')
     );
-    const snap = await getDocs(q);
-    const announcements = snap.docs.map(d => ({ id: d.id, ...d.data() } as Announcement));
+    const companySnap = await getDocs(companyQ);
+    all.push(...companySnap.docs.map(d => ({ id: d.id, ...d.data() } as Announcement)));
 
-    return announcements.filter(a => {
+    // System-wide published announcements (no companyId)
+    try {
+      const systemQ = query(
+        collection(db, COLLECTION),
+        where('status', '==', 'published'),
+        orderBy('pinned', 'desc'),
+        orderBy('createdAt', 'desc')
+      );
+      const systemSnap = await getDocs(systemQ);
+      for (const d of systemSnap.docs) {
+        const data = d.data() as Announcement;
+        if (!data.companyId && !all.some(a => a.id === d.id)) {
+          all.push({ ...data, id: d.id } as Announcement);
+        }
+      }
+    } catch {
+      // System-wide query may fail if rules don't allow it yet; skip silently
+    }
+
+    return all.filter(a => {
       if (a.targetRoles.length === 0) return true;
       return a.targetRoles.includes(userRole as 'admin' | 'coordinator' | 'supervisor' | 'trainee');
     });

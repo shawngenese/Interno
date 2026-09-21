@@ -27,13 +27,13 @@ export interface AuditLogContext {
 export function deepClean<T>(obj?: T): T | undefined {
   if (obj == null) return undefined;
   if (Array.isArray(obj)) {
-    const cleaned = (obj as any).map((v: any) => deepClean(v)).filter((v: any) => v !== undefined);
-    return (cleaned.length ? cleaned : undefined) as any;
+    const cleaned = obj.map((v) => deepClean(v)).filter((v) => v !== undefined);
+    return (cleaned.length ? cleaned : undefined) as T;
   }
   if (typeof obj === 'object') {
-    const cleaned: any = {};
-    for (const [k, v] of Object.entries(obj as any)) {
-      const val = deepClean(v as any);
+    const cleaned: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+      const val = deepClean(v);
       if (val !== undefined) cleaned[k] = val;
     }
     return Object.keys(cleaned).length ? (cleaned as T) : undefined;
@@ -55,7 +55,7 @@ export async function logAction(
   if (!auditEntry) {
     throw new Error('Audit entry resolved to undefined after cleaning');
   }
-  await getAdminDb().collection(COLLECTIONS.AUDIT_LOGS).add(auditEntry as any);
+  await getAdminDb().collection(COLLECTIONS.AUDIT_LOGS).add(auditEntry as Record<string, unknown>);
 }
 
 
@@ -69,7 +69,7 @@ export async function logActionBatch(
 
   for (const entry of entries) {
     const docRef = adminDb.collection(COLLECTIONS.AUDIT_LOGS).doc();
-    const cleanedEntry: any = {
+    const cleanedEntry: Record<string, unknown> = {
       userId: entry.userId,
       action: entry.action,
       entityType: entry.entityType,
@@ -101,7 +101,7 @@ export async function logActionInTransaction(
   context?: AuditLogContext
 ): Promise<void> {
   const docRef = getAdminDb().collection(COLLECTIONS.AUDIT_LOGS).doc();
-  const cleanedEntryTx: any = {
+  const cleanedEntryTx: Record<string, unknown> = {
     userId: entry.userId,
     action: entry.action,
     entityType: entry.entityType,

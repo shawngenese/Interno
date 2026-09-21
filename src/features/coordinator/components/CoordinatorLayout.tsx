@@ -6,7 +6,7 @@ import { ThemeToggle } from '@/shared/components/ThemeToggle';
 
 const navigation = [
   { name: 'Dashboard', href: '/coordinator', icon: HomeIcon },
-  { name: 'Trainees', href: '/coordinator/trainees', icon: UserCircleIcon },
+  { name: 'Trainees', href: '/coordinator/trainees', icon: GraduationCapIcon },
   { name: 'Assign Trainees', href: '/coordinator/assign', icon: UsersIcon },
   { name: 'Attendance', href: '/coordinator/attendance', icon: CalendarIcon },
   { name: 'Tasks', href: '/coordinator/tasks', icon: CheckCircleIcon },
@@ -50,6 +50,14 @@ function DocumentIcon({ className }: { className?: string }) {
   );
 }
 
+function GraduationCapIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" />
+    </svg>
+  );
+}
+
 function UsersIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
@@ -70,14 +78,6 @@ function BellIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-    </svg>
-  );
-}
-
-function UserCircleIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-18 0 9 9 0 0018 0z" />
     </svg>
   );
 }
@@ -116,7 +116,11 @@ export function CoordinatorLayout({ children }: { children: ReactNode }) {
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-[#121212]/80 lg:hidden"
+          role="button"
+          tabIndex={0}
+          aria-label="Close sidebar"
           onClick={() => setSidebarOpen(false)}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSidebarOpen(false); }}
         />
       )}
 

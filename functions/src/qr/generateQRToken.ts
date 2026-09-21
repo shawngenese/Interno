@@ -35,7 +35,6 @@ export async function generateQRTokenHandler(
 ): Promise<GenerateQRTokenResponse> {
   const callerUid = assertRole(request.auth, ['admin', 'supervisor']);
 
-  const callerRole = request.auth?.token?.role as string | undefined;
   const callerCompanyId = request.auth?.token?.companyId as string | undefined;
 
   if (!callerCompanyId) {

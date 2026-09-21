@@ -17,7 +17,7 @@ interface ResolvedCoordinator extends User {
 }
 
 export function CoordinatorList({ onEdit, onView, onDelete }: CoordinatorListProps) {
-  const { role, user } = useAuth();
+  const { role } = useAuth();
   const [coordinators, setCoordinators] = useState<ResolvedCoordinator[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

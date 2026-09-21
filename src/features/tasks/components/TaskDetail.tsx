@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { getTask, getTaskApprovals, submitTask, reviewTask, addComment, getComments } from '../services/taskService';
+import { getTask, submitTask, reviewTask } from '../services/taskService';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { getStorageInstancePublic } from '@/config/firebase';
 import { TaskForm } from './TaskForm';
 import { formatDateTime12 } from '@/shared/utils/dateUtils';
-import type { Task, TaskApproval, SubmitTaskPayload, ReviewTaskPayload, TaskComment } from '../types';
+import type { Task, SubmitTaskPayload, ReviewTaskPayload } from '../types';
 import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS, TASK_STATUS_COLORS, TASK_PRIORITY_COLORS } from '../types';
 
 interface TaskDetailProps {
@@ -15,8 +15,6 @@ interface TaskDetailProps {
 export function TaskDetail({ taskId }: TaskDetailProps) {
   const { user, role } = useAuth();
   const [task, setTask] = useState<Task | null>(null);
-  const [approvals, setApprovals] = useState<TaskApproval[]>([]);
-  const [comments, setComments] = useState<TaskComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -26,17 +24,13 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
   const [submitText, setSubmitText] = useState('');
   const [submitFiles, setSubmitFiles] = useState<File[]>([]);
   const [reviewFeedback, setReviewFeedback] = useState('');
-  const [commentText, setCommentText] = useState('');
-  const [commentFiles, setCommentFiles] = useState<File[]>([]);
 
   const loadTask = async () => {
     setLoading(true);
     setError(null);
     try {
-      const [t, a, c] = await Promise.all([getTask(taskId), getTaskApprovals(taskId), getComments(taskId)]);
+      const t = await getTask(taskId);
       setTask(t);
-      setApprovals(a);
-      setComments(c);
 
       if (t?.traineeId) {
         const { getFirestoreInstancePublic } = await import('@/config/firebase');
@@ -55,15 +49,18 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
 
   useEffect(() => {
     loadTask();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskId]);
 
-  const uploadFiles = async (files: File[], companyId: string, folder: 'submissions' | 'comments'): Promise<string[]> => {
+  const [now] = useState(() => Date.now());
+
+  const uploadFiles = async (files: File[], companyId: string): Promise<string[]> => {
     if (files.length === 0) return [];
     const storage = getStorageInstancePublic();
     const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
     const urls: string[] = [];
     for (const file of files) {
-      const path = `tasks/${companyId}/${taskId}/${folder}/${Date.now()}_${file.name}`;
+      const path = `tasks/${companyId}/${taskId}/submissions/${Date.now()}_${file.name}`;
       const storageRef = ref(storage, path);
       await uploadBytes(storageRef, file, { contentType: file.type });
       const url = await getDownloadURL(storageRef);
@@ -73,14 +70,21 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
   };
 
   const handleSubmit = async () => {
+    if (task?.requireAttachment && submitFiles.length === 0) {
+      alert('This task requires at least one file attachment.');
+      return;
+    }
     setSubmitting(true);
     try {
-      const attachmentUrls = await uploadFiles(submitFiles, task?.companyId || '', 'submissions');
+      const attachmentUrls = await uploadFiles(submitFiles, task?.companyId || '');
       const payload: SubmitTaskPayload = { text: submitText, attachments: attachmentUrls };
       await submitTask(taskId, payload);
       setSubmitText('');
       setSubmitFiles([]);
       await loadTask();
+    } catch (err) {
+      console.error('Failed to submit task:', err);
+      alert('Failed to submit. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -92,21 +96,6 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
       const payload: ReviewTaskPayload = { action, feedback: reviewFeedback || undefined };
       await reviewTask(taskId, payload);
       setReviewFeedback('');
-      await loadTask();
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleAddComment = async () => {
-    if (!user) return;
-    if (!commentText.trim() && commentFiles.length === 0) return;
-    setSubmitting(true);
-    try {
-      const attachmentUrls = await uploadFiles(commentFiles, task?.companyId || '', 'comments');
-      await addComment(taskId, commentText, user!.uid, attachmentUrls);
-      setCommentText('');
-      setCommentFiles([]);
       await loadTask();
     } finally {
       setSubmitting(false);
@@ -148,7 +137,7 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
   const isSupervisor = traineeUserId
     ? user?.uid !== traineeUserId
     : role === 'supervisor' || role === 'admin';
-  const isOverdue = task.dueDate < Date.now() && task.status !== 'approved';
+  const isOverdue = task.dueDate < now && task.status !== 'approved';
 
   if (editing) {
     return (
@@ -268,8 +257,11 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
             className="w-full px-4 py-2.5 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none mb-3"
           />
           <div className="mb-4">
-            <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">Attachments</label>
+            <label htmlFor="attachment-input" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+              Attachments{task?.requireAttachment ? <span className="text-red-500 ml-1">(Required)</span> : <span className="text-[#757575] dark:text-[#9E9E9E] ml-1">(Optional)</span>}
+            </label>
             <input
+              id="attachment-input"
               type="file"
               multiple
               onChange={(e) => setSubmitFiles(Array.from(e.target.files || []))}
@@ -289,99 +281,7 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
         </div>
       )}
 
-      {/* Comments Section */}
-      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
-        <h3 className="text-lg font-semibold text-[#121212] dark:text-white mb-4">
-          Comments
-          {comments.length > 0 && (
-            <span className="ml-2 text-sm font-normal text-[#757575] dark:text-[#9E9E9E]">({comments.length})</span>
-          )}
-        </h3>
 
-        <div className="space-y-3 mb-4">
-          {comments.length === 0 ? (
-            <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">No comments yet.</p>
-          ) : (
-            comments.map((c) => (
-              <div key={c.id} className="p-3 bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 rounded-lg">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-medium text-[#3A3A3A] dark:text-[#BDBDBD]">
-                    {c.userId === user?.uid ? 'You' : c.userId.slice(0, 8) + '...'}
-                  </span>
-                  <span className="text-xs text-[#757575] dark:text-[#9E9E9E]">
-                    {formatDateTime12(c.createdAt)}
-                  </span>
-                </div>
-                <p className="text-sm text-[#3A3A3A] dark:text-[#BDBDBD] whitespace-pre-wrap">{c.content}</p>
-                {c.attachments && c.attachments.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {c.attachments.map((url, i) => (
-                      <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 dark:text-blue-400 underline">
-                        Attachment {i + 1}
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-
-        <div className="border-t border-[#D5D5D5] dark:border-[#3A3A3A] pt-4">
-          <textarea
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            rows={2}
-            placeholder="Add a comment..."
-            aria-label="Add a comment"
-            className="w-full px-4 py-2.5 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none mb-3"
-          />
-          <div className="flex items-center justify-between">
-            <input
-              type="file"
-              multiple
-              onChange={(e) => setCommentFiles(Array.from(e.target.files || []))}
-              className="text-sm text-[#757575] dark:text-[#9E9E9E] file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-[#EFEFEF] file:text-[#3A3A3A] dark:file:bg-[#3A3A3A] dark:file:text-[#BDBDBD] hover:file:bg-[#D5D5D5]"
-            />
-            <button
-              onClick={handleAddComment}
-              disabled={submitting || (!commentText.trim() && commentFiles.length === 0)}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-            >
-              {submitting ? 'Sending...' : 'Comment'}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {approvals.length > 0 && (
-        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
-          <h3 className="text-lg font-semibold text-[#121212] dark:text-white mb-4">Approval History</h3>
-          <div className="space-y-3">
-            {approvals.map((a) => (
-              <div key={a.id} className={`p-3 rounded-lg border ${
-                a.action === 'approved'
-                  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                  : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-              }`}>
-                <div className="flex items-center justify-between">
-                  <span className={`text-sm font-medium ${
-                    a.action === 'approved' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'
-                  }`}>
-                    {a.action === 'approved' ? 'Approved' : 'Returned'}
-                  </span>
-                  <span className="text-xs text-[#757575] dark:text-[#9E9E9E]">
-                    {formatDateTime12(a.timestamp)}
-                  </span>
-                </div>
-                {a.feedback && (
-                  <p className="mt-1 text-sm text-[#555555] dark:text-[#9E9E9E]">{a.feedback}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

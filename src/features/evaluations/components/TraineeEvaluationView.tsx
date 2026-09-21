@@ -12,10 +12,6 @@ export function TraineeEvaluationView({ traineeId }: TraineeEvaluationViewProps)
   const [loading, setLoading] = useState(true);
   const [selectedEvaluation, setSelectedEvaluation] = useState<Evaluation | null>(null);
 
-  useEffect(() => {
-    loadEvaluations();
-  }, [traineeId]);
-
   const loadEvaluations = async () => {
     try {
       const data = await evaluationService.getTraineeEvaluations(traineeId);
@@ -26,6 +22,11 @@ export function TraineeEvaluationView({ traineeId }: TraineeEvaluationViewProps)
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadEvaluations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [traineeId]);
 
   const getStatusBadge = (status: string) => {
     const badges: Record<string, string> = {

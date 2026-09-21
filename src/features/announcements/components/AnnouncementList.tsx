@@ -6,7 +6,7 @@ import { useToast } from '@/shared/components/Toast';
 import { useAuth } from '@/features/auth';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import type { Announcement, AnnouncementStatus } from '../types';
+import type { Announcement, AnnouncementStatus, AnnouncementPriority } from '../types';
 
 interface AnnouncementListProps {
   companyId?: string;
@@ -21,22 +21,23 @@ export function AnnouncementList({ companyId: companyIdProp, role }: Announcemen
   const [showForm, setShowForm] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
   const [filterStatus, setFilterStatus] = useState<AnnouncementStatus | ''>('');
+  const [filterPriority, setFilterPriority] = useState<AnnouncementPriority | ''>('');
   const [error, setError] = useState<string | null>(null);
   const { addToast } = useToast();
   const abortRef = useRef<AbortController | null>(null);
 
   // Resolve companyId for coordinator/supervisor if not passed as prop
+  // Trainees load all announcements (targetRoles filter handles visibility)
   useEffect(() => {
     if (companyIdProp) {
       setResolvedCompanyId(companyIdProp);
       return;
     }
-    if (!user?.uid) return;
+    if (!user?.uid || role === 'trainee') return;
     let cancelled = false;
     async function resolveCompanyId() {
       try {
         const db = getFirestoreInstancePublic();
-        // Try coordinators collection first, then supervisors
         let snap = await getDoc(doc(db, 'coordinators', user!.uid));
         if (!snap.exists()) {
           snap = await getDoc(doc(db, 'supervisors', user!.uid));
@@ -51,15 +52,17 @@ export function AnnouncementList({ companyId: companyIdProp, role }: Announcemen
     }
     resolveCompanyId();
     return () => { cancelled = true; };
-  }, [user?.uid, companyIdProp]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid, companyIdProp, role]);
 
   const loadAnnouncements = useCallback(async (signal?: AbortSignal) => {
     // Admin sees all announcements (no companyId filter)
-    if (role !== 'admin' && !resolvedCompanyId) return;
+    // Trainees without companyId also see all (system-wide)
+    if (role !== 'admin' && role !== 'trainee' && !resolvedCompanyId) return;
     try {
       setLoading(true);
       const data = await announcementService.getAnnouncements(
-        role === 'admin' ? undefined : resolvedCompanyId,
+        role === 'admin' || (role === 'trainee' && !resolvedCompanyId) ? undefined : resolvedCompanyId,
         {
           status: filterStatus || undefined,
         }
@@ -117,17 +120,32 @@ export function AnnouncementList({ companyId: companyIdProp, role }: Announcemen
             Announcements
           </h2>
           <div className="flex flex-wrap gap-3">
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as AnnouncementStatus | '')}
-              aria-label="Filter by status"
-              className="px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
-            >
-              <option value="">All Status</option>
-              <option value="published">Published</option>
-              <option value="draft">Draft</option>
-              <option value="archived">Archived</option>
-            </select>
+            {(role === 'admin' || role === 'coordinator') ? (
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value as AnnouncementStatus | '')}
+                aria-label="Filter by status"
+                className="px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
+              >
+                <option value="">All Status</option>
+                <option value="published">Published</option>
+                <option value="draft">Draft</option>
+                <option value="archived">Archived</option>
+              </select>
+            ) : (
+              <select
+                value={filterPriority}
+                onChange={(e) => setFilterPriority(e.target.value as AnnouncementPriority | '')}
+                aria-label="Filter by priority"
+                className="px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
+              >
+                <option value="">All Priorities</option>
+                <option value="urgent">Urgent</option>
+                <option value="high">High</option>
+                <option value="normal">Normal</option>
+                <option value="low">Low</option>
+              </select>
+            )}
             {showActions && (
               <button
                 onClick={() => {
@@ -173,7 +191,9 @@ export function AnnouncementList({ companyId: companyIdProp, role }: Announcemen
           </div>
         ) : (
           <div className="space-y-3">
-            {announcements.map((announcement) => (
+            {announcements
+              .filter((a) => !filterPriority || a.priority === filterPriority)
+              .map((announcement) => (
               <AnnouncementCard
                 key={announcement.id}
                 announcement={announcement}

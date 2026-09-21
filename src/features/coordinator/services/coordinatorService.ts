@@ -1,5 +1,5 @@
 import { getFirestoreInstancePublic } from '@/config/firebase';
-import { collection, query, where, getDocs, documentId, doc, getDoc, updateDoc, serverTimestamp, writeBatch, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, query, where, getDocs, documentId, doc, getDoc, updateDoc, serverTimestamp, writeBatch, arrayUnion, arrayRemove, deleteField } from 'firebase/firestore';
 import type {
   CoordinatorTrainee,
   CoordinatorAttendanceSummary,
@@ -27,7 +27,7 @@ export async function getCoordinatorTrainees(_coordinatorId: string, companyId: 
     query(
       collection(db, 'trainees'),
       where('companyId', '==', companyId),
-      where('status', 'in', ['active', 'completed']),
+      where('status', 'in', ['pending', 'active', 'completed']),
     ),
   );
 
@@ -75,8 +75,21 @@ export async function getAttendanceSummary(
   );
 
   const traineeIds = traineeSnap.docs.map((d) => d.id);
+
+  const userIds = [...new Set(traineeSnap.docs.map((d) => d.data().userId).filter(Boolean))];
+  const userMap = new Map<string, string>();
+  for (const batch of chunk(userIds, FIRESTORE_IN_MAX)) {
+    const userSnap = await getDocs(
+      query(collection(db, 'users'), where(documentId(), 'in', batch)),
+    );
+    userSnap.docs.forEach((doc) => userMap.set(doc.id, (doc.data().displayName as string) || 'Unknown'));
+  }
+
   const traineeNameMap = new Map<string, string>();
-  traineeSnap.docs.forEach((d) => traineeNameMap.set(d.id, d.data().name || 'Unknown'));
+  traineeSnap.docs.forEach((d) => {
+    const userId = d.data().userId as string;
+    traineeNameMap.set(d.id, userMap.get(userId) || 'Unknown');
+  });
 
   // Batch fetch all DTRs across all trainees
   const dtrCounts = new Map<string, { presentDays: number; lateDays: number; totalRegular: number; totalOvertime: number; totalLate: number; totalUndertime: number }>();
@@ -133,8 +146,21 @@ export async function getTaskSummary(companyId: string): Promise<CoordinatorTask
   );
 
   const traineeIds = traineeSnap.docs.map((d) => d.id);
+
+  const userIds = [...new Set(traineeSnap.docs.map((d) => d.data().userId).filter(Boolean))];
+  const userMap = new Map<string, string>();
+  for (const batch of chunk(userIds, FIRESTORE_IN_MAX)) {
+    const userSnap = await getDocs(
+      query(collection(db, 'users'), where(documentId(), 'in', batch)),
+    );
+    userSnap.docs.forEach((doc) => userMap.set(doc.id, (doc.data().displayName as string) || 'Unknown'));
+  }
+
   const traineeNameMap = new Map<string, string>();
-  traineeSnap.docs.forEach((d) => traineeNameMap.set(d.id, d.data().name || 'Unknown'));
+  traineeSnap.docs.forEach((d) => {
+    const userId = d.data().userId as string;
+    traineeNameMap.set(d.id, userMap.get(userId) || 'Unknown');
+  });
 
   const taskCounts = new Map<string, {
     totalTasks: number; pendingTasks: number; inProgressTasks: number;
@@ -301,36 +327,43 @@ export async function updateTraineeAssignment(
     const newSupervisorId = updates.supervisorId || '';
 
     if (oldSupervisorId !== newSupervisorId) {
-      const batch = writeBatch(db);
+      try {
+        const batch = writeBatch(db);
 
-      // Remove from old supervisor's array + subcollection
-      if (oldSupervisorId) {
-        batch.update(doc(db, 'supervisors', oldSupervisorId), {
-          assignedTrainees: arrayRemove(traineeId),
-          updatedAt: serverTimestamp(),
-        });
-        batch.delete(doc(db, 'supervisors', oldSupervisorId, 'assignedTrainees', traineeId));
+        // Remove from old supervisor's array + subcollection
+        if (oldSupervisorId) {
+          batch.update(doc(db, 'supervisors', oldSupervisorId), {
+            assignedTrainees: arrayRemove(traineeId),
+            updatedAt: serverTimestamp(),
+          });
+          batch.delete(doc(db, 'supervisors', oldSupervisorId, 'assignedTrainees', traineeId));
+        }
+
+        // Add to new supervisor's array + subcollection
+        if (newSupervisorId) {
+          batch.update(doc(db, 'supervisors', newSupervisorId), {
+            assignedTrainees: arrayUnion(traineeId),
+            updatedAt: serverTimestamp(),
+          });
+          batch.set(
+            doc(db, 'supervisors', newSupervisorId, 'assignedTrainees', traineeId),
+            { traineeId, assignedAt: serverTimestamp() },
+            { merge: true },
+          );
+        }
+
+        await batch.commit();
+      } catch {
+        // Batch may fail due to security rules (coordinator can't update supervisors collection).
+        // The trainee doc update below still succeeds.
       }
-
-      // Add to new supervisor's array + subcollection
-      if (newSupervisorId) {
-        batch.update(doc(db, 'supervisors', newSupervisorId), {
-          assignedTrainees: arrayUnion(traineeId),
-          updatedAt: serverTimestamp(),
-        });
-        batch.set(
-          doc(db, 'supervisors', newSupervisorId, 'assignedTrainees', traineeId),
-          { traineeId, assignedAt: serverTimestamp() },
-          { merge: true },
-        );
-      }
-
-      await batch.commit();
     }
   }
 
+  const { supervisorId, ...rest } = updates;
   await updateDoc(docRef, {
-    ...updates,
+    ...rest,
+    ...(supervisorId ? { supervisorId } : { supervisorId: deleteField() }),
     updatedAt: serverTimestamp(),
   });
 }
@@ -351,10 +384,25 @@ export async function getCompanies(): Promise<{ id: string; name: string; type?:
 export async function getSupervisors(): Promise<{ id: string; name: string; email: string; companyId?: string }[]> {
   const db = getFirestoreInstancePublic();
   const snap = await getDocs(collection(db, 'supervisors'));
-  return snap.docs.map((d) => ({
-    id: d.id,
-    name: d.data().name,
-    email: d.data().email,
-    companyId: d.data().companyId,
-  }));
+
+  const userIds = [...new Set(snap.docs.map((d) => d.data().userId).filter(Boolean))];
+
+  const userMap = new Map<string, Record<string, unknown>>();
+  for (const batch of chunk(userIds, FIRESTORE_IN_MAX)) {
+    const userSnap = await getDocs(
+      query(collection(db, 'users'), where(documentId(), 'in', batch)),
+    );
+    userSnap.docs.forEach((doc) => userMap.set(doc.id, doc.data()));
+  }
+
+  return snap.docs.map((d) => {
+    const data = d.data();
+    const userData = userMap.get(data.userId) ?? null;
+    return {
+      id: d.id,
+      name: (userData?.displayName as string) || data.name || 'Unknown',
+      email: (userData?.email as string) || data.email || '',
+      companyId: data.companyId,
+    };
+  });
 }

@@ -2,7 +2,6 @@ import * as crypto from 'crypto';
 import { CallableRequest, HttpsError } from 'firebase-functions/v2/https';
 import { getAdminDb, COLLECTIONS, ALLOWED_MIME_TYPES, MAX_FILE_SIZE_MB } from '../config';
 import { logAction } from '../audit/auditLog';
-import { Timestamp } from 'firebase-admin/firestore';
 
 const ALLOWED_MIME_TYPES_MAP: Record<string, readonly string[]> = {
   documents: ALLOWED_MIME_TYPES,
@@ -16,31 +15,19 @@ const MAX_FILE_SIZE_MAP: Record<string, number> = {
   profiles: 5 * 1024 * 1024,
 };
 
-const MAGIC_BYTES: Record<string, number[][]> = {
-  'application/pdf': [[0x25, 0x50, 0x44, 0x46]],
-  'image/jpeg': [[0xFF, 0xD8, 0xFF]],
-  'image/png': [[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]],
-  'image/webp': [[0x52, 0x49, 0x46, 0x46]],
-  'application/msword': [[0xD0, 0xCF, 0x11, 0xE0]],
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': [[0x50, 0x4B, 0x03, 0x04]],
-  'application/vnd.ms-excel': [[0xD0, 0xCF, 0x11, 0xE0]],
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': [[0x50, 0x4B, 0x03, 0x04]],
-};
-
-function checkMagicBytes(mimeType: string, buffer: Uint8Array): boolean {
-  const patterns = MAGIC_BYTES[mimeType];
-  if (!patterns) return true;
-  return patterns.some((pattern) => pattern.every((byte, i) => buffer[i] === byte));
+function sanitizeFileName(name: string): string {
+  return name.replace(/[^a-zA-Z0-9_-]/g, '_').replace(/_+/g, '_').slice(0, 64);
 }
 
-function generateStoragePath(bucket: string, companyId: string, resourceId: string, fileName: string): string {
+function generateStoragePath(bucket: string, companyId: string, resourceId: string, fileName: string, resourceLabel?: string): string {
   const ext = fileName.split('.').pop()?.toLowerCase() || 'bin';
   const timestamp = Date.now();
   const random = crypto.randomBytes(8).toString('hex');
   if (bucket === 'profiles') {
     return `${bucket}/${resourceId}/${timestamp}_${random}.${ext}`;
   }
-  return `${bucket}/${companyId}/${resourceId}/${timestamp}_${random}.${ext}`;
+  const safeLabel = resourceLabel ? `${sanitizeFileName(resourceLabel)}_` : '';
+  return `${bucket}/${companyId}/${resourceId}/${safeLabel}${timestamp}_${random}.${ext}`;
 }
 
 export interface ValidateUploadRequest {
@@ -51,6 +38,7 @@ export interface ValidateUploadRequest {
   traineeId?: string;
   taskId?: string;
   userId?: string;
+  documentType?: string;
 }
 
 export interface ValidateUploadResponse {
@@ -75,7 +63,7 @@ export async function validateUploadHandler(
     throw new HttpsError('invalid-argument', 'Caller missing companyId in custom claims');
   }
 
-  const { fileName, mimeType, fileSize, bucket, traineeId, taskId, userId } = request.data;
+  const { fileName, mimeType, fileSize, bucket, traineeId, taskId, userId, documentType } = request.data;
 
   if (!fileName || !mimeType || !fileSize || !bucket) {
     throw new HttpsError('invalid-argument', 'fileName, mimeType, fileSize, bucket are required');
@@ -110,6 +98,8 @@ export async function validateUploadHandler(
 
   const db = getAdminDb();
 
+  let path: string;
+
   if (bucket === 'documents') {
     const traineeSnap = await db.doc(`${COLLECTIONS.TRAINEES}/${traineeId}`).get();
     if (!traineeSnap.exists) throw new HttpsError('not-found', 'Trainee not found');
@@ -121,6 +111,17 @@ export async function validateUploadHandler(
     if (!(isOwner || isSupervisor || callerRole === 'admin')) {
       throw new HttpsError('permission-denied', 'Not authorized to upload for this trainee');
     }
+
+    let traineeLabel = '';
+    if (traineeData.userId) {
+      const userSnap = await db.doc(`${COLLECTIONS.USERS}/${traineeData.userId}`).get();
+      if (userSnap.exists) {
+        traineeLabel = (userSnap.data()?.displayName as string) || '';
+      }
+    }
+    if (!traineeLabel) traineeLabel = traineeData.name || traineeId;
+    const label = documentType ? `${traineeLabel}_${documentType}` : traineeLabel;
+    path = generateStoragePath(bucket, callerCompanyId, resourceId, fileName, label);
   } else if (bucket === 'tasks') {
     const taskSnap = await db.doc(`${COLLECTIONS.TASKS}/${taskId}`).get();
     if (!taskSnap.exists) throw new HttpsError('not-found', 'Task not found');
@@ -132,13 +133,13 @@ export async function validateUploadHandler(
     if (!(isCreator || isAssignee || callerRole === 'admin' || callerRole === 'supervisor')) {
       throw new HttpsError('permission-denied', 'Not authorized to upload for this task');
     }
+    path = generateStoragePath(bucket, callerCompanyId, resourceId, fileName);
   } else {
     if (userId !== callerUid && callerRole !== 'admin') {
       throw new HttpsError('permission-denied', 'Can only upload own profile image');
     }
+    path = generateStoragePath(bucket, callerCompanyId, resourceId, fileName);
   }
-
-  const path = generateStoragePath(bucket, callerCompanyId, resourceId, fileName);
 
   const now = Date.now();
   await logAction({

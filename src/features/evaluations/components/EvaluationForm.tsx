@@ -102,10 +102,11 @@ export function EvaluationForm({
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+            <label htmlFor="evaluation-type" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Evaluation Type
             </label>
             <select
+              id="evaluation-type"
               value={type}
               onChange={(e) => setType(e.target.value as EvaluationType)}
               className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -116,10 +117,11 @@ export function EvaluationForm({
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+            <label htmlFor="period-start" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Period Start
             </label>
             <input
+              id="period-start"
               type="date"
               value={periodStart}
               onChange={(e) => setPeriodStart(e.target.value)}
@@ -127,10 +129,11 @@ export function EvaluationForm({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+            <label htmlFor="period-end" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Period End
             </label>
             <input
+              id="period-end"
               type="date"
               value={periodEnd}
               onChange={(e) => setPeriodEnd(e.target.value)}
@@ -177,10 +180,11 @@ export function EvaluationForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+          <label htmlFor="overall-comments" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Overall Comments
           </label>
           <textarea
+            id="overall-comments"
             value={overallComments}
             onChange={(e) => setOverallComments(e.target.value)}
             rows={4}

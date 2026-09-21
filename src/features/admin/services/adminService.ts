@@ -125,6 +125,7 @@ export interface ListOJTSchedulesParams {
   page?: number;
   limit?: number;
   companyId?: string;
+  status?: string;
 }
 
 const COLLECTIONS = {

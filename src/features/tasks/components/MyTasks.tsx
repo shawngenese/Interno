@@ -25,6 +25,7 @@ export function MyTasks() {
     submitted: 0,
     approved: 0,
     returned: 0,
+    archived: 0,
   });
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -79,6 +80,8 @@ export function MyTasks() {
     [tasks, statusFilter]
   );
 
+  const [now] = useState(() => Date.now());
+
   if (selectedTask) {
     return (
       <div className="space-y-4">
@@ -124,7 +127,7 @@ export function MyTasks() {
       ) : (
         <div className="grid grid-cols-1 gap-3">
           {filteredTasks.map((task) => {
-            const isOverdue = getDueMs(task.dueDate) < Date.now() && task.status !== 'approved';
+            const isOverdue = getDueMs(task.dueDate) < now && task.status !== 'approved';
             return (
               <button
                 key={task.id}

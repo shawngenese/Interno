@@ -17,7 +17,7 @@ interface ResolvedOJTSchedule extends OJTSchedule {
 }
 
 export function OJTScheduleList({ onEdit, onView, onDelete }: OJTScheduleListProps) {
-  const { role, user } = useAuth();
+  const { role } = useAuth();
   const [schedules, setSchedules] = useState<ResolvedOJTSchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

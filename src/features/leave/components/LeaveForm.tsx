@@ -79,8 +79,9 @@ export function LeaveForm({ onSaved, onCancel }: LeaveFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">Leave Type</label>
+        <label htmlFor="leave-type" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">Leave Type</label>
         <select
+          id="leave-type"
           value={type}
           onChange={(e) => setType(e.target.value as LeaveType)}
           className="w-full rounded-lg border border-[#BDBDBD] dark:border-[#555555] bg-white dark:bg-[#1E1E1E] px-3 py-2 text-sm dark:text-white"
@@ -93,8 +94,9 @@ export function LeaveForm({ onSaved, onCancel }: LeaveFormProps) {
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">Start Date</label>
+          <label htmlFor="start-date" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">Start Date</label>
           <input
+            id="start-date"
             type="date"
             value={startDate}
             min={today}
@@ -103,8 +105,9 @@ export function LeaveForm({ onSaved, onCancel }: LeaveFormProps) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">End Date</label>
+          <label htmlFor="end-date" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">End Date</label>
           <input
+            id="end-date"
             type="date"
             value={endDate}
             min={startDate || today}
@@ -115,8 +118,9 @@ export function LeaveForm({ onSaved, onCancel }: LeaveFormProps) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">Reason</label>
+        <label htmlFor="leave-reason" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">Reason</label>
         <textarea
+          id="leave-reason"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           rows={3}

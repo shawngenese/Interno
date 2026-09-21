@@ -23,6 +23,7 @@ function isValidRole(value: unknown): value is Exclude<UserRole, null> {
 interface AuthContextType {
   user: User | null;
   role: UserRole;
+  companyId: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -34,6 +35,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<UserRole>(null);
+  const [companyId, setCompanyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Spark-safe: no Cloud Functions callable (Functions require Blaze and are
@@ -62,6 +64,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         tokenResult = await currentUser.getIdTokenResult(false);
       }
       const claimRole = (tokenResult.claims as { role?: unknown }).role;
+      const claimCompanyId = (tokenResult.claims as { companyId?: unknown }).companyId;
+      if (typeof claimCompanyId === 'string') {
+        setCompanyId(claimCompanyId);
+      }
       if (isValidRole(claimRole)) {
         if (typeof window !== 'undefined') window.__USER_ROLE__ = claimRole;
         setRole(claimRole);
@@ -71,9 +77,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const db = getFirestoreInstancePublic();
         const snap = await getDoc(doc(db, 'users', currentUser.uid));
-        const docRole = snap.exists()
-          ? (snap.data() as { role?: unknown }).role
-          : undefined;
+        const docData = snap.exists() ? snap.data() : undefined;
+        const docRole = docData?.role;
+        const docCompanyId = docData?.companyId;
+        if (typeof docCompanyId === 'string') {
+          setCompanyId(docCompanyId);
+        }
         if (isValidRole(docRole)) {
           if (typeof window !== 'undefined') window.__USER_ROLE__ = docRole;
           setRole(docRole);
@@ -100,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await refreshUserRole(currentUser);
       } else {
         setRole(null);
+        setCompanyId(null);
       }
       setLoading(false);
     });
@@ -130,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await signOut(auth);
       setUser(null);
       setRole(null);
+      setCompanyId(null);
     } finally {
       setLoading(false);
     }
@@ -142,7 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, role, loading, login, logout, refreshRole }}>
+    <AuthContext.Provider value={{ user, role, companyId, loading, login, logout, refreshRole }}>
       {children}
     </AuthContext.Provider>
   );

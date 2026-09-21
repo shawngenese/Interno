@@ -68,7 +68,7 @@ export function TraineeDTRView() {
     } finally {
       setLoading(false);
     }
-  }, [user, traineeId]);
+  }, [user, traineeId, period]);
 
   useEffect(() => {
     refresh();
@@ -95,7 +95,7 @@ export function TraineeDTRView() {
       const start = period.start ? new Date(period.start).getTime() : new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
       const end = period.end ? new Date(period.end).getTime() : new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getTime();
 
-      await calculateDTR({ traineeId: resolvedId, startDate: start, endDate: end, forceRecalc: true });
+      await calculateDTR({ traineeId: resolvedId, startDate: start, endDate: end, forceRecalc: true, timezoneOffsetMinutes: new Date().getTimezoneOffset() });
       await refresh();
     } catch (err) {
       console.error('Calculate DTR failed:', err);

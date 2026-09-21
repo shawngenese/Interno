@@ -3,9 +3,12 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { defineConfig } from 'vite'
 
+// import basicSsl from '@vitejs/plugin-basic-ssl'
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
+  // plugins: [react(), basicSsl()],
   plugins: [react()],
   resolve: {
     alias: {

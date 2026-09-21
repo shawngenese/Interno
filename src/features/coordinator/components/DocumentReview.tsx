@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getFirestoreInstancePublic } from '@/config/firebase';
-import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp, getDoc, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/features/auth';
 import type { Document } from '@/features/documents/types';
 
@@ -8,6 +8,14 @@ interface Trainee {
   id: string;
   name: string;
   email: string;
+}
+
+function toMillis(value: unknown): number {
+  if (typeof value === 'number') return value;
+  if (value && typeof value === 'object' && 'toMillis' in value) {
+    return (value as { toMillis: () => number }).toMillis();
+  }
+  return 0;
 }
 
 export function DocumentReview() {
@@ -45,8 +53,16 @@ export function DocumentReview() {
       const traineeList: Trainee[] = [];
       for (const t of traineeSnap.docs) {
         const data = t.data();
-        traineeMap.set(t.id, data.name || 'Unknown');
-        traineeList.push({ id: t.id, name: data.name || 'Unknown', email: data.email || '' });
+        let name = '';
+        if (data.userId) {
+          const userDoc = await getDoc(doc(db, 'users', data.userId));
+          if (userDoc.exists()) {
+            name = (userDoc.data().displayName as string) || (userDoc.data().email as string) || '';
+          }
+        }
+        if (!name) name = data.name || t.id.slice(0, 8) + '...';
+        traineeMap.set(t.id, name);
+        traineeList.push({ id: t.id, name, email: data.email || '' });
       }
       setTrainees(traineeList);
 
@@ -79,10 +95,10 @@ export function DocumentReview() {
             storagePath: data.storagePath as string,
             status: data.status as 'pending' | 'approved' | 'rejected',
             uploadedBy: data.uploadedBy as string,
-            createdAt: data.createdAt as number,
-            updatedAt: data.updatedAt as number,
+            createdAt: toMillis(data.createdAt),
+            updatedAt: toMillis(data.updatedAt),
             reviewedBy: data.reviewedBy as string,
-            reviewedAt: data.reviewedAt as number,
+            reviewedAt: toMillis(data.reviewedAt),
             reviewNotes: data.reviewNotes as string,
             traineeName: traineeMap.get(data.traineeId as string),
           });
@@ -112,10 +128,10 @@ export function DocumentReview() {
               storagePath: data.storagePath as string,
               status: data.status as 'pending' | 'approved' | 'rejected',
               uploadedBy: data.uploadedBy as string,
-              createdAt: data.createdAt as number,
-              updatedAt: data.updatedAt as number,
+              createdAt: toMillis(data.createdAt),
+              updatedAt: toMillis(data.updatedAt),
               reviewedBy: data.reviewedBy as string,
-              reviewedAt: data.reviewedAt as number,
+              reviewedAt: toMillis(data.reviewedAt),
               reviewNotes: data.reviewNotes as string,
               traineeName: traineeMap.get(data.traineeId as string),
             });
@@ -147,23 +163,11 @@ export function DocumentReview() {
     try {
       const db = getFirestoreInstancePublic();
       const docRef = doc(db, 'documents', docId);
-      const beforeSnap = await getDoc(docRef);
-      const beforeData = beforeSnap.data();
       await updateDoc(docRef, {
         status: 'approved',
         reviewedBy: user.uid,
         reviewedAt: serverTimestamp(),
-        reviewNotes: reviewNotes || null,
-      });
-      await addDoc(collection(db, 'audit_logs'), {
-        timestamp: Date.now(),
-        userId: user.uid,
-        action: 'update',
-        entityType: 'document',
-        entityId: docId,
-        originalValue: beforeData?.status,
-        newValue: 'approved',
-        metadata: { reviewNotes: reviewNotes || null },
+        ...(reviewNotes ? { reviewNotes } : {}),
       });
       setSelectedDoc(null);
       setReviewNotes('');
@@ -182,23 +186,28 @@ export function DocumentReview() {
     try {
       const db = getFirestoreInstancePublic();
       const docRef = doc(db, 'documents', docId);
-      const beforeSnap = await getDoc(docRef);
-      const beforeData = beforeSnap.data();
+
+      // Delete the Storage file to avoid orphaned files
+      try {
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const docData = docSnap.data();
+          if (docData.storagePath) {
+            const { getStorageInstancePublic } = await import('@/config/firebase');
+            const storage = getStorageInstancePublic();
+            const { ref, deleteObject } = await import('firebase/storage');
+            await deleteObject(ref(storage, docData.storagePath));
+          }
+        }
+      } catch (storageErr) {
+        console.warn('Failed to delete rejected file from storage:', storageErr);
+      }
+
       await updateDoc(docRef, {
         status: 'rejected',
         reviewedBy: user.uid,
         reviewedAt: serverTimestamp(),
-        reviewNotes: reviewNotes || null,
-      });
-      await addDoc(collection(db, 'audit_logs'), {
-        timestamp: Date.now(),
-        userId: user.uid,
-        action: 'update',
-        entityType: 'document',
-        entityId: docId,
-        originalValue: beforeData?.status,
-        newValue: 'rejected',
-        metadata: { reviewNotes: reviewNotes || null },
+        ...(reviewNotes ? { reviewNotes } : {}),
       });
       setSelectedDoc(null);
       setReviewNotes('');
@@ -365,10 +374,11 @@ export function DocumentReview() {
                 </a>
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+                <label htmlFor="review-notes" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
                   Review Notes (optional)
                 </label>
                 <textarea
+                  id="review-notes"
                   value={reviewNotes}
                   onChange={(e) => setReviewNotes(e.target.value)}
                   rows={3}

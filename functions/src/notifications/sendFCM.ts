@@ -82,7 +82,7 @@ export async function sendFCMNotificationHandler(
         const messageId = await messaging.send({
           ...baseMessage,
           token,
-        } as any);
+        });
         successCount++;
         messageIds.push(messageId);
       } catch (error) {
@@ -95,7 +95,7 @@ export async function sendFCMNotificationHandler(
       const messageId = await messaging.send({
         ...baseMessage,
         topic,
-      } as any);
+      });
       successCount = 1;
       messageIds.push(messageId);
     } catch (error) {

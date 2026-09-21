@@ -2,7 +2,7 @@ import * as jwt from 'jsonwebtoken';
 import * as crypto from 'crypto';
 import { CallableRequest, HttpsError } from 'firebase-functions/v2/https';
 import { getAdminDb, COLLECTIONS, type QRAction } from '../config';
-import { logAction, logActionInTransaction } from '../audit/auditLog';
+import { logAction } from '../audit/auditLog';
 import { assertRole } from '../utils/helpers';
 import { Timestamp } from 'firebase-admin/firestore';
 

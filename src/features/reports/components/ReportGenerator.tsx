@@ -154,10 +154,11 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div>
-            <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+            <label htmlFor="report-type" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Report Type
             </label>
             <select
+              id="report-type"
               value={reportType}
               onChange={(e) => setReportType(e.target.value as ReportType)}
               className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -172,13 +173,14 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+            <label htmlFor="format-pdf" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Output Format
             </label>
             <div className="flex gap-2">
               {['pdf', 'excel', 'both'].map(f => (
                 <label key={f} className="flex items-center gap-1 cursor-pointer">
                   <input
+                    id={`format-${f}`}
                     type="radio"
                     name="format"
                     value={f}
@@ -193,10 +195,11 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+            <label htmlFor="company-select" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Company
             </label>
             <select
+              id="company-select"
               value={filters.companyId}
               onChange={(e) => handleCompanyChange(e.target.value)}
               className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -211,10 +214,11 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div>
-            <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+            <label htmlFor="report-start-date" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Start Date
             </label>
             <input
+              id="report-start-date"
               type="date"
               value={filters.startDate ? new Date(filters.startDate).toISOString().split('T')[0] : ''}
               onChange={(e) => handleDateChange('startDate', e.target.value)}
@@ -224,10 +228,11 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+            <label htmlFor="report-end-date" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               End Date
             </label>
             <input
+              id="report-end-date"
               type="date"
               value={filters.endDate ? new Date(filters.endDate).toISOString().split('T')[0] : ''}
               onChange={(e) => handleDateChange('endDate', e.target.value)}
@@ -239,10 +244,11 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div>
-            <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+            <label htmlFor="trainee-select" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Trainee (optional)
             </label>
             <select
+              id="trainee-select"
               value={filters.traineeId || ''}
               onChange={(e) => handleTraineeChange(e.target.value)}
               className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
@@ -255,10 +261,11 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+            <label htmlFor="status-filter" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
               Status Filter (optional)
             </label>
             <input
+              id="status-filter"
               type="text"
               value={filters.status || ''}
               onChange={(e) => setFilters(f => ({ ...f, status: e.target.value }))}

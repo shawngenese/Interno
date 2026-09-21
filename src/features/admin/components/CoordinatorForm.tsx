@@ -173,7 +173,6 @@ export function CoordinatorForm({ editingId, editingCoordinatorId, onCancel, onS
           <div className="flex items-center gap-3 mb-4">
             <label className="flex items-center gap-2 text-sm text-[#3A3A3A] dark:text-[#BDBDBD]">
               <input
-                autoFocus
                 type="checkbox"
                 checked={useExistingUser}
                 onChange={(e) => setUseExistingUser(e.target.checked)}

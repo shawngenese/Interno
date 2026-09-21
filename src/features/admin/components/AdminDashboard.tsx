@@ -59,6 +59,18 @@ function getTabFromPathname(pathname: string): Tab {
 export function AdminDashboard() {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<Tab>(() => getTabFromPathname(location.pathname));
+  const [view, setView] = useState<'list' | 'create' | 'edit' | 'assign' | 'documents'>('list');
+  const [viewOnly, setViewOnly] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editingCompanyId, setEditingCompanyId] = useState<string | null>(null);
+  const [editingDepartmentId, setEditingDepartmentId] = useState<string | null>(null);
+  const [editingTraineeId, setEditingTraineeId] = useState<string | null>(null);
+  const [editingWorkScheduleId, setEditingWorkScheduleId] = useState<string | null>(null);
+  const [editingOJTScheduleId, setEditingOJTScheduleId] = useState<string | null>(null);
+  const [assigningSupervisor, setAssigningSupervisor] = useState<Supervisor | null>(null);
+  const [editingSupervisorId, setEditingSupervisorId] = useState<string | null>(null);
+  const [editingCoordinatorId, setEditingCoordinatorId] = useState<string | null>(null);
+  const [viewingTraineeCompanyId, setViewingTraineeCompanyId] = useState<string | null>(null);
 
   useEffect(() => {
     setActiveTab(getTabFromPathname(location.pathname));
@@ -75,19 +87,6 @@ export function AdminDashboard() {
     setAssigningSupervisor(null);
     setViewingTraineeCompanyId(null);
   }, [location.pathname]);
-
-  const [view, setView] = useState<'list' | 'create' | 'edit' | 'assign' | 'documents'>('list');
-  const [viewOnly, setViewOnly] = useState(false);
-  const [editingUserId, setEditingUserId] = useState<string | null>(null);
-  const [editingCompanyId, setEditingCompanyId] = useState<string | null>(null);
-  const [editingDepartmentId, setEditingDepartmentId] = useState<string | null>(null);
-  const [editingTraineeId, setEditingTraineeId] = useState<string | null>(null);
-  const [editingWorkScheduleId, setEditingWorkScheduleId] = useState<string | null>(null);
-  const [editingOJTScheduleId, setEditingOJTScheduleId] = useState<string | null>(null);
-  const [assigningSupervisor, setAssigningSupervisor] = useState<Supervisor | null>(null);
-  const [editingSupervisorId, setEditingSupervisorId] = useState<string | null>(null);
-  const [editingCoordinatorId, setEditingCoordinatorId] = useState<string | null>(null);
-  const [viewingTraineeCompanyId, setViewingTraineeCompanyId] = useState<string | null>(null);
 
   const handleEditUser = (user: User) => {
     setEditingUserId(user.id);

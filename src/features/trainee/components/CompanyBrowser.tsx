@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getFirestoreInstancePublic } from '@/config/firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, limit } from 'firebase/firestore';
+import { useAuth } from '@/features/auth';
 import { PlacementRequestForm } from '@/features/coordinator/components/PlacementRequestForm';
 
 interface Company {
@@ -14,31 +15,43 @@ interface Company {
 }
 
 export function CompanyBrowser() {
+  const { user } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [showRequestForm, setShowRequestForm] = useState(false);
 
-  useEffect(() => {
-    fetchCompanies();
-  }, []);
-
   const fetchCompanies = async () => {
     setLoading(true);
     try {
       const db = getFirestoreInstancePublic();
+
+      // Get current user's trainee doc to find their externalCompanyId
+      let currentExternalCompanyId: string | null = null;
+      if (user) {
+        const traineeSnap = await getDocs(
+          query(collection(db, 'trainees'), where('userId', '==', user.uid), limit(1))
+        );
+        if (!traineeSnap.empty) {
+          const traineeData = traineeSnap.docs[0].data();
+          currentExternalCompanyId = (traineeData.externalCompanyId as string) ?? null;
+        }
+      }
+
       const q = query(
         collection(db, 'companies'),
         where('type', '==', 'external'),
         where('verified', '==', true)
       );
       const snap = await getDocs(q);
-      const data = snap.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Company[];
-      setCompanies(data);
+      const data = snap.docs
+        .map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Company[];
+      // Exclude the company the trainee is currently placed at
+      setCompanies(data.filter((c) => c.id !== currentExternalCompanyId));
     } catch (err) {
       setError('Failed to load companies');
       console.error(err);
@@ -46,6 +59,11 @@ export function CompanyBrowser() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchCompanies();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid]);
 
   const handleRequestPlacement = (company: Company) => {
     setSelectedCompany(company);

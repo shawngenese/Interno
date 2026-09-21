@@ -1,7 +1,6 @@
 import { CallableRequest, HttpsError } from 'firebase-functions/v2/https';
 import { getAdminDb, COLLECTIONS } from '../config';
 import { logAction } from '../audit/auditLog';
-import { Timestamp } from 'firebase-admin/firestore';
 
 export interface ApproveDTRRequest {
   dtrId: string;

@@ -33,8 +33,8 @@ const STATUS_LABELS: Record<EvaluationStatus, { label: string; color: string }> 
 };
 
 export function EvaluationList({ companyId: companyIdProp, role, userId: userIdProp, traineeId: traineeIdProp }: EvaluationListProps) {
-  const { user } = useAuth();
-  const companyId = companyIdProp || user?.companyId || '';
+  const { user, companyId: userCompanyId } = useAuth();
+  const companyId = companyIdProp || userCompanyId || '';
   const userId = userIdProp || user?.uid || '';
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,7 +90,7 @@ export function EvaluationList({ companyId: companyIdProp, role, userId: userIdP
         if (!resolvedCompanyId) return;
 
         const traineeSnap = await getDocs(
-          query(collection(db, 'trainees'), where('status', '==', 'active'), where('companyId', '==', resolvedCompanyId))
+          query(collection(db, 'trainees'), where('status', '==', 'active'), where('companyId', '==', resolvedCompanyId), where('supervisorId', '==', user.uid))
         );
         if (!isMounted) return;
 
@@ -187,10 +187,11 @@ export function EvaluationList({ companyId: companyIdProp, role, userId: userIdP
 
         {showForm && role === 'supervisor' && (
           <div className="mb-6 p-4 bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 rounded-lg">
-            <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-2">
+            <label htmlFor="select-trainee" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-2">
               Select Trainee
             </label>
             <select
+              id="select-trainee"
               value={selectedTraineeId}
               onChange={(e) => {
                 const id = e.target.value;

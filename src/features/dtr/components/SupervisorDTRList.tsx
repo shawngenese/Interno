@@ -23,8 +23,8 @@ function statusBadge(status: DTREntry['status']): React.ReactNode {
 
 export function SupervisorDTRList() {
   const { addToast } = useToast();
-  const { user, role } = useAuth();
-  const { supervisor, loading: supLoading } = useSupervisor();
+  const { role } = useAuth();
+  const { supervisor } = useSupervisor();
   const [dtrs, setDtrs] = useState<DTREntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ListDTRParams>({ page: 1, limit: 20, status: 'pending' });

@@ -83,7 +83,7 @@ export async function getDocument(id: string): Promise<Document | null> {
 /** List documents with filters and pagination. */
 export async function listDocuments(params: ListDocumentsParams = {}): Promise<PaginatedDocumentsResponse> {
   const { getFirestoreInstancePublic } = await import('@/config/firebase');
-  const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
+  const { collection, query, where, limit, getDocs } = await import('firebase/firestore');
   const db = getFirestoreInstancePublic();
 
   const page = params.page ?? 1;
@@ -94,10 +94,32 @@ export async function listDocuments(params: ListDocumentsParams = {}): Promise<P
   if (params.status) constraints.push(where('status', '==', params.status));
   if (params.companyId) constraints.push(where('companyId', '==', params.companyId));
 
-  constraints.push(orderBy('createdAt', 'desc'), limit(LIST_FETCH_CAP));
+  constraints.push(limit(LIST_FETCH_CAP));
 
-  const snap = await getDocs(query(collection(db, 'documents'), ...constraints));
-  const all = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Document));
+  let all: Document[];
+  try {
+    const snap = await getDocs(query(collection(db, 'documents'), ...constraints));
+    all = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Document));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes('index')) {
+      const fallbackConstraints = constraints.filter(c => {
+        const s = String(c);
+        return !s.includes('orderBy');
+      });
+      fallbackConstraints.push(limit(LIST_FETCH_CAP));
+      const snap = await getDocs(query(collection(db, 'documents'), ...fallbackConstraints));
+      all = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() } as Document))
+        .sort((a, b) => {
+          const aTime = (a as unknown as Record<string, unknown>).createdAt as { toMillis?: () => number } | undefined;
+          const bTime = (b as unknown as Record<string, unknown>).createdAt as { toMillis?: () => number } | undefined;
+          return (bTime?.toMillis?.() ?? 0) - (aTime?.toMillis?.() ?? 0);
+        });
+    } else {
+      throw err;
+    }
+  }
 
   const start = (page - 1) * pageLimit;
   return {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, query, orderBy, limit, getDocs, getDoc, doc, type DocumentSnapshot, type QueryConstraint } from 'firebase/firestore';
 import { downloadBlob } from '@/features/reports/services/reportService';
@@ -131,7 +131,9 @@ function formatValue(value: unknown, nameCache?: Record<string, string>): string
             hour: '2-digit', minute: '2-digit', hour12: true 
           });
         }
-      } catch {}
+      } catch {
+        // Invalid date string, fall through to raw value
+      }
     }
     if (value.includes('@')) return value;
     if (value.startsWith('http')) return '[link]';
@@ -161,7 +163,7 @@ function renderChangeDescription(original: Record<string, unknown>, updated: Rec
     
     changes.push(
       <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-1 py-1.5 border-b border-[#E5E5E5] dark:border-[#2A2A2A] last:border-0">
-        <span className="font-medium text-[#121212] dark:text-white min-w-[120px]">{formatFieldKey(key)}</span>
+        <span className="font-medium text-[#121212] dark:text-white min-w-30">{formatFieldKey(key)}</span>
         {oldVal !== undefined && newVal !== undefined ? (
           <>
             <span className="text-red-500 dark:text-red-400 line-through">{formatValue(oldVal, nameCache)}</span>
@@ -185,7 +187,7 @@ function renderMetadata(metadata: Record<string, unknown>, nameCache?: Record<st
   
   return Object.entries(metadata).map(([key, value]) => (
     <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-1 py-1.5 border-b border-[#E5E5E5] dark:border-[#2A2A2A] last:border-0">
-      <span className="font-medium text-[#121212] dark:text-white min-w-[120px]">{formatFieldKey(key)}</span>
+      <span className="font-medium text-[#121212] dark:text-white min-w-30">{formatFieldKey(key)}</span>
       <span className="text-[#555555] dark:text-[#9E9E9E]">{formatValue(value, nameCache as Record<string, string>)}</span>
     </div>
   ));
@@ -386,14 +388,13 @@ export function AuditLogViewer() {
 
   useEffect(() => {
     fetchLogs(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
   useEffect(() => {
     if (!expandedLog) return;
     const log = logs.find((l) => l.id === expandedLog);
     if (!log) return;
-
-    const TWO_STEP_FIELDS = new Set(['supervisorId', 'coordinatorId', 'traineeId']);
 
     const allValues = { ...log.originalValue, ...log.newValue, ...log.metadata };
     const idsToResolve: string[] = [];
@@ -453,6 +454,7 @@ export function AuditLogViewer() {
     });
 
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expandedLog, logs]);
 
   const handleExport = async (format: 'pdf' | 'excel') => {

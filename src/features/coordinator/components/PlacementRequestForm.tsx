@@ -24,10 +24,6 @@ export function PlacementRequestForm({ onSuccess }: PlacementRequestFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  useEffect(() => {
-    fetchCompanies();
-  }, []);
-
   const fetchCompanies = async () => {
     setLoading(true);
     try {
@@ -47,6 +43,10 @@ export function PlacementRequestForm({ onSuccess }: PlacementRequestFormProps) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchCompanies();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,7 +124,7 @@ export function PlacementRequestForm({ onSuccess }: PlacementRequestFormProps) {
         )}
 
         <div>
-          <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+          <label htmlFor="external-company" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Select External Company <span className="text-red-500">*</span>
           </label>
           {loading ? (
@@ -133,6 +133,7 @@ export function PlacementRequestForm({ onSuccess }: PlacementRequestFormProps) {
             </div>
           ) : (
             <select
+              id="external-company"
               value={selectedCompanyId}
               onChange={(e) => setSelectedCompanyId(e.target.value)}
               required
@@ -149,10 +150,11 @@ export function PlacementRequestForm({ onSuccess }: PlacementRequestFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+          <label htmlFor="request-notes" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
             Request Notes (optional)
           </label>
           <textarea
+            id="request-notes"
             value={requestNotes}
             onChange={(e) => setRequestNotes(e.target.value)}
             rows={4}

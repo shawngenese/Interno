@@ -66,8 +66,11 @@ export function useOfflineWrite<T>(
   const [pending, setPending] = useState(false);
   const onlineWriteRef = useRef(onlineWrite);
   const offlineFallbackRef = useRef(offlineFallback);
-  onlineWriteRef.current = onlineWrite;
-  offlineFallbackRef.current = offlineFallback;
+
+  useEffect(() => {
+    onlineWriteRef.current = onlineWrite;
+    offlineFallbackRef.current = offlineFallback;
+  });
 
   const execute = useCallback(async () => {
     setPending(true);

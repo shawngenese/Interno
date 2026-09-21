@@ -40,45 +40,20 @@ export async function getSupervisorByUserId(userId: string): Promise<Supervisor 
   return null;
 }
 
-/** Get trainees assigned to a supervisor. Queries both internal (supervisorId) and external (externalCompanyId) paths. */
-export async function getAssignedTrainees(supervisorId: string, companyId?: string): Promise<Trainee[]> {
+/** Get trainees assigned to a supervisor. Queries trainees where supervisorId matches. */
+export async function getAssignedTrainees(supervisorId: string, _companyId?: string): Promise<Trainee[]> {
   const db = getFirestoreInstancePublic();
-  const results: Trainee[] = [];
 
-  // Internal path: trainees where supervisorId matches
-  const internalQ = query(
+  // Query trainees where supervisorId matches this supervisor
+  const q = query(
     collection(db, COLLECTIONS.TRAINEES),
     where('supervisorId', '==', supervisorId),
   );
-  const internalSnap = await getDocs(internalQ);
-  results.push(...internalSnap.docs.map(d => {
+  const snap = await getDocs(q);
+  return snap.docs.map(d => {
     const data = d.data() as Record<string, unknown>;
     return toEntity<Trainee>(d.id, { ...data, name: data.name as string });
-  }));
-
-  // External path: trainees at the supervisor's company with external placement
-  if (companyId) {
-    try {
-      const externalQ = query(
-        collection(db, COLLECTIONS.TRAINEES),
-        where('externalCompanyId', '==', companyId),
-        where('placementType', '==', 'external'),
-      );
-      const externalSnap = await getDocs(externalQ);
-      // Deduplicate (in case a trainee somehow matches both)
-      const existingIds = new Set(results.map(t => t.id));
-      for (const d of externalSnap.docs) {
-        if (!existingIds.has(d.id)) {
-          const data = d.data() as Record<string, unknown>;
-          results.push(toEntity<Trainee>(d.id, { ...data, name: data.name as string }));
-        }
-      }
-    } catch (e) {
-      console.warn('External trainees query note:', e);
-    }
-  }
-
-  return results;
+  });
 }
 
 function chunkArray<T>(arr: T[], size: number): T[][] {

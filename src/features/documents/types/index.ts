@@ -92,6 +92,7 @@ export interface UploadParams {
   taskId?: string;
   userId?: string;
   companyId?: string;
+  documentType?: string;
 }
 
 export interface ListDocumentsParams {

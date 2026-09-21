@@ -9,10 +9,6 @@ export function ExternalPlacementRequest() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchRequests();
-  }, [user]);
-
   const fetchRequests = async () => {
     if (!user) return;
     setLoading(true);
@@ -26,6 +22,11 @@ export function ExternalPlacementRequest() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchRequests();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const getStatusColor = (status: string) => {
     switch (status) {

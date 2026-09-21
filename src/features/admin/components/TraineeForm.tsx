@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { adminService } from '../services/adminService';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
-import type { TraineeFormData, Company, Department, Supervisor, Trainee, User } from '../types';
+import type { TraineeFormData, Company, Department, Supervisor, Trainee, User, WorkSchedule } from '../types';
 
 interface TraineeFormProps {
   editingId?: string;
@@ -41,6 +41,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
   const [companies, setCompanies] = useState<Company[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [supervisors, setSupervisors] = useState<(Supervisor & { userName?: string; userEmail?: string })[]>([]);
+  const [workSchedules, setWorkSchedules] = useState<WorkSchedule[]>([]);
   const [existingUsers, setExistingUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -135,6 +136,22 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
   }, [formData.companyId]);
 
   useEffect(() => {
+    if (formData.companyId) {
+      const loadWorkSchedules = async () => {
+        try {
+          const result = await adminService.listWorkSchedules({ companyId: formData.companyId, limit: 100 });
+          setWorkSchedules(result.data);
+        } catch (err) {
+          console.error('Failed to load work schedules:', err);
+        }
+      };
+      loadWorkSchedules();
+    } else {
+      setWorkSchedules([]);
+    }
+  }, [formData.companyId]);
+
+  useEffect(() => {
     if (useExistingUser && formData.companyId) {
       const loadUsers = async () => {
         try {
@@ -223,8 +240,8 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
           userId = user.id;
         }
 
-        if (!formData.companyId || !formData.departmentId) {
-          throw new Error('Company and department are required');
+        if (!formData.companyId || !formData.departmentId || !formData.scheduleId) {
+          throw new Error('Company, department, and work schedule are required');
         }
 
         await adminService.createTrainee({
@@ -273,7 +290,6 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
           <div className="flex items-center gap-3 mb-4">
             <label className="flex items-center gap-2 text-sm text-[#3A3A3A] dark:text-[#BDBDBD]">
               <input
-                autoFocus
                 type="checkbox"
                 checked={useExistingUser}
                 onChange={(e) => setUseExistingUser(e.target.checked)}
@@ -447,6 +463,28 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
                 <option key={sup.id} value={sup.id}>{sup.userName || sup.userEmail || sup.userId}</option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label htmlFor="scheduleId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+              Work Schedule <span className="text-red-500">*</span>
+            </label>
+            <select
+              id="scheduleId"
+              value={formData.scheduleId}
+              onChange={(e) => handleChange('scheduleId', e.target.value)}
+              required
+              disabled={viewOnly || !formData.companyId}
+              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="">Select Work Schedule</option>
+              {workSchedules.map(ws => (
+                <option key={ws.id} value={ws.id}>{ws.name} ({ws.timeIn} - {ws.timeOut})</option>
+              ))}
+            </select>
+            {!formData.companyId && (
+              <p className="text-xs text-[#9E9E9E] mt-1">Select a company first</p>
+            )}
           </div>
 
           <div>

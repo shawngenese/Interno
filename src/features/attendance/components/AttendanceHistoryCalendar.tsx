@@ -81,7 +81,7 @@ export function AttendanceHistoryCalendar() {
     } finally {
       setLoading(false);
     }
-  }, [user?.uid, currentMonth]);
+  }, [user, currentMonth]);
 
   useEffect(() => {
     fetchAttendanceForMonth();

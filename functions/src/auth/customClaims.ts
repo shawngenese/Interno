@@ -108,7 +108,7 @@ export async function setUserRoleHandler(
       throw error;
     }
     const msg = error instanceof Error ? error.message : String(error);
-    console.error('Error in setUserRoleHandler:', msg, (error as any)?.stack);
+    console.error('Error in setUserRoleHandler:', msg, error instanceof Error ? error.stack : undefined);
     throw new HttpsError('internal', `Failed to set user role: ${msg}`);
   }
 }

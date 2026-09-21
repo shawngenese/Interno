@@ -1,6 +1,6 @@
 import type { Timestamp } from '@/shared/types';
 
-export type TaskStatus = 'pending' | 'in_progress' | 'submitted' | 'approved' | 'returned';
+export type TaskStatus = 'pending' | 'in_progress' | 'submitted' | 'approved' | 'returned' | 'archived';
 
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 
@@ -93,6 +93,7 @@ export interface TaskFilters {
   status?: TaskStatus[];
   priority?: TaskPriority[];
   traineeId?: string;
+  traineeIds?: string[];
   createdBy?: string;
   search?: string;
   dueDateFrom?: number;
@@ -113,6 +114,7 @@ export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   submitted: 'Submitted',
   approved: 'Approved',
   returned: 'Returned',
+  archived: 'Archived',
 };
 
 export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
@@ -128,6 +130,7 @@ export const TASK_STATUS_COLORS: Record<TaskStatus, { bg: string; text: string }
   submitted: { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-300' },
   approved: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300' },
   returned: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300' },
+  archived: { bg: 'bg-gray-100 dark:bg-gray-800/30', text: 'text-gray-500 dark:text-gray-400' },
 };
 
 export const TASK_PRIORITY_COLORS: Record<TaskPriority, { bg: string; text: string }> = {

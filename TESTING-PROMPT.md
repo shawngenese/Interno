@@ -6,6 +6,110 @@ Test each role: Admin, Coordinator, Supervisor, Trainee.
 
 ---
 
+## BROWSER MULTI-TAB END-TO-END TESTING SETUP
+
+> **IMPORTANT: Open the app in multiple browser tabs simultaneously to monitor real-time behavior across roles.**
+
+### Setup Steps
+1. Open your browser (Chrome recommended) with the app URL in multiple tabs
+2. Log in as each role in a separate tab
+3. Perform actions in one tab and verify real-time updates in other tabs
+4. Monitor browser DevTools (F12) Console and Network tabs for errors
+
+### Tab Configuration (Minimum 4 Tabs)
+
+| Tab | Role | URL | Purpose |
+|-----|------|-----|---------|
+| Tab 1 | Admin | `http://localhost:5173/admin` | Monitor admin operations, user management |
+| Tab 2 | Coordinator | `http://localhost:5173/coordinator` | Monitor placement, company verification |
+| Tab 3 | Supervisor | `http://localhost:5173/supervisor` | Monitor QR display, task management, DTR |
+| Tab 4 | Trainee | `http://localhost:5173/trainee` | Monitor attendance scan, task updates, documents |
+
+### Optional Additional Tabs
+
+| Tab | Role | URL | Purpose |
+|-----|------|-----|---------|
+| Tab 5 | Trainee 2 | `http://localhost:5173/trainee` | Cross-trainee data isolation check |
+| Tab 6 | Supervisor 2 | `http://localhost:5173/supervisor` | Cross-supervisor data isolation check |
+
+### Real-Time Monitoring Workflow
+
+#### Step 1: Login Sequence (All Tabs)
+1. Open Tab 1 -> Login as Admin -> Keep tab open
+2. Open Tab 2 -> Login as Coordinator -> Keep tab open
+3. Open Tab 3 -> Login as Supervisor -> Keep tab open
+4. Open Tab 4 -> Login as Trainee -> Keep tab open
+5. **Verify**: Each tab stays on its own dashboard, no role leaking
+
+#### Step 2: Cross-Role Access Test
+1. In Tab 4 (Trainee), manually type `/admin` in URL bar
+2. **Expected**: Redirected to `/trainee` or `/unauthorized`
+3. Repeat for all cross-role URL attempts in each tab
+
+#### Step 3: Real-Time Data Flow Test
+1. **Tab 3 (Supervisor)**: Generate QR code on `/supervisor/qr`
+2. **Tab 4 (Trainee)**: Navigate to `/trainee/attendance` and scan the QR
+3. **Tab 3 (Supervisor)**: Verify attendance appears in `/supervisor/attendance`
+4. **Tab 2 (Coordinator)**: Verify attendance appears in `/coordinator/attendance`
+
+#### Step 4: Task Lifecycle Test
+1. **Tab 3 (Supervisor)**: Create a new task at `/supervisor/tasks`
+2. **Tab 4 (Trainee)**: Verify task appears at `/trainee/tasks`
+3. **Tab 4 (Trainee)**: Update task status to "In Progress"
+4. **Tab 3 (Supervisor)**: Verify status change reflected in task list
+5. **Tab 4 (Trainee)**: Complete the task
+6. **Tab 3 (Supervisor)**: Verify task shows as completed
+
+#### Step 5: DTR Flow Test
+1. **Tab 4 (Trainee)**: Check attendance at `/trainee/attendance`
+2. **Tab 4 (Trainee)**: View DTR at `/trainee/dtr`
+3. **Tab 3 (Supervisor)**: Navigate to `/supervisor/dtr`
+4. **Tab 3 (Supervisor)**: Approve the DTR
+5. **Tab 4 (Trainee)**: Verify DTR status updated to "Approved"
+
+#### Step 6: Document Upload Test
+1. **Tab 4 (Trainee)**: Upload a document at `/trainee/documents`
+2. **Tab 2 (Coordinator)**: Navigate to `/coordinator/documents`
+3. **Tab 2 (Coordinator)**: Review and approve the document
+4. **Tab 4 (Trainee)**: Verify document status updated
+
+#### Step 7: Announcement Test
+1. **Tab 1 (Admin)**: Create announcement at `/admin/announcements`
+2. **Tab 2 (Coordinator)**: Verify announcement appears
+3. **Tab 3 (Supervisor)**: Verify announcement appears
+4. **Tab 4 (Trainee)**: Verify announcement appears (only if targeting trainees)
+
+#### Step 8: Leave Request Test
+1. **Tab 4 (Trainee)**: Submit leave request at `/trainee/leave`
+2. **Tab 3 (Supervisor)**: Navigate to `/supervisor/leave`
+3. **Tab 3 (Supervisor)**: Approve leave request
+4. **Tab 4 (Trainee)**: Verify leave status updated
+
+### DevTools Monitoring (Every Tab)
+- Keep Console tab open to catch JavaScript errors
+- Keep Network tab open to catch failed requests (4xx, 5xx)
+- Watch for CORS errors, Firebase permission denied errors
+- Monitor for unhandled promise rejections
+- Check for memory leaks (Performance tab)
+
+### Browser Testing Checklist
+
+- [ ] All 4 tabs open and logged in simultaneously
+- [ ] No cross-role data leakage between tabs
+- [ ] Real-time Firestore updates appear without page refresh
+- [ ] No console errors in any tab
+- [ ] No failed network requests in any tab
+- [ ] Navigation works correctly in all tabs
+- [ ] Loading states display properly in all tabs
+- [ ] Error toasts appear correctly in the originating tab only
+- [ ] Dark mode toggle works in all tabs independently
+- [ ] Mobile bottom nav works in all tabs (resize to mobile)
+- [ ] No race conditions when performing simultaneous actions
+- [ ] QR code generation and scanning work across tabs
+- [ ] Form submissions don't cause duplicate entries
+
+---
+
 ## 1. Authentication and Access Control
 
 ### Login/Logout
@@ -136,6 +240,11 @@ Test each role: Admin, Coordinator, Supervisor, Trainee.
 - [ ] Edit trainee works
 - [ ] Trainee names resolve from users collection (not trainees.name)
 
+### Trainee Assignment (/coordinator/assign)
+- [ ] Assignment page loads correctly
+- [ ] Can assign trainees to supervisors
+- [ ] Assignment persists after page refresh
+
 ### Placement Requests (/coordinator/placements)
 - [ ] Placement request list loads (company-scoped)
 - [ ] Approve placement works
@@ -156,6 +265,14 @@ Test each role: Admin, Coordinator, Supervisor, Trainee.
 - [ ] Document list loads
 - [ ] Document types match company requirements
 - [ ] Review/approve documents works
+
+### Supervisor Invitations (/coordinator/invite-supervisors)
+- [ ] Invitation form works
+- [ ] Invitation list shows pending/accepted
+
+### Company Verification (/coordinator/companies)
+- [ ] Company list loads
+- [ ] Verification actions work
 
 ### Announcements (/coordinator/announcements)
 - [ ] Announcement list loads (company-scoped only)
@@ -188,6 +305,11 @@ Test each role: Admin, Coordinator, Supervisor, Trainee.
 - [ ] QR countdown timer works
 - [ ] Refresh button hidden when QR inactive
 - [ ] Auth guard prevents unauthorized access
+
+### QR Page (/supervisor/qr)
+- [ ] QR code displays correctly
+- [ ] QR code refreshes on schedule
+- [ ] QR code contains valid token
 
 ### Task Management (/supervisor/tasks)
 - [ ] Task list loads for assigned trainees
@@ -258,6 +380,16 @@ Test each role: Admin, Coordinator, Supervisor, Trainee.
 - [ ] Leave history shows own requests
 - [ ] Status tracking works
 
+### Company Browser (/trainee/companies)
+- [ ] Company list loads
+- [ ] Company details view works
+- [ ] External placement request works
+
+### External Placement (/trainee/placement)
+- [ ] Placement request form works
+- [ ] Request submission works
+- [ ] Status tracking works
+
 ### Announcements (/trainee/announcements)
 - [ ] Announcement list loads (company-scoped, published only)
 - [ ] View-only mode
@@ -285,6 +417,7 @@ Test each role: Admin, Coordinator, Supervisor, Trainee.
 - [ ] Tables scroll horizontally on mobile
 - [ ] Touch targets are at least 44x44px
 - [ ] No horizontal overflow on any page
+- [ ] Bottom navigation bar works on all mobile pages
 
 ### Loading States
 - [ ] Skeleton loaders show while data fetches
@@ -304,6 +437,7 @@ Test each role: Admin, Coordinator, Supervisor, Trainee.
 - [ ] Focus management works (tab order logical)
 - [ ] Color is not the only way to convey information
 - [ ] Alt text on images (if any)
+- [ ] Skip to content link works
 
 ---
 
@@ -318,6 +452,9 @@ Test each role: Admin, Coordinator, Supervisor, Trainee.
 - [ ] Role escalation is blocked (trainee cannot write to admin collections)
 - [ ] Company scoping enforced for coordinator/supervisor
 - [ ] Audit logs are immutable (no update/delete allowed)
+- [ ] Attendance records are immutable (no update/delete allowed)
+- [ ] DTR records only updatable by Cloud Functions
+- [ ] QR sessions only writable by Cloud Functions
 
 ### Storage Rules
 - [ ] File type validation enforced (documents, tasks, profiles buckets)
@@ -325,8 +462,9 @@ Test each role: Admin, Coordinator, Supervisor, Trainee.
 - [ ] Magic-byte check works in Cloud Function validateUpload
 - [ ] Users can only upload to their own paths
 - [ ] No secret files accessible publicly
+- [ ] Profile images restricted to images only, 5MB max
 
-### Cloud Functions
+### Cloud Functions Security
 - [ ] QR token generation requires authentication
 - [ ] QR token validation checks expiration
 - [ ] QR token is single-use (invalidated after scan)
@@ -335,12 +473,21 @@ Test each role: Admin, Coordinator, Supervisor, Trainee.
 - [ ] FCM send requires proper authorization
 - [ ] Email send requires proper authorization
 - [ ] No secrets exposed in client code
+- [ ] validateUpload checks MIME type against allowed list
+- [ ] validateUpload checks file size against limit
+- [ ] validateUpload verifies magic bytes match declared type
 
 ### Data Integrity
 - [ ] Audit logs created for: attendance scans, DTR changes, task status, document uploads, role changes
 - [ ] Audit log fields complete: timestamp, userId, action, entityType, entityId, originalValue, newValue, metadata
 - [ ] Attendance never overwritten - correction requests used
 - [ ] Soft delete only (archive flag) - permanent delete requires admin
+
+### Client-Side Security
+- [ ] No API keys exposed in console output
+- [ ] No sensitive data in localStorage
+- [ ] Firebase config does not contain secrets
+- [ ] Environment variables not accessible via client bundle
 
 ---
 
@@ -352,6 +499,7 @@ Test each role: Admin, Coordinator, Supervisor, Trainee.
 - [ ] QR scanner works offline (validates token locally)
 - [ ] Data syncs on reconnect
 - [ ] No data loss during airplane mode transitions
+- [ ] NetworkStatus component shows correct online/offline state
 
 ---
 
@@ -359,10 +507,11 @@ Test each role: Admin, Coordinator, Supervisor, Trainee.
 
 - [ ] Pages load within 3 seconds
 - [ ] No unnecessary re-renders
-- [ ] TanStack Query caching works (5-min cache for supervisor data)
 - [ ] Large lists use pagination or virtualization
 - [ ] Images are optimized
 - [ ] No memory leaks (cleanup in useEffect)
+- [ ] Firebase queries use proper indexes (no full collection scans)
+- [ ] Lazy loading works for route components
 
 ---
 
@@ -451,9 +600,44 @@ Test each role: Admin, Coordinator, Supervisor, Trainee.
 
 ---
 
+## 13. Potential Bug Areas to Investigate
+
+### Race Conditions
+- [ ] QR scan double-submission (two scans before first completes)
+- [ ] Task status update race (supervisor and trainee update simultaneously)
+- [ ] DTR approval race (two supervisors approve same DTR)
+- [ ] Document upload race (multiple uploads to same path)
+
+### Edge Cases
+- [ ] Empty Firestore collections (no data yet)
+- [ ] Very long text in form fields
+- [ ] Special characters in input fields
+- [ ] Concurrent form submissions
+- [ ] Browser back/forward navigation
+- [ ] Page refresh during form submission
+- [ ] Multiple rapid clicks on buttons
+- [ ] Network timeout during operations
+- [ ] Firebase quota exceeded scenarios
+
+### Data Consistency
+- [ ] User deleted but referenced in trainees collection
+- [ ] Company deleted but trainees still assigned
+- [ ] Supervisor deleted but trainees still assigned
+- [ ] Trainee moved between companies (data scoping)
+- [ ] Coordinator role change (access implications)
+
+### Memory and State
+- [ ] React state not cleaned up on unmount
+- [ ] Firestore listeners not detached on unmount
+- [ ] Event listeners not removed on unmount
+- [ ] Timer intervals not cleared on unmount
+- [ ] Large datasets causing slow rendering
+
+---
+
 ## Testing Commands
 
-\\\ash
+```bash
 # Run TypeScript check
 npx tsc --noEmit
 
@@ -471,7 +655,7 @@ firebase deploy --project staging
 
 # Test Firestore rules
 firebase firestore:test
-\\\
+```
 
 ---
 
@@ -483,6 +667,28 @@ firebase firestore:test
 | Coordinator | coordinator1@test.com | coordinator123 |
 | Supervisor | supervisor1@test.com | supervisor123 |
 | Trainee | (create via admin) | (set during creation) |
+
+---
+
+## Bug Reporting Format
+
+When you find a bug, report it in this format:
+
+```
+### Bug: [Short Title]
+- **Severity**: Critical / High / Medium / Low
+- **Role affected**: Admin / Coordinator / Supervisor / Trainee / All
+- **Steps to Reproduce**:
+  1. Step 1
+  2. Step 2
+  3. Step 3
+- **Expected Result**: What should happen
+- **Actual Result**: What actually happens
+- **Browser/Device**: Chrome Desktop / Safari Mobile / etc.
+- **Console Errors**: [Paste any console errors]
+- **Network Errors**: [Paste any failed requests]
+- **Screenshots**: [If applicable]
+```
 
 ---
 

@@ -9,24 +9,20 @@ service firebase.storage {
       return request.auth != null;
     }
     
-    function getUserData() {
-      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
-    }
-    
     function getUserRole() {
-      return getUserData().role;
+      return request.auth.token.role;
     }
     
     function getUserCompanyId() {
-      return getUserData().companyId;
+      return request.auth.token.companyId;
     }
     
     function getUserDepartmentId() {
-      return getUserData().departmentId;
+      return request.auth.token.departmentId;
     }
     
     function getUserTraineeId() {
-      return getUserData().traineeId;
+      return request.auth.token.traineeId;
     }
     
     function isAdmin() {
@@ -90,14 +86,16 @@ service firebase.storage {
       
       allow delete: if isSignedIn() && (
         isAdmin() ||
-        (isTrainee() && getUserCompanyId() == companyId && request.resource.metadata.owner == request.auth.uid)
+        (isTrainee() && getUserCompanyId() == companyId && request.resource.metadata.owner == request.auth.uid) ||
+        (isCoordinator() && getUserCompanyId() == companyId) ||
+        (isSupervisor() && getUserCompanyId() == companyId)
       );
     }
     
     // ============================================
     // Task Attachments Storage
     // ============================================
-    match /tasks/{companyId}/{taskId}/{fileName} {
+    match /tasks/{companyId}/{taskId}/{allPaths=**} {
       allow read: if isSignedIn() && (
         isAdmin() ||
         (isTrainee() && getUserCompanyId() == companyId) ||

@@ -20,7 +20,7 @@ interface TraineeOption {
 }
 
 export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSaved, onCancel }: TaskFormProps) {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [trainees, setTrainees] = useState<TraineeOption[]>([]);
@@ -34,37 +34,53 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
   const [requireAttachment, setRequireAttachment] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     async function loadTrainees() {
       if (!user?.uid) return;
       try {
         const db = getFirestoreInstancePublic();
+        const traineeConstraints = [where('status', '==', 'active')];
+        if (role === 'supervisor') {
+          traineeConstraints.push(where('supervisorId', '==', user.uid));
+        }
         const snap = await getDocs(
-          query(collection(db, 'trainees'), where('status', '==', 'active'))
+          query(collection(db, 'trainees'), ...traineeConstraints)
         );
-        const options = snap.docs.map((d) => {
-          const data = d.data();
-          return { id: d.id, name: data.name || data.userId || d.id };
-        });
-        setTrainees(options);
+        if (cancelled) return;
 
-        const userSnap = await getDocs(
-          query(collection(db, 'users'), where('role', '==', 'trainee'), where('status', '==', 'active'))
-        );
-        const userOptions = userSnap.docs.map((d) => {
-          const data = d.data();
-          return { id: d.id, name: data.displayName || data.email || d.id };
-        });
+        const traineeData = snap.docs.map((d) => ({ id: d.id, userId: d.data().userId as string }));
 
-        const merged = new Map<string, TraineeOption>();
-        options.forEach((o) => merged.set(o.id, o));
-        userOptions.forEach((o) => merged.set(o.id, o));
-        setTrainees(Array.from(merged.values()));
+        const fallback = traineeData.map((t) => ({ id: t.id, name: t.userId || t.id }));
+        setTrainees(fallback);
+
+        const userIds = [...new Set(traineeData.map((t) => t.userId).filter(Boolean))];
+        if (userIds.length === 0) return;
+
+        const userMap = new Map<string, string>();
+        const FIRESTORE_IN_LIMIT = 30;
+        for (let i = 0; i < userIds.length; i += FIRESTORE_IN_LIMIT) {
+          const chunk = userIds.slice(i, i + FIRESTORE_IN_LIMIT);
+          const userSnap = await getDocs(
+            query(collection(db, 'users'), where('__name__', 'in', chunk))
+          );
+          userSnap.docs.forEach((doc) => {
+            userMap.set(doc.id, doc.data().displayName || doc.data().email || doc.id);
+          });
+        }
+        if (cancelled) return;
+
+        const resolved = traineeData.map((t) => ({
+          id: t.id,
+          name: userMap.get(t.userId) || t.userId || t.id,
+        }));
+        setTrainees(resolved);
       } catch (err) {
         console.error('Failed to load trainees:', err);
       }
     }
     loadTrainees();
-  }, [user?.uid]);
+    return () => { cancelled = true; };
+  }, [user?.uid, role]);
 
   useEffect(() => {
     if (taskId) {

@@ -72,6 +72,7 @@ export function SupervisorDashboard() {
 
     loadDashboard();
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.uid, supLoading, supervisor]);
 
   const { activeTrainees, todayPresent, todayWithTimeout } = useMemo(() => {

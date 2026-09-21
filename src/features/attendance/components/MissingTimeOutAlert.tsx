@@ -61,7 +61,7 @@ export function MissingTimeOutAlert() {
     } catch (err) {
       console.error('Failed to check missing time-out:', err);
     }
-  }, [user?.uid]);
+  }, [user]);
 
   useEffect(() => {
     if (timedOut) return;
@@ -75,7 +75,7 @@ export function MissingTimeOutAlert() {
   return (
     <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
       <div className="flex items-start gap-3">
-        <div className="flex-shrink-0">
+        <div className="shrink-0">
           <svg className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
           </svg>
@@ -90,7 +90,7 @@ export function MissingTimeOutAlert() {
         </div>
         <button
           onClick={() => setShowAlert(false)}
-          className="flex-shrink-0 text-yellow-500 dark:text-yellow-400 hover:text-yellow-600 dark:hover:text-yellow-300"
+          className="shrink-0 text-yellow-500 dark:text-yellow-400 hover:text-yellow-600 dark:hover:text-yellow-300"
           aria-label="Dismiss alert"
         >
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>

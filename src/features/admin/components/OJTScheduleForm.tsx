@@ -153,7 +153,6 @@ export function OJTScheduleForm({ editingId, viewOnly, onCancel, onSaved }: OJTS
             Company <span className="text-red-500">*</span>
           </label>
           <select
-            autoFocus
             id="companyId"
             value={formData.companyId}
             onChange={(e) => handleChange('companyId', e.target.value)}

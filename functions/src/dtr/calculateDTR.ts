@@ -1,6 +1,5 @@
 import { CallableRequest, HttpsError } from 'firebase-functions/v2/https';
 import { getAdminDb, COLLECTIONS } from '../config';
-import { logAction } from '../audit/auditLog';
 import { Timestamp } from 'firebase-admin/firestore';
 
 interface WorkSchedule {
@@ -66,26 +65,33 @@ const PH_HOLIDAYS: { month: number; day: number; name: string }[] = [
   { month: 11, day: 31, name: "Last Day of Year" },
 ];
 
-function getDayStart(date: Date): number {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+function getDayStart(epochMs: number, tzOffsetMinutes = 0): number {
+  const localMs = epochMs - tzOffsetMinutes * 60 * 1000;
+  const date = new Date(localMs);
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) + tzOffsetMinutes * 60 * 1000;
 }
 
-function parseTimeString(timeStr: string, baseDate: Date): number {
+function parseTimeString(timeStr: string, dayEpochMs: number, tzOffsetMinutes: number): number {
   const [hours, minutes] = timeStr.split(':').map(Number);
-  const d = new Date(baseDate);
-  d.setHours(hours, minutes, 0, 0);
-  return d.getTime();
+  const localMs = dayEpochMs - tzOffsetMinutes * 60 * 1000;
+  const date = new Date(localMs);
+  const midnightUtc = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  return midnightUtc + tzOffsetMinutes * 60 * 1000 + (hours * 60 + minutes) * 60 * 1000;
 }
 
-function isHoliday(date: Date): { isHoliday: boolean; name: string } {
-  const month = date.getMonth();
-  const day = date.getDate();
+function isHoliday(epochMs: number, tzOffsetMinutes: number): { isHoliday: boolean; name: string } {
+  const localMs = epochMs - tzOffsetMinutes * 60 * 1000;
+  const date = new Date(localMs);
+  const month = date.getUTCMonth();
+  const day = date.getUTCDate();
   const found = PH_HOLIDAYS.find((h) => h.month === month && h.day === day);
   return found ? { isHoliday: true, name: found.name } : { isHoliday: false, name: '' };
 }
 
-function isWorkDay(schedule: WorkSchedule, date: Date): boolean {
-  return schedule.workDays.includes(date.getDay());
+function isWorkDay(schedule: WorkSchedule, epochMs: number, tzOffsetMinutes: number): boolean {
+  const localMs = epochMs - tzOffsetMinutes * 60 * 1000;
+  const date = new Date(localMs);
+  return schedule.workDays.includes(date.getUTCDay());
 }
 
 function calculateNightDiffMinutes(timeIn: number, timeOut: number): number {
@@ -110,6 +116,7 @@ export interface CalculateDTRRequest {
   startDate: number;
   endDate: number;
   forceRecalc?: boolean;
+  timezoneOffsetMinutes?: number;
 }
 
 export interface CalculateDTRResponse {
@@ -136,7 +143,7 @@ export async function calculateDTRHandler(
     throw new HttpsError('permission-denied', 'Invalid role for DTR calculation');
   }
 
-  const { traineeId, startDate, endDate, forceRecalc = false } = request.data;
+  const { traineeId, startDate, endDate, forceRecalc = false, timezoneOffsetMinutes = 0 } = request.data;
 
   if (!traineeId || !startDate || !endDate) {
     throw new HttpsError('invalid-argument', 'traineeId, startDate, endDate are required');
@@ -191,7 +198,7 @@ export async function calculateDTRHandler(
 
   const byDay = new Map<number, { timeIn?: number; timeOut?: number; sessions: string[] }>();
   for (const a of attendances) {
-    const dayStart = getDayStart(new Date(a.timestamp));
+    const dayStart = getDayStart(a.timestamp, timezoneOffsetMinutes);
     if (!byDay.has(dayStart)) byDay.set(dayStart, { sessions: [] });
     const day = byDay.get(dayStart)!;
     day.sessions.push(a.qrSessionId);
@@ -204,16 +211,17 @@ export async function calculateDTRHandler(
   let calculated = 0;
   const results: DTREntry[] = [];
 
-  for (let dayMs = startDate; dayMs <= endDate; dayMs += 24 * 60 * 60 * 1000) {
-    const dayDate = new Date(dayMs);
-    if (!isWorkDay(schedule, dayDate)) continue;
+  const dayStep = 24 * 60 * 60 * 1000;
+  const firstDayMs = getDayStart(startDate, timezoneOffsetMinutes);
+  for (let dayMs = firstDayMs; dayMs <= endDate; dayMs += dayStep) {
+    if (!isWorkDay(schedule, dayMs, timezoneOffsetMinutes)) continue;
 
     const dayData = byDay.get(dayMs);
     const actualTimeIn = dayData?.timeIn;
     const actualTimeOut = dayData?.timeOut;
 
-    const scheduledTimeIn = parseTimeString(schedule.timeIn, dayDate);
-    const scheduledTimeOut = parseTimeString(schedule.timeOut, dayDate);
+    const scheduledTimeIn = parseTimeString(schedule.timeIn, dayMs, timezoneOffsetMinutes);
+    const scheduledTimeOut = parseTimeString(schedule.timeOut, dayMs, timezoneOffsetMinutes);
     const scheduledBreakMinutes = schedule.breakDurationMinutes;
     const scheduledWorkMinutes = (scheduledTimeOut - scheduledTimeIn) / 1000 / 60 - scheduledBreakMinutes;
 
@@ -222,7 +230,7 @@ export async function calculateDTRHandler(
     let undertimeMinutes = 0;
     let nightDiffMinutes = 0;
 
-    const holidayInfo = isHoliday(new Date(dayMs));
+    const holidayInfo = isHoliday(dayMs, timezoneOffsetMinutes);
 
     if (actualTimeIn && actualTimeOut) {
       const workMs = actualTimeOut - actualTimeIn;

@@ -5,7 +5,7 @@ import jsxA11y from 'eslint-plugin-jsx-a11y';
 import prettierConfig from 'eslint-config-prettier';
 
 export default tseslint.config(
-  { ignores: ['dist/', 'functions/lib/', 'functions/jest.config.js', 'functions/tests/**', 'node_modules/', '.git/', '*.config.*', 'firestore/**'] },
+  { ignores: ['dist/', 'functions/lib/', 'functions/jest.config.js', 'functions/tests/**', 'node_modules/', '.git/', '*.config.*', 'firestore/**', '_archive/**', 'scripts/**', '*.cjs', '*.js'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

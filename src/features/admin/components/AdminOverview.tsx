@@ -4,7 +4,7 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts';
 import { getFirestoreInstancePublic } from '@/config/firebase';
-import { collection, getDocs, query, where, limit as firestoreLimit, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, query, limit as firestoreLimit, orderBy, type QuerySnapshot } from 'firebase/firestore';
 import { AnimatedCard } from '@/shared/components/AnimatedCard';
 import { AnimatedList, AnimatedListItem, listItemVariants } from '@/shared/components/AnimatedList';
 
@@ -52,7 +52,7 @@ export function AdminOverview() {
         getDocs(query(collection(db, 'trainees'), firestoreLimit(500))),
         getDocs(query(collection(db, 'companies'), firestoreLimit(500))),
         getDocs(query(collection(db, 'departments'), firestoreLimit(500))),
-        getDocs(query(collection(db, 'audit_logs'), where('timestamp', '>=', Timestamp.fromMillis(Date.now() - 7 * 86400000)), firestoreLimit(50))),
+        getDocs(query(collection(db, 'audit_logs'), orderBy('timestamp', 'desc'), firestoreLimit(50))).catch(() => ({ docs: [] } as unknown as QuerySnapshot)),
       ]);
 
       const usersByRoleMap = new Map<string, number>();
@@ -97,7 +97,20 @@ export function AdminOverview() {
 
       const recentActivity = auditSnap.docs.slice(0, 8).map((doc) => {
         const d = doc.data();
-        const ts = typeof d.timestamp === 'number' ? d.timestamp : d.timestamp?.seconds * 1000 || 0;
+        let ts = 0;
+        const raw = d.timestamp;
+        if (typeof raw === 'number') {
+          ts = raw;
+        } else if (typeof raw === 'object' && raw && typeof (raw as { toDate?: () => Date }).toDate === 'function') {
+          ts = (raw as { toDate: () => Date }).toDate().getTime();
+        } else if (typeof raw === 'object' && raw) {
+          const obj = raw as Record<string, unknown>;
+          const seconds = (obj.seconds ?? obj._seconds) as number | undefined;
+          const nanoseconds = (obj.nanoseconds ?? obj._nanoseconds) as number | undefined;
+          if (typeof seconds === 'number') {
+            ts = seconds * 1000 + Math.floor((nanoseconds ?? 0) / 1_000_000);
+          }
+        }
         const diff = Date.now() - ts;
         let time = 'just now';
         if (diff > 86400000) time = `${Math.floor(diff / 86400000)}d ago`;

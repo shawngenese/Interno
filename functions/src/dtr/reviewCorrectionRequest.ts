@@ -1,7 +1,6 @@
 import { CallableRequest, HttpsError } from 'firebase-functions/v2/https';
 import { getAdminDb, COLLECTIONS } from '../config';
 import { logActionInTransaction } from '../audit/auditLog';
-import { Timestamp } from 'firebase-admin/firestore';
 
 export interface ReviewCorrectionRequest {
   dtrId: string;
@@ -73,8 +72,6 @@ export async function reviewCorrectionRequestHandler(
       throw new HttpsError('permission-denied', 'Not authorized for this trainee');
     }
   }
-
-  const now = Date.now();
 
   // Run both updates in a transaction for atomicity
   await db.runTransaction(async (tx) => {

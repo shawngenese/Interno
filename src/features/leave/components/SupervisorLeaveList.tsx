@@ -38,7 +38,7 @@ function daysBetween(start: number, end: number): number {
 
 export function SupervisorLeaveList() {
   const { user, role } = useAuth();
-  const { supervisor, loading: supLoading } = useSupervisor();
+  const { supervisor } = useSupervisor();
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ListLeaveParams>({ page: 1, limit: 20 });

@@ -124,7 +124,7 @@ export function CoordinatorTaskView() {
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
-  }, [user?.uid]);
+  }, [user]);
 
   useEffect(() => {
     const controller = new AbortController();

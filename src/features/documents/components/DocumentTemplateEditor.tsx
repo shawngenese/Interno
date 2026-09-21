@@ -41,10 +41,6 @@ export function DocumentTemplateEditor() {
   });
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-  }, [user]);
-
   const fetchData = async () => {
     if (!user) return;
     setLoading(true);
@@ -67,6 +63,11 @@ export function DocumentTemplateEditor() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const handleCreate = () => {
     setEditingId(null);
@@ -251,10 +252,11 @@ export function DocumentTemplateEditor() {
             </div>
             <div className="p-4 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+                <label htmlFor="doc-type-select" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
                   Document Type
                 </label>
                 <select
+                  id="doc-type-select"
                   value={formData.documentType}
                   onChange={(e) => handleTypeChange(e.target.value as DocumentType)}
                   className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -265,10 +267,11 @@ export function DocumentTemplateEditor() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+                <label htmlFor="requirement-label" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
                   Label
                 </label>
                 <input
+                  id="requirement-label"
                   type="text"
                   value={formData.label}
                   onChange={(e) => setFormData(prev => ({ ...prev, label: e.target.value }))}
@@ -277,10 +280,11 @@ export function DocumentTemplateEditor() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+                <label htmlFor="requirement-description" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
                   Description
                 </label>
                 <textarea
+                  id="requirement-description"
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   rows={2}
@@ -289,10 +293,11 @@ export function DocumentTemplateEditor() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+                <label htmlFor="required-for-select" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
                   Required For
                 </label>
                 <select
+                  id="required-for-select"
                   value={formData.requiredFor}
                   onChange={(e) => setFormData(prev => ({ ...prev, requiredFor: e.target.value as PlacementType | 'all' }))}
                   className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -315,10 +320,11 @@ export function DocumentTemplateEditor() {
                 </label>
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+                <label htmlFor="requirement-order" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
                   Order
                 </label>
                 <input
+                  id="requirement-order"
                   type="number"
                   value={formData.order}
                   onChange={(e) => setFormData(prev => ({ ...prev, order: parseInt(e.target.value) || 0 }))}
