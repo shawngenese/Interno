@@ -22,22 +22,10 @@ import { AdminOverview } from './AdminOverview';
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
+import { Modal } from '@/shared/components/Modal';
 import type { User, Company, Department, Supervisor, Trainee, WorkSchedule, OJTSchedule } from '../types';
 
 type Tab = 'dashboard' | 'users' | 'companies' | 'departments' | 'supervisors' | 'coordinators' | 'trainees' | 'work-schedules' | 'ojt-schedules';
-
-const TAB_LABELS: Record<string, string> = {
-  'dashboard': 'Dashboard',
-  'users': 'Users',
-  'supervisors': 'Supervisors',
-  'coordinators': 'Coordinators',
-  'trainees': 'Trainees',
-  'companies': 'Companies',
-  'departments': 'Departments',
-  'work-schedules': 'Work Schedules',
-  'ojt-schedules': 'OJT Schedules',
-  'audit-logs': 'Audit Logs',
-};
 
 const TAB_FROM_PATH: Record<string, Tab> = {
   '/admin': 'dashboard',
@@ -56,6 +44,18 @@ function getTabFromPathname(pathname: string): Tab {
   const base = '/admin/' + pathname.split('/')[2];
   return TAB_FROM_PATH[base] || 'users';
 }
+
+const FORM_TITLES: Record<Tab, { create: string; edit: string }> = {
+  users: { create: 'Add User', edit: 'Edit User' },
+  companies: { create: 'Add Company', edit: 'Edit Company' },
+  departments: { create: 'Add Department', edit: 'Edit Department' },
+  supervisors: { create: 'Add Supervisor', edit: 'Edit Supervisor' },
+  coordinators: { create: 'Add Coordinator', edit: 'Edit Coordinator' },
+  trainees: { create: 'Add Trainee', edit: 'Edit Trainee' },
+  'work-schedules': { create: 'Add Work Schedule', edit: 'Edit Work Schedule' },
+  'ojt-schedules': { create: 'Add OJT Schedule', edit: 'Edit OJT Schedule' },
+  dashboard: { create: '', edit: '' },
+};
 
 export function AdminDashboard() {
   const location = useLocation();
@@ -309,20 +309,6 @@ export function AdminDashboard() {
   return (
     <>
     <div>
-      {view !== 'list' && view !== 'assign' && (
-        <div className="mb-4">
-          <button
-            onClick={handleBackToList}
-            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium flex items-center gap-1"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to {TAB_LABELS[activeTab] || activeTab}
-          </button>
-        </div>
-      )}
-
       {view === 'assign' && assigningSupervisor && (
         <div className="mb-4">
           <button
@@ -359,8 +345,16 @@ export function AdminDashboard() {
             </>
           )}
 
-          {view === 'create' && <UserForm onCancel={handleBackToList} onSaved={handleBackToList} />}
-          {view === 'edit' && editingUserId && <UserForm editingId={editingUserId} onCancel={handleBackToList} onSaved={handleBackToList} />}
+          {view === 'create' && (
+            <Modal open title={FORM_TITLES[activeTab].create} onClose={handleBackToList}>
+              <UserForm onCancel={handleBackToList} onSaved={handleBackToList} />
+            </Modal>
+          )}
+          {view === 'edit' && editingUserId && (
+            <Modal open title={FORM_TITLES[activeTab].edit} onClose={handleBackToList}>
+              <UserForm editingId={editingUserId} onCancel={handleBackToList} onSaved={handleBackToList} />
+            </Modal>
+          )}
         </>
       )}
 
@@ -384,8 +378,16 @@ export function AdminDashboard() {
             </>
           )}
 
-          {view === 'create' && <CompanyForm onCancel={handleBackToList} onSaved={handleBackToList} />}
-          {view === 'edit' && editingCompanyId && <CompanyForm editingId={editingCompanyId} onCancel={handleBackToList} onSaved={handleBackToList} />}
+          {view === 'create' && (
+            <Modal open title={FORM_TITLES[activeTab].create} onClose={handleBackToList}>
+              <CompanyForm onCancel={handleBackToList} onSaved={handleBackToList} />
+            </Modal>
+          )}
+          {view === 'edit' && editingCompanyId && (
+            <Modal open title={FORM_TITLES[activeTab].edit} onClose={handleBackToList}>
+              <CompanyForm editingId={editingCompanyId} onCancel={handleBackToList} onSaved={handleBackToList} />
+            </Modal>
+          )}
         </>
       )}
 
@@ -409,8 +411,16 @@ export function AdminDashboard() {
             </>
           )}
 
-          {view === 'create' && <DepartmentForm onCancel={handleBackToList} onSaved={handleBackToList} />}
-          {view === 'edit' && editingDepartmentId && <DepartmentForm editingId={editingDepartmentId} onCancel={handleBackToList} onSaved={handleBackToList} />}
+          {view === 'create' && (
+            <Modal open title={FORM_TITLES[activeTab].create} onClose={handleBackToList}>
+              <DepartmentForm onCancel={handleBackToList} onSaved={handleBackToList} />
+            </Modal>
+          )}
+          {view === 'edit' && editingDepartmentId && (
+            <Modal open title={FORM_TITLES[activeTab].edit} onClose={handleBackToList}>
+              <DepartmentForm editingId={editingDepartmentId} onCancel={handleBackToList} onSaved={handleBackToList} />
+            </Modal>
+          )}
         </>
       )}
 
@@ -434,14 +444,20 @@ export function AdminDashboard() {
             </>
           )}
 
-          {view === 'create' && <SupervisorForm onCancel={handleBackToList} onSaved={handleBackToList} />}
+          {view === 'create' && (
+            <Modal open title={FORM_TITLES[activeTab].create} onClose={handleBackToList}>
+              <SupervisorForm onCancel={handleBackToList} onSaved={handleBackToList} />
+            </Modal>
+          )}
           {view === 'edit' && editingSupervisorId && (
-            <SupervisorForm
-              editingId={editingUserId ?? undefined}
-              editingSupervisorId={editingSupervisorId}
-              onCancel={handleBackToList}
-              onSaved={handleBackToList}
-            />
+            <Modal open title={FORM_TITLES[activeTab].edit} onClose={handleBackToList}>
+              <SupervisorForm
+                editingId={editingUserId ?? undefined}
+                editingSupervisorId={editingSupervisorId}
+                onCancel={handleBackToList}
+                onSaved={handleBackToList}
+              />
+            </Modal>
           )}
 
           {view === 'assign' && assigningSupervisor && (
@@ -474,8 +490,16 @@ export function AdminDashboard() {
             </>
           )}
 
-          {view === 'create' && <CoordinatorForm onCancel={handleBackToList} onSaved={handleBackToList} />}
-          {view === 'edit' && editingCoordinatorId && <CoordinatorForm editingCoordinatorId={editingCoordinatorId} editingId={editingUserId ?? undefined} onCancel={handleBackToList} onSaved={handleBackToList} />}
+          {view === 'create' && (
+            <Modal open title={FORM_TITLES[activeTab].create} onClose={handleBackToList}>
+              <CoordinatorForm onCancel={handleBackToList} onSaved={handleBackToList} />
+            </Modal>
+          )}
+          {view === 'edit' && editingCoordinatorId && (
+            <Modal open title={FORM_TITLES[activeTab].edit} onClose={handleBackToList}>
+              <CoordinatorForm editingCoordinatorId={editingCoordinatorId} editingId={editingUserId ?? undefined} onCancel={handleBackToList} onSaved={handleBackToList} />
+            </Modal>
+          )}
         </>
       )}
 
@@ -504,8 +528,16 @@ export function AdminDashboard() {
             </>
           )}
 
-          {view === 'create' && <TraineeForm onCancel={handleBackToList} onSaved={handleBackToList} />}
-          {view === 'edit' && editingTraineeId && <TraineeForm editingId={editingTraineeId} viewOnly={viewOnly} onCancel={handleBackToList} onSaved={handleBackToList} />}
+          {view === 'create' && (
+            <Modal open title={FORM_TITLES[activeTab].create} onClose={handleBackToList}>
+              <TraineeForm onCancel={handleBackToList} onSaved={handleBackToList} />
+            </Modal>
+          )}
+          {view === 'edit' && editingTraineeId && (
+            <Modal open title={FORM_TITLES[activeTab].edit} onClose={handleBackToList}>
+              <TraineeForm editingId={editingTraineeId} viewOnly={viewOnly} onCancel={handleBackToList} onSaved={handleBackToList} />
+            </Modal>
+          )}
           {view === 'documents' && editingTraineeId && viewingTraineeCompanyId && (
             <DocumentRequirements 
               traineeId={editingTraineeId} 
@@ -535,8 +567,16 @@ export function AdminDashboard() {
             </>
           )}
 
-          {view === 'create' && <WorkScheduleForm onCancel={handleBackToList} onSaved={handleBackToList} />}
-          {view === 'edit' && editingWorkScheduleId && <WorkScheduleForm editingId={editingWorkScheduleId} viewOnly={viewOnly} onCancel={handleBackToList} onSaved={handleBackToList} />}
+          {view === 'create' && (
+            <Modal open title={FORM_TITLES[activeTab].create} onClose={handleBackToList}>
+              <WorkScheduleForm onCancel={handleBackToList} onSaved={handleBackToList} />
+            </Modal>
+          )}
+          {view === 'edit' && editingWorkScheduleId && (
+            <Modal open title={FORM_TITLES[activeTab].edit} onClose={handleBackToList}>
+              <WorkScheduleForm editingId={editingWorkScheduleId} viewOnly={viewOnly} onCancel={handleBackToList} onSaved={handleBackToList} />
+            </Modal>
+          )}
         </>
       )}
 
@@ -560,8 +600,16 @@ export function AdminDashboard() {
             </>
           )}
 
-          {view === 'create' && <OJTScheduleForm onCancel={handleBackToList} onSaved={handleBackToList} />}
-          {view === 'edit' && editingOJTScheduleId && <OJTScheduleForm editingId={editingOJTScheduleId} viewOnly={viewOnly} onCancel={handleBackToList} onSaved={handleBackToList} />}
+          {view === 'create' && (
+            <Modal open title={FORM_TITLES[activeTab].create} onClose={handleBackToList}>
+              <OJTScheduleForm onCancel={handleBackToList} onSaved={handleBackToList} />
+            </Modal>
+          )}
+          {view === 'edit' && editingOJTScheduleId && (
+            <Modal open title={FORM_TITLES[activeTab].edit} onClose={handleBackToList}>
+              <OJTScheduleForm editingId={editingOJTScheduleId} viewOnly={viewOnly} onCancel={handleBackToList} onSaved={handleBackToList} />
+            </Modal>
+          )}
         </>
       )}
     </div>
