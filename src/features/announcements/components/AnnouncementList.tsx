@@ -6,6 +6,7 @@ import { useToast } from '@/shared/components/Toast';
 import { useAuth } from '@/features/auth';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
+import { Modal } from '@/shared/components/Modal';
 import { doc, getDoc } from 'firebase/firestore';
 import type { Announcement, AnnouncementStatus, AnnouncementPriority } from '../types';
 
@@ -174,15 +175,18 @@ export function AnnouncementList({ companyId: companyIdProp, role }: Announcemen
         </div>
 
         {showForm && (
-          <AnnouncementForm
-            companyId={resolvedCompanyId}
-            announcement={editingAnnouncement}
-            onSuccess={handleFormSuccess}
-            onCancel={() => {
-              setShowForm(false);
-              setEditingAnnouncement(null);
-            }}
-          />
+          <Modal
+            open
+            title={editingAnnouncement ? 'Edit Announcement' : 'New Announcement'}
+            onClose={() => { setShowForm(false); setEditingAnnouncement(null); }}
+          >
+            <AnnouncementForm
+              companyId={resolvedCompanyId}
+              announcement={editingAnnouncement}
+              onSuccess={handleFormSuccess}
+              onCancel={() => { setShowForm(false); setEditingAnnouncement(null); }}
+            />
+          </Modal>
         )}
 
         {error && (

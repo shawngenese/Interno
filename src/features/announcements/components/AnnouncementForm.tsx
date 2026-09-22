@@ -111,13 +111,7 @@ export function AnnouncementForm({
   };
 
   return (
-    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
-      <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
-        <h3 className="text-lg font-semibold text-[#121212] dark:text-white">
-          {announcement ? 'Edit Announcement' : 'New Announcement'}
-        </h3>
-      </div>
-
+    <div className="bg-white dark:bg-[#1E1E1E]">
       <div className="p-4 space-y-6">
         {error && (
           <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">

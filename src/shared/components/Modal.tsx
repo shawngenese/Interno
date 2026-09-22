@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence, type PanInfo } from 'framer-motion';
+import { useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ModalProps {
   open: boolean;
@@ -9,9 +9,6 @@ interface ModalProps {
 }
 
 export function Modal({ open, title, onClose, children }: ModalProps) {
-  const [dragOffset, setDragOffset] = useState(0);
-  const contentRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -21,56 +18,27 @@ export function Modal({ open, title, onClose, children }: ModalProps) {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [open, onClose]);
 
-  const handleDragEnd = (_: unknown, info: PanInfo) => {
-    if (info.offset.x > 100) {
-      onClose();
-    }
-    setDragOffset(0);
-  };
-
-  const handleDrag = (_: unknown, info: PanInfo) => {
-    setDragOffset(info.offset.x);
-  };
-
-  const backdropOpacity = Math.max(0, 1 - dragOffset / 300);
-
   return (
     <AnimatePresence>
       {open && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-          className="fixed inset-0 z-50"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="modal-title"
-        >
+        <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="modal-title">
           {/* Backdrop */}
           <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
             className="absolute inset-0 bg-black/50"
-            style={{ opacity: backdropOpacity }}
             onClick={onClose}
-            onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
-            role="button"
-            tabIndex={-1}
-            aria-label="Close modal"
           />
 
-          {/* Mobile: full-screen slide-in */}
+          {/* Content */}
           <motion.div
-            ref={contentRef}
-            initial={{ x: '100%' }}
-            animate={{ x: dragOffset }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.2}
-            onDrag={handleDrag}
-            onDragEnd={handleDragEnd}
-            className="absolute inset-0 flex flex-col bg-white dark:bg-[#1E1E1E] md:relative md:inset-auto md:my-auto md:mx-auto md:max-w-lg md:rounded-xl md:shadow-xl md:border md:border-[#D5D5D5] md:dark:border-[#3A3A3A]"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="relative w-full max-w-lg mx-4 max-h-[85vh] flex flex-col bg-white dark:bg-[#1E1E1E] rounded-xl shadow-xl border border-[#D5D5D5] dark:border-[#3A3A3A]"
           >
             {/* Title bar */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-[#D5D5D5] dark:border-[#3A3A3A] shrink-0">
@@ -94,7 +62,7 @@ export function Modal({ open, title, onClose, children }: ModalProps) {
               {children}
             </div>
           </motion.div>
-        </motion.div>
+        </div>
       )}
     </AnimatePresence>
   );
