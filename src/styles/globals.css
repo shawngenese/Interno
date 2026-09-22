@@ -29,88 +29,94 @@ body {
   min-height: 100dvh;
 }
 
-/* Typography — headings never italic */
+/* Typography — headings never italic (Hallmark rule) */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
   font-style: normal;
 }
 
-/* Focus styles */
+/* Focus styles — visible for keyboard nav */
 :focus-visible {
   outline: 2px solid var(--color-ring);
   outline-offset: 2px;
 }
 
-/* Inputs — prevent iOS zoom */
+/* Inputs — prevent iOS zoom (mobile-native rule) */
 input, textarea, select {
   font-size: 16px;
 }
 
-/* Tappable elements */
+/* Tappable elements — mobile-native baseline */
 button, a, [role="button"] {
   touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
 }
 
-/* Hover — gated for touch devices */
-@media (hover: hover) and (pointer: fine) {
-  .hover-lift:hover {
-    transform: translateY(-1px);
-  }
-  .hover-shadow:hover {
-    box-shadow: var(--shadow-md);
-  }
+/* ============================================================
+   CUSTOM EASING CURVES (emil-design-eng)
+   Stronger than CSS defaults — feels intentional
+   ============================================================ */
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Active press feedback */
-.button-press:active {
+/* ============================================================
+   BUTTON PRESS FEEDBACK (emil-design-eng + apple-design)
+   Respond on pointer-down, not release
+   ============================================================ */
+.btn,
+button:not([disabled]) {
+  transition: transform 100ms var(--ease-out), background 150ms ease, opacity 150ms ease;
+}
+
+.btn:active,
+button:not([disabled]):active {
   transform: scale(0.97);
 }
 
-/* Scrollbar styles */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* ============================================================
+   HOVER EFFECTS — gated for touch devices
+   ============================================================ */
+@media (hover: hover) and (pointer: fine) {
+  .hover-lift {
+    transition: transform 200ms var(--ease-out), box-shadow 200ms ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .hover-scale {
+    transition: transform 200ms var(--ease-out);
+  }
+  .hover-scale:hover {
+    transform: scale(1.02);
+  }
 }
 
-::-webkit-scrollbar-track {
-  background: var(--color-muted);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--color-input);
-  border-radius: var(--radius-full);
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-muted-foreground);
-}
-
-/* Safe area utilities */
-.safe-area-inset-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-.safe-area-inset-top {
-  padding-top: env(safe-area-inset-top, 0px);
-}
-
-/* Touch target */
-.touch-target {
-  min-height: 44px;
-  min-width: 44px;
-}
-
-/* Card */
+/* ============================================================
+   CARD — flat design, subtle interaction
+   ============================================================ */
 .card {
   background: var(--color-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   color: var(--color-card-foreground);
+  transition: border-color 200ms ease, box-shadow 200ms ease;
 }
 
-/* Button base */
+@media (hover: hover) and (pointer: fine) {
+  .card:hover {
+    border-color: var(--color-primary);
+  }
+}
+
+/* ============================================================
+   BUTTON COMPONENTS — with proper press feedback
+   ============================================================ */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -123,7 +129,8 @@ button, a, [role="button"] {
   font-size: var(--text-body);
   font-weight: var(--weight-medium);
   cursor: pointer;
-  transition: background var(--duration-fast) ease, transform var(--duration-fast) ease;
+  border: none;
+  white-space: nowrap;
 }
 
 @media (pointer: coarse) {
@@ -135,7 +142,6 @@ button, a, [role="button"] {
 .btn-primary {
   background: var(--color-primary);
   color: var(--color-on-primary);
-  border: none;
 }
 
 .btn-primary:hover {
@@ -155,7 +161,6 @@ button, a, [role="button"] {
 .btn-danger {
   background: var(--color-destructive);
   color: var(--color-on-destructive);
-  border: none;
 }
 
 .btn-danger:hover {
@@ -165,14 +170,21 @@ button, a, [role="button"] {
 .btn-ghost {
   background: transparent;
   color: var(--color-foreground);
-  border: none;
 }
 
 .btn-ghost:hover {
   background: var(--color-muted);
 }
 
-/* Input base */
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ============================================================
+   INPUT — with focus ring and error state
+   ============================================================ */
 .input {
   width: 100%;
   height: 40px;
@@ -183,7 +195,7 @@ button, a, [role="button"] {
   color: var(--color-foreground);
   font-family: var(--font-body);
   font-size: 16px;
-  transition: border-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
 @media (pointer: coarse) {
@@ -202,12 +214,136 @@ button, a, [role="button"] {
   border-color: var(--color-destructive);
 }
 
-/* Muted text */
+.input-error:focus {
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
+}
+
+/* ============================================================
+   SKELETON LOADING — pulsing placeholder
+   ============================================================ */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.skeleton {
+  background: var(--color-muted);
+  border-radius: var(--radius-md);
+  animation: skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ============================================================
+   MODAL — fade + scale (apple-design: scale from 0.95)
+   ============================================================ */
+@keyframes modal-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes modal-exit {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+/* ============================================================
+   TOAST — slide up + fade
+   ============================================================ */
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toast-exit {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+/* ============================================================
+   SCROLLBAR — minimal, matches theme
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-muted);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-input);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted-foreground);
+}
+
+/* ============================================================
+   SAFE AREA — for notch, dynamic island, home indicator
+   ============================================================ */
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-area-inset-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* ============================================================
+   TOUCH TARGET — 44x44px minimum
+   ============================================================ */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* ============================================================
+   TEXT UTILITIES
+   ============================================================ */
 .text-muted {
   color: var(--color-muted-foreground);
 }
 
-/* Reduced motion */
+.text-primary {
+  color: var(--color-primary);
+}
+
+.text-destructive {
+  color: var(--color-destructive);
+}
+
+.text-success {
+  color: var(--color-success);
+}
+
+/* ============================================================
+   REDUCED MOTION — disable non-essential animation
+   ============================================================ */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -216,7 +352,9 @@ button, a, [role="button"] {
   }
 }
 
-/* Print-friendly styles */
+/* ============================================================
+   PRINT — clean output
+   ============================================================ */
 @media print {
   body {
     background: white !important;

@@ -22,6 +22,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@types/xlsx": "^0.0.35",
+    "clsx": "^2.1.1",
     "firebase": "^12.19.0",
     "firebase-admin": "^14.4.0",
     "framer-motion": "^13.4.0",
@@ -32,6 +33,7 @@
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.18.3",
     "recharts": "^3.10.1",
+    "sonner": "^2.0.8",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
