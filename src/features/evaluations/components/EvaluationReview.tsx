@@ -3,6 +3,7 @@ import { evaluationService } from '../services/evaluationService';
 import { EVALUATION_CATEGORIES, EVALUATION_TYPE_LABELS, RATING_LABELS } from '../types';
 import type { Evaluation, EvaluationStatus } from '../types';
 import { useAuth } from '@/features/auth';
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 
 interface EvaluationReviewProps {
   evaluationId: string;
@@ -15,6 +16,12 @@ export function EvaluationReview({ evaluationId, onClose }: EvaluationReviewProp
   const [loading, setLoading] = useState(true);
   const [reviewComments, setReviewComments] = useState('');
   const [saving, setSaving] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    danger?: boolean;
+  } | null>(null);
 
   const loadEvaluation = async () => {
     try {
@@ -35,15 +42,29 @@ export function EvaluationReview({ evaluationId, onClose }: EvaluationReviewProp
 
   const handleReview = async (action: 'review' | 'finalize') => {
     if (!user || !evaluation) return;
-    if (action === 'finalize' && !confirm('Are you sure you want to finalize this evaluation?')) return;
+    if (action === 'finalize') {
+      setConfirmDialog({
+        title: 'Finalize Evaluation',
+        message: 'Are you sure you want to finalize this evaluation?',
+        danger: true,
+        onConfirm: async () => {
+          setSaving(true);
+          try {
+            await evaluationService.finalizeEvaluation(evaluation.id, user.uid);
+            onClose();
+          } catch (error) {
+            console.error('Failed to update evaluation:', error);
+          } finally {
+            setSaving(false);
+          }
+        },
+      });
+      return;
+    }
     setSaving(true);
 
     try {
-      if (action === 'review') {
-        await evaluationService.reviewEvaluation(evaluation.id, user.uid, reviewComments);
-      } else {
-        await evaluationService.finalizeEvaluation(evaluation.id, user.uid);
-      }
+      await evaluationService.reviewEvaluation(evaluation.id, user.uid, reviewComments);
       onClose();
     } catch (error) {
       console.error('Failed to update evaluation:', error);
@@ -200,6 +221,15 @@ export function EvaluationReview({ evaluationId, onClose }: EvaluationReviewProp
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmDialog !== null}
+        title={confirmDialog?.title || ''}
+        message={confirmDialog?.message || ''}
+        danger={confirmDialog?.danger}
+        onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { TaskForm } from './TaskForm';
 import { TaskDetail } from './TaskDetail';
 import { EmptyState, ClipboardIcon } from '@/shared/components/EmptyState';
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import type { Task, TaskStatus, TaskPriority } from '../types';
 import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS, TASK_STATUS_COLORS, TASK_PRIORITY_COLORS } from '../types';
 
@@ -46,6 +47,12 @@ export function TaskList() {
   });
   const [trainees, setTrainees] = useState<{ id: string; name: string }[]>([]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    danger?: boolean;
+  } | null>(null);
 
   const updateFilter = useCallback(<K extends keyof TaskFilters>(key: K, value: TaskFilters[K]) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -133,13 +140,19 @@ export function TaskList() {
   }, [user]);
 
   const handleArchive = async (taskId: string) => {
-    if (!confirm('Archive this task?')) return;
-    try {
-      await deleteTask(taskId);
-      fetchTasks();
-    } catch (err) {
-      console.error('Archive failed:', err);
-    }
+    setConfirmDialog({
+      title: 'Archive Task',
+      message: 'Archive this task?',
+      danger: true,
+      onConfirm: async () => {
+        try {
+          await deleteTask(taskId);
+          fetchTasks();
+        } catch (err) {
+          console.error('Archive failed:', err);
+        }
+      },
+    });
   };
 
   if (showForm) {
@@ -325,6 +338,15 @@ export function TaskList() {
           </table>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDialog !== null}
+        title={confirmDialog?.title || ''}
+        message={confirmDialog?.message || ''}
+        danger={confirmDialog?.danger}
+        onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </div>
   );
 }

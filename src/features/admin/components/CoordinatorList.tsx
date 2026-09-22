@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { adminService } from '../services/adminService';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
 import { ActionsMenu } from '@/shared/components/ActionsMenu';
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import { useAuth } from '@/features/auth';
 import type { User, ListUsersParams } from '../types';
 
@@ -73,16 +74,29 @@ export function CoordinatorList({ onEdit, onView, onDelete }: CoordinatorListPro
     setFilters(p => ({ ...p, page }));
   };
 
-  const handleDelete = async (coordinator: User) => {
-    if (!confirm('Delete this coordinator?')) return;
-    try {
-      await adminService.deleteUser(coordinator.id);
-      onDelete?.(coordinator);
-      fetchCoordinators();
-    } catch (err) {
-      console.error('Failed to delete coordinator:', err);
-      setError('Failed to delete coordinator');
-    }
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    danger?: boolean;
+  } | null>(null);
+
+  const handleDelete = (coordinator: User) => {
+    setConfirmDialog({
+      title: 'Delete Coordinator',
+      message: 'Delete this coordinator?',
+      danger: true,
+      onConfirm: async () => {
+        try {
+          await adminService.deleteUser(coordinator.id);
+          onDelete?.(coordinator);
+          fetchCoordinators();
+        } catch (err) {
+          console.error('Failed to delete coordinator:', err);
+          setError('Failed to delete coordinator');
+        }
+      },
+    });
   };
 
   const totalPages = Math.ceil(total / (filters.limit || 10));
@@ -115,6 +129,7 @@ export function CoordinatorList({ onEdit, onView, onDelete }: CoordinatorListPro
   }
 
   return (
+    <>
     <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
       <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -228,5 +243,15 @@ export function CoordinatorList({ onEdit, onView, onDelete }: CoordinatorListPro
         </div>
       )}
     </div>
+
+    <ConfirmDialog
+      open={confirmDialog !== null}
+      title={confirmDialog?.title || ''}
+      message={confirmDialog?.message || ''}
+      danger={confirmDialog?.danger}
+      onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
+      onCancel={() => setConfirmDialog(null)}
+    />
+    </>
   );
 }

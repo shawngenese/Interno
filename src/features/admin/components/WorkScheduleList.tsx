@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { adminService } from '../services/adminService';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
 import { ActionsMenu } from '@/shared/components/ActionsMenu';
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import type { WorkSchedule, ListWorkSchedulesParams } from '../types';
 
 interface WorkScheduleListProps {
@@ -20,6 +21,7 @@ export function WorkScheduleList({ onEdit, onView, onDelete }: WorkScheduleListP
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ListWorkSchedulesParams>({ page: 1, limit: 10 });
   const [total, setTotal] = useState(0);
+  const totalPages = Math.max(1, Math.ceil(total / (filters.limit || 10)));
   const [searchValue, setSearchValue] = useState('');
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -67,7 +69,23 @@ export function WorkScheduleList({ onEdit, onView, onDelete }: WorkScheduleListP
     setFilters(p => ({ ...p, page }));
   };
 
-  const totalPages = Math.ceil(total / (filters.limit || 10));
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    danger?: boolean;
+  } | null>(null);
+
+  const handleDelete = (schedule: WorkSchedule) => {
+    setConfirmDialog({
+      title: 'Delete Work Schedule',
+      message: 'Delete this work schedule?',
+      danger: true,
+      onConfirm: async () => {
+        onDelete?.(schedule);
+      },
+    });
+  };
 
   const formatWorkDays = (days: number[] | undefined) => {
     if (!Array.isArray(days) || days.length === 0) return '—';
@@ -112,6 +130,7 @@ export function WorkScheduleList({ onEdit, onView, onDelete }: WorkScheduleListP
   }
 
   return (
+    <>
     <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
       <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -186,7 +205,7 @@ export function WorkScheduleList({ onEdit, onView, onDelete }: WorkScheduleListP
                       items={[
                         ...(onView ? [{ label: 'View', onClick: () => onView(schedule) }] : []),
                         ...(onEdit ? [{ label: 'Edit', onClick: () => onEdit(schedule) }] : []),
-                        ...(onDelete ? [{ label: 'Delete', onClick: () => { if (confirm('Delete this work schedule?')) onDelete(schedule); }, danger: true }] : []),
+                        ...(onDelete ? [{ label: 'Delete', onClick: () => handleDelete(schedule), danger: true }] : []),
                       ]}
                     />
                   </td>
@@ -221,5 +240,15 @@ export function WorkScheduleList({ onEdit, onView, onDelete }: WorkScheduleListP
         </div>
       )}
     </div>
+
+    <ConfirmDialog
+      open={confirmDialog !== null}
+      title={confirmDialog?.title || ''}
+      message={confirmDialog?.message || ''}
+      danger={confirmDialog?.danger}
+      onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
+      onCancel={() => setConfirmDialog(null)}
+    />
+    </>
   );
 }

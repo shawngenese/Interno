@@ -3,6 +3,7 @@ import { adminService } from '../services/adminService';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
 import { useAuth } from '@/features/auth';
 import { ActionsMenu } from '@/shared/components/ActionsMenu';
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import type { User, ListUsersParams } from '../types';
 
 interface UserListProps {
@@ -84,37 +85,61 @@ export function UserList({ onEdit, onView }: UserListProps) {
     setPagination(p => ({ ...p, page: filters.page ?? 1 }));
   }, [filters.page]);
 
-  const handleDelete = async (uid: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
-    try {
-      await adminService.deleteUser(uid);
-      fetchUsers();
-    } catch (err) {
-      setError('Failed to delete user');
-      console.error(err);
-    }
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    danger?: boolean;
+  } | null>(null);
+
+  const handleDelete = (uid: string) => {
+    setConfirmDialog({
+      title: 'Delete User',
+      message: 'Are you sure you want to delete this user?',
+      danger: true,
+      onConfirm: async () => {
+        try {
+          await adminService.deleteUser(uid);
+          fetchUsers();
+        } catch (err) {
+          setError('Failed to delete user');
+          console.error(err);
+        }
+      },
+    });
   };
 
-  const handleArchive = async (uid: string) => {
-    if (!confirm('Are you sure you want to archive this user?')) return;
-    try {
-      await adminService.archiveUser(uid);
-      fetchUsers();
-    } catch (err) {
-      setError('Failed to archive user');
-      console.error(err);
-    }
+  const handleArchive = (uid: string) => {
+    setConfirmDialog({
+      title: 'Archive User',
+      message: 'Are you sure you want to archive this user?',
+      danger: true,
+      onConfirm: async () => {
+        try {
+          await adminService.archiveUser(uid);
+          fetchUsers();
+        } catch (err) {
+          setError('Failed to archive user');
+          console.error(err);
+        }
+      },
+    });
   };
 
-  const handleRestore = async (uid: string) => {
-    if (!confirm('Are you sure you want to restore this user?')) return;
-    try {
-      await adminService.restoreUser(uid);
-      fetchUsers();
-    } catch (err) {
-      setError('Failed to restore user');
-      console.error(err);
-    }
+  const handleRestore = (uid: string) => {
+    setConfirmDialog({
+      title: 'Restore User',
+      message: 'Are you sure you want to restore this user?',
+      onConfirm: async () => {
+        try {
+          await adminService.restoreUser(uid);
+          fetchUsers();
+        } catch (err) {
+          setError('Failed to restore user');
+          console.error(err);
+        }
+      },
+    });
   };
 
   const roleColors: Record<string, string> = {
@@ -132,6 +157,7 @@ export function UserList({ onEdit, onView }: UserListProps) {
   };
 
   return (
+    <>
     <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
       <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -264,5 +290,15 @@ export function UserList({ onEdit, onView }: UserListProps) {
         </div>
       )}
     </div>
+
+    <ConfirmDialog
+      open={confirmDialog !== null}
+      title={confirmDialog?.title || ''}
+      message={confirmDialog?.message || ''}
+      danger={confirmDialog?.danger}
+      onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
+      onCancel={() => setConfirmDialog(null)}
+    />
+    </>
   );
 }

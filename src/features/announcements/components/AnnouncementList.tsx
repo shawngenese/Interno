@@ -5,6 +5,7 @@ import { AnnouncementForm } from './AnnouncementForm';
 import { useToast } from '@/shared/components/Toast';
 import { useAuth } from '@/features/auth';
 import { getFirestoreInstancePublic } from '@/config/firebase';
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import { doc, getDoc } from 'firebase/firestore';
 import type { Announcement, AnnouncementStatus, AnnouncementPriority } from '../types';
 
@@ -25,6 +26,12 @@ export function AnnouncementList({ companyId: companyIdProp, role }: Announcemen
   const [error, setError] = useState<string | null>(null);
   const { addToast } = useToast();
   const abortRef = useRef<AbortController | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    danger?: boolean;
+  } | null>(null);
 
   // Resolve companyId for coordinator/supervisor if not passed as prop
   // Trainees load all announcements (targetRoles filter handles visibility)
@@ -92,14 +99,20 @@ export function AnnouncementList({ companyId: companyIdProp, role }: Announcemen
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this announcement?')) return;
-    try {
-      await announcementService.deleteAnnouncement(id);
-      addToast('success', 'Announcement deleted');
-      loadAnnouncements();
-    } catch {
-      addToast('error', 'Failed to delete announcement');
-    }
+    setConfirmDialog({
+      title: 'Delete Announcement',
+      message: 'Are you sure you want to delete this announcement?',
+      danger: true,
+      onConfirm: async () => {
+        try {
+          await announcementService.deleteAnnouncement(id);
+          addToast('success', 'Announcement deleted');
+          loadAnnouncements();
+        } catch {
+          addToast('error', 'Failed to delete announcement');
+        }
+      },
+    });
   };
 
   const handleFormSuccess = () => {
@@ -206,6 +219,15 @@ export function AnnouncementList({ companyId: companyIdProp, role }: Announcemen
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={confirmDialog !== null}
+        title={confirmDialog?.title || ''}
+        message={confirmDialog?.message || ''}
+        danger={confirmDialog?.danger}
+        onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </div>
   );
 }

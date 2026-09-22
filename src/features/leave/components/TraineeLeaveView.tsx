@@ -3,6 +3,7 @@ import { getTraineeLeaveRequests, cancelLeaveRequest } from '../services/leaveSe
 import { useAuth } from '@/features/auth/AuthProvider';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { SkeletonCard } from '@/shared/components/Skeleton';
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { LeaveForm } from './LeaveForm';
 import type { LeaveRequest, LeaveStatus, LeaveType } from '../types';
@@ -44,6 +45,12 @@ export function TraineeLeaveView() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    danger?: boolean;
+  } | null>(null);
 
   const fetchLeaves = useCallback(async (signal?: AbortSignal) => {
     if (!user?.uid) return;
@@ -72,16 +79,22 @@ export function TraineeLeaveView() {
   }, [fetchLeaves]);
 
   const handleCancel = async (leaveId: string) => {
-    if (!confirm('Are you sure you want to cancel this leave request?')) return;
-    setCancelling(leaveId);
-    try {
-      await cancelLeaveRequest(leaveId);
-      fetchLeaves();
-    } catch (err) {
-      console.error('Failed to cancel leave:', err);
-    } finally {
-      setCancelling(null);
-    }
+    setConfirmDialog({
+      title: 'Cancel Leave Request',
+      message: 'Are you sure you want to cancel this leave request?',
+      danger: true,
+      onConfirm: async () => {
+        setCancelling(leaveId);
+        try {
+          await cancelLeaveRequest(leaveId);
+          fetchLeaves();
+        } catch (err) {
+          console.error('Failed to cancel leave:', err);
+        } finally {
+          setCancelling(null);
+        }
+      },
+    });
   };
 
   const pendingCount = leaves.filter((l) => l.status === 'pending').length;
@@ -185,6 +198,15 @@ export function TraineeLeaveView() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDialog !== null}
+        title={confirmDialog?.title || ''}
+        message={confirmDialog?.message || ''}
+        danger={confirmDialog?.danger}
+        onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </div>
   );
 }

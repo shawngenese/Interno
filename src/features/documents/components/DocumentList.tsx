@@ -6,6 +6,7 @@ import { useAuth } from '@/features/auth';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import type { Document, DocumentType, DocumentStatus, ListDocumentsParams } from '../types';
 
 function formatDate(ms: number): string {
@@ -83,6 +84,12 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [traineeNameMap, setTraineeNameMap] = useState<Map<string, string>>(new Map());
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    danger?: boolean;
+  } | null>(null);
 
   const fetchDocuments = useCallback(async () => {
     if (role === 'trainee' && !traineeId) return;
@@ -141,26 +148,38 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
     }
   };
 
-  const handleReject = async (doc: Document) => {
-    if (!confirm('Reject this document?')) return;
-    try {
-      await updateDocumentStatus(doc.id, 'rejected');
-      await fetchDocuments();
-    } catch (err) {
-      console.error('Reject failed:', err);
-      addToast('error', 'Failed to reject document');
-    }
+  const handleReject = (doc: Document) => {
+    setConfirmDialog({
+      title: 'Reject Document',
+      message: 'Reject this document?',
+      danger: true,
+      onConfirm: async () => {
+        try {
+          await updateDocumentStatus(doc.id, 'rejected');
+          await fetchDocuments();
+        } catch (err) {
+          console.error('Reject failed:', err);
+          addToast('error', 'Failed to reject document');
+        }
+      },
+    });
   };
 
-  const handleDelete = async (doc: Document) => {
-    if (!confirm('Delete this document permanently?')) return;
-    try {
-      await deleteDocument(doc.id);
-      await fetchDocuments();
-    } catch (err) {
-      console.error('Delete failed:', err);
-      addToast('error', 'Failed to delete document');
-    }
+  const handleDelete = (doc: Document) => {
+    setConfirmDialog({
+      title: 'Delete Document',
+      message: 'Delete this document permanently?',
+      danger: true,
+      onConfirm: async () => {
+        try {
+          await deleteDocument(doc.id);
+          await fetchDocuments();
+        } catch (err) {
+          console.error('Delete failed:', err);
+          addToast('error', 'Failed to delete document');
+        }
+      },
+    });
   };
 
   const totalPages = Math.max(1, Math.ceil(total / (filters.limit || 20)));
@@ -320,6 +339,14 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
         </div>
       </div>
       )}
+      <ConfirmDialog
+        open={confirmDialog !== null}
+        title={confirmDialog?.title || ''}
+        message={confirmDialog?.message || ''}
+        danger={confirmDialog?.danger}
+        onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </div>
   );
 }

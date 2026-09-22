@@ -4,6 +4,7 @@ import { useSupervisor } from '@/shared/hooks/useSupervisor';
 import { useAuth } from '@/features/auth';
 import { useToast } from '@/shared/components/Toast';
 import { formatDateFull, formatTime12 } from '@/shared/utils/dateUtils';
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import type { DTREntry, DTRStatus, DTRCorrectionRequest, ListDTRParams } from '../types';
 
 function minutesToHours(mins: number): string {
@@ -34,6 +35,12 @@ export function SupervisorDTRList() {
   const [showDetail, setShowDetail] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [corrections, setCorrections] = useState<DTRCorrectionRequest[]>([]);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    danger?: boolean;
+  } | null>(null);
 
   const fetchDTRs = useCallback(async () => {
     if (!supervisor) return;
@@ -75,33 +82,44 @@ export function SupervisorDTRList() {
   };
 
   const handleApprove = async (dtr: DTREntry) => {
-    if (!confirm('Approve this DTR?')) return;
-    try {
-      await approveDTR(dtr.id);
-      addToast('success', 'DTR approved');
-      await fetchDTRs();
-      if (selectedDTR?.id === dtr.id) {
-        setSelectedDTR({ ...dtr, status: 'approved' });
-      }
-    } catch (err) {
-      console.error('Approve failed:', err);
-      addToast('error', 'Failed to approve DTR');
-    }
+    setConfirmDialog({
+      title: 'Approve DTR',
+      message: 'Approve this DTR?',
+      onConfirm: async () => {
+        try {
+          await approveDTR(dtr.id);
+          addToast('success', 'DTR approved');
+          await fetchDTRs();
+          if (selectedDTR?.id === dtr.id) {
+            setSelectedDTR({ ...dtr, status: 'approved' });
+          }
+        } catch (err) {
+          console.error('Approve failed:', err);
+          addToast('error', 'Failed to approve DTR');
+        }
+      },
+    });
   };
 
   const handleReject = async (dtr: DTREntry) => {
-    if (!confirm('Reject this DTR?')) return;
-    try {
-      await rejectDTR(dtr.id);
-      addToast('success', 'DTR rejected');
-      await fetchDTRs();
-      if (selectedDTR?.id === dtr.id) {
-        setSelectedDTR({ ...dtr, status: 'rejected' });
-      }
-    } catch (err) {
-      console.error('Reject failed:', err);
-      addToast('error', 'Failed to reject DTR');
-    }
+    setConfirmDialog({
+      title: 'Reject DTR',
+      message: 'Reject this DTR?',
+      danger: true,
+      onConfirm: async () => {
+        try {
+          await rejectDTR(dtr.id);
+          addToast('success', 'DTR rejected');
+          await fetchDTRs();
+          if (selectedDTR?.id === dtr.id) {
+            setSelectedDTR({ ...dtr, status: 'rejected' });
+          }
+        } catch (err) {
+          console.error('Reject failed:', err);
+          addToast('error', 'Failed to reject DTR');
+        }
+      },
+    });
   };
 
   const handleCorrectionAction = async (correction: DTRCorrectionRequest, action: 'approve' | 'reject') => {
@@ -364,6 +382,15 @@ export function SupervisorDTRList() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDialog !== null}
+        title={confirmDialog?.title || ''}
+        message={confirmDialog?.message || ''}
+        danger={confirmDialog?.danger}
+        onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </div>
   );
 }

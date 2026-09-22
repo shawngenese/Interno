@@ -4,6 +4,7 @@ import { useAuth } from '@/features/auth';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import type { PlacementRequest, PlacementStatus } from '@/features/admin/types';
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 
 interface PlacementRequestListProps {
   onRefresh?: () => void;
@@ -19,6 +20,12 @@ export function PlacementRequestList({ onRefresh }: PlacementRequestListProps) {
   const [selectedRequest, setSelectedRequest] = useState<PlacementRequest | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    danger?: boolean;
+  } | null>(null);
 
   // Resolve coordinator's companyId
   useEffect(() => {
@@ -68,38 +75,49 @@ export function PlacementRequestList({ onRefresh }: PlacementRequestListProps) {
 
   const handleApprove = async (request: PlacementRequest) => {
     if (!user) return;
-    if (!confirm('Approve this placement request?')) return;
-    setProcessing(true);
-    try {
-      await placementService.approvePlacementRequest(request.id, user.uid, reviewNotes);
-      setSelectedRequest(null);
-      setReviewNotes('');
-      fetchRequests();
-      onRefresh?.();
-    } catch (err) {
-      setError('Failed to approve request');
-      console.error(err);
-    } finally {
-      setProcessing(false);
-    }
+    setConfirmDialog({
+      title: 'Approve Placement',
+      message: 'Approve this placement request?',
+      onConfirm: async () => {
+        setProcessing(true);
+        try {
+          await placementService.approvePlacementRequest(request.id, user.uid, reviewNotes);
+          setSelectedRequest(null);
+          setReviewNotes('');
+          fetchRequests();
+          onRefresh?.();
+        } catch (err) {
+          setError('Failed to approve request');
+          console.error(err);
+        } finally {
+          setProcessing(false);
+        }
+      },
+    });
   };
 
   const handleReject = async (request: PlacementRequest) => {
     if (!user) return;
-    if (!confirm('Reject this placement request?')) return;
-    setProcessing(true);
-    try {
-      await placementService.rejectPlacementRequest(request.id, user.uid, reviewNotes);
-      setSelectedRequest(null);
-      setReviewNotes('');
-      fetchRequests();
-      onRefresh?.();
-    } catch (err) {
-      setError('Failed to reject request');
-      console.error(err);
-    } finally {
-      setProcessing(false);
-    }
+    setConfirmDialog({
+      title: 'Reject Placement',
+      message: 'Reject this placement request?',
+      danger: true,
+      onConfirm: async () => {
+        setProcessing(true);
+        try {
+          await placementService.rejectPlacementRequest(request.id, user.uid, reviewNotes);
+          setSelectedRequest(null);
+          setReviewNotes('');
+          fetchRequests();
+          onRefresh?.();
+        } catch (err) {
+          setError('Failed to reject request');
+          console.error(err);
+        } finally {
+          setProcessing(false);
+        }
+      },
+    });
   };
 
   const getStatusColor = (status: PlacementStatus) => {
@@ -277,6 +295,14 @@ export function PlacementRequestList({ onRefresh }: PlacementRequestListProps) {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmDialog !== null}
+        title={confirmDialog?.title || ''}
+        message={confirmDialog?.message || ''}
+        danger={confirmDialog?.danger}
+        onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </div>
   );
 }

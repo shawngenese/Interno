@@ -3,6 +3,7 @@ import { documentRequirementService } from '../services/documentRequirementServi
 import { useAuth } from '@/features/auth';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import type { DocumentRequirement, DocumentRequirementFormData, DocumentType, PlacementType } from '../types';
 
 const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
@@ -40,6 +41,12 @@ export function DocumentTemplateEditor() {
     order: 0,
   });
   const [saving, setSaving] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    danger?: boolean;
+  } | null>(null);
 
   const fetchData = async () => {
     if (!user) return;
@@ -117,15 +124,21 @@ export function DocumentTemplateEditor() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this requirement?')) return;
-    try {
-      await documentRequirementService.deleteRequirement(id);
-      fetchData();
-    } catch (err) {
-      setError('Failed to delete requirement');
-      console.error(err);
-    }
+  const handleDelete = (id: string) => {
+    setConfirmDialog({
+      title: 'Delete Requirement',
+      message: 'Delete this requirement?',
+      danger: true,
+      onConfirm: async () => {
+        try {
+          await documentRequirementService.deleteRequirement(id);
+          fetchData();
+        } catch (err) {
+          setError('Failed to delete requirement');
+          console.error(err);
+        }
+      },
+    });
   };
 
   const handleTypeChange = (type: DocumentType) => {
@@ -354,6 +367,14 @@ export function DocumentTemplateEditor() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmDialog !== null}
+        title={confirmDialog?.title || ''}
+        message={confirmDialog?.message || ''}
+        danger={confirmDialog?.danger}
+        onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </div>
   );
 }

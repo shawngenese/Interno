@@ -21,6 +21,7 @@ import {
 import { AdminOverview } from './AdminOverview';
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import type { User, Company, Department, Supervisor, Trainee, WorkSchedule, OJTSchedule } from '../types';
 
 type Tab = 'dashboard' | 'users' | 'companies' | 'departments' | 'supervisors' | 'coordinators' | 'trainees' | 'work-schedules' | 'ojt-schedules';
@@ -71,6 +72,13 @@ export function AdminDashboard() {
   const [editingSupervisorId, setEditingSupervisorId] = useState<string | null>(null);
   const [editingCoordinatorId, setEditingCoordinatorId] = useState<string | null>(null);
   const [viewingTraineeCompanyId, setViewingTraineeCompanyId] = useState<string | null>(null);
+
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    danger?: boolean;
+  } | null>(null);
 
   useEffect(() => {
     setActiveTab(getTabFromPathname(location.pathname));
@@ -232,15 +240,21 @@ export function AdminDashboard() {
     setView('edit');
   };
 
-  const handleDeleteWorkSchedule = async (schedule: WorkSchedule) => {
-    if (!confirm(`Are you sure you want to delete "${schedule.name}"?`)) return;
-    try {
-      const { adminService } = await import('../services/adminService');
-      await adminService.deleteWorkSchedule(schedule.id);
-      setView('list');
-    } catch (err) {
-      console.error('Failed to delete work schedule:', err);
-    }
+  const handleDeleteWorkSchedule = (schedule: WorkSchedule) => {
+    setConfirmDialog({
+      title: 'Delete Work Schedule',
+      message: `Are you sure you want to delete "${schedule.name}"?`,
+      danger: true,
+      onConfirm: async () => {
+        try {
+          const { adminService } = await import('../services/adminService');
+          await adminService.deleteWorkSchedule(schedule.id);
+          setView('list');
+        } catch (err) {
+          console.error('Failed to delete work schedule:', err);
+        }
+      },
+    });
   };
 
   const handleEditOJTSchedule = (schedule: OJTSchedule) => {
@@ -293,6 +307,7 @@ export function AdminDashboard() {
   };
 
   return (
+    <>
     <div>
       {view !== 'list' && view !== 'assign' && (
         <div className="mb-4">
@@ -550,5 +565,15 @@ export function AdminDashboard() {
         </>
       )}
     </div>
+
+    <ConfirmDialog
+      open={confirmDialog !== null}
+      title={confirmDialog?.title || ''}
+      message={confirmDialog?.message || ''}
+      danger={confirmDialog?.danger}
+      onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
+      onCancel={() => setConfirmDialog(null)}
+    />
+    </>
   );
 }

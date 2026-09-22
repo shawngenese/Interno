@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { adminService } from '../services/adminService';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
 import { ActionsMenu } from '@/shared/components/ActionsMenu';
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import { useAuth } from '@/features/auth';
 import type { OJTSchedule, ListOJTSchedulesParams } from '../types';
 
@@ -74,16 +75,29 @@ export function OJTScheduleList({ onEdit, onView, onDelete }: OJTScheduleListPro
     setFilters(p => ({ ...p, page }));
   };
 
-  const handleDelete = async (schedule: OJTSchedule) => {
-    if (!confirm('Delete this OJT schedule?')) return;
-    try {
-      await adminService.deleteOJTSchedule(schedule.id);
-      onDelete?.(schedule);
-      fetchSchedules();
-    } catch (err) {
-      console.error('Failed to delete schedule:', err);
-      setError('Failed to delete schedule');
-    }
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    danger?: boolean;
+  } | null>(null);
+
+  const handleDelete = (schedule: OJTSchedule) => {
+    setConfirmDialog({
+      title: 'Delete OJT Schedule',
+      message: 'Delete this OJT schedule?',
+      danger: true,
+      onConfirm: async () => {
+        try {
+          await adminService.deleteOJTSchedule(schedule.id);
+          onDelete?.(schedule);
+          fetchSchedules();
+        } catch (err) {
+          console.error('Failed to delete schedule:', err);
+          setError('Failed to delete schedule');
+        }
+      },
+    });
   };
 
   const totalPages = Math.ceil(total / (filters.limit || 10));
@@ -127,6 +141,7 @@ export function OJTScheduleList({ onEdit, onView, onDelete }: OJTScheduleListPro
   }
 
   return (
+    <>
     <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
       <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -234,5 +249,15 @@ export function OJTScheduleList({ onEdit, onView, onDelete }: OJTScheduleListPro
         </div>
       )}
     </div>
+
+    <ConfirmDialog
+      open={confirmDialog !== null}
+      title={confirmDialog?.title || ''}
+      message={confirmDialog?.message || ''}
+      danger={confirmDialog?.danger}
+      onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
+      onCancel={() => setConfirmDialog(null)}
+    />
+    </>
   );
 }

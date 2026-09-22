@@ -4,6 +4,7 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { getStorageInstancePublic } from '@/config/firebase';
 import { TaskForm } from './TaskForm';
 import { formatDateTime12 } from '@/shared/utils/dateUtils';
+import { AlertModal } from '@/shared/components/AlertModal';
 import type { Task, SubmitTaskPayload, ReviewTaskPayload } from '../types';
 import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS, TASK_STATUS_COLORS, TASK_PRIORITY_COLORS } from '../types';
 
@@ -24,6 +25,7 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
   const [submitText, setSubmitText] = useState('');
   const [submitFiles, setSubmitFiles] = useState<File[]>([]);
   const [reviewFeedback, setReviewFeedback] = useState('');
+  const [alertModal, setAlertModal] = useState<{ title: string; message: string } | null>(null);
 
   const loadTask = async () => {
     setLoading(true);
@@ -71,7 +73,7 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
 
   const handleSubmit = async () => {
     if (task?.requireAttachment && submitFiles.length === 0) {
-      alert('This task requires at least one file attachment.');
+      setAlertModal({ title: 'Error', message: 'This task requires at least one file attachment.' });
       return;
     }
     setSubmitting(true);
@@ -84,7 +86,7 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
       await loadTask();
     } catch (err) {
       console.error('Failed to submit task:', err);
-      alert('Failed to submit. Please try again.');
+      setAlertModal({ title: 'Error', message: 'Failed to submit. Please try again.' });
     } finally {
       setSubmitting(false);
     }
@@ -282,6 +284,12 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
       )}
 
 
+      <AlertModal
+        open={alertModal !== null}
+        title={alertModal?.title || ''}
+        message={alertModal?.message || ''}
+        onClose={() => setAlertModal(null)}
+      />
     </div>
   );
 }

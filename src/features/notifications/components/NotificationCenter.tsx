@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { listNotifications, markNotificationRead, markAllNotificationsRead, deleteNotification, getNotificationPreferences, updateNotificationPreferences, getDefaultPreferences } from '../services/notificationService';
 import { EmptyState, InboxIcon } from '@/shared/components/EmptyState';
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import type { Notification, NotificationType, NotificationPreferences, ListNotificationsParams } from '../types';
 
 function formatTime(ms: number): string {
@@ -63,6 +64,12 @@ export function NotificationCenter() {
   const [error, setError] = useState<string | null>(null);
   const [showPreferences, setShowPreferences] = useState(false);
   const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    danger?: boolean;
+  } | null>(null);
 
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
@@ -112,14 +119,20 @@ export function NotificationCenter() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this notification?')) return;
-    try {
-      await deleteNotification(id);
-      setNotifications(prev => prev.filter(n => n.id !== id));
-      setTotal(t => t - 1);
-    } catch (err) {
-      console.error('Delete failed:', err);
-    }
+    setConfirmDialog({
+      title: 'Delete Notification',
+      message: 'Delete this notification?',
+      danger: true,
+      onConfirm: async () => {
+        try {
+          await deleteNotification(id);
+          setNotifications(prev => prev.filter(n => n.id !== id));
+          setTotal(t => t - 1);
+        } catch (err) {
+          console.error('Delete failed:', err);
+        }
+      },
+    });
   };
 
   const handlePreferenceChange = async (key: keyof NotificationPreferences, value: boolean) => {
@@ -136,6 +149,7 @@ export function NotificationCenter() {
   const totalPages = Math.max(1, Math.ceil(total / (filters.limit || 20)));
 
   return (
+    <>
     <div className="space-y-6">
       <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -299,5 +313,15 @@ export function NotificationCenter() {
         </div>
       </div>
     </div>
+
+    <ConfirmDialog
+      open={confirmDialog !== null}
+      title={confirmDialog?.title || ''}
+      message={confirmDialog?.message || ''}
+      danger={confirmDialog?.danger}
+      onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
+      onCancel={() => setConfirmDialog(null)}
+    />
+    </>
   );
 }

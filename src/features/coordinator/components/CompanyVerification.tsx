@@ -3,6 +3,7 @@ import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, getDocs, doc, updateDoc, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/features/auth';
 import { COMPANY_TYPES } from '@/config/constants';
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 
 interface Company {
   id: string;
@@ -22,6 +23,12 @@ export function CompanyVerification() {
   const [processing, setProcessing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'verified' | 'unverified'>('unverified');
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    danger?: boolean;
+  } | null>(null);
 
   const fetchCompanies = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
@@ -72,62 +79,73 @@ export function CompanyVerification() {
 
   const handleVerify = async (companyId: string) => {
     if (!user) return;
-    if (!confirm('Verify this company?')) return;
-    setProcessing(companyId);
-    try {
-      const db = getFirestoreInstancePublic();
-      await updateDoc(doc(db, 'companies', companyId), {
-        verified: true,
-        verifiedBy: user.uid,
-        verifiedAt: new Date(),
-      });
-      await addDoc(collection(db, 'audit_logs'), {
-        timestamp: serverTimestamp(),
-        userId: user.uid,
-        action: 'update',
-        entityType: 'company',
-        entityId: companyId,
-        originalValue: false,
-        newValue: true,
-        metadata: { field: 'verified' },
-      });
-      fetchCompanies();
-    } catch (err) {
-      setError('Failed to verify company');
-      console.error(err);
-    } finally {
-      setProcessing(null);
-    }
+    setConfirmDialog({
+      title: 'Verify Company',
+      message: 'Verify this company?',
+      onConfirm: async () => {
+        setProcessing(companyId);
+        try {
+          const db = getFirestoreInstancePublic();
+          await updateDoc(doc(db, 'companies', companyId), {
+            verified: true,
+            verifiedBy: user.uid,
+            verifiedAt: new Date(),
+          });
+          await addDoc(collection(db, 'audit_logs'), {
+            timestamp: serverTimestamp(),
+            userId: user.uid,
+            action: 'update',
+            entityType: 'company',
+            entityId: companyId,
+            originalValue: false,
+            newValue: true,
+            metadata: { field: 'verified' },
+          });
+          fetchCompanies();
+        } catch (err) {
+          setError('Failed to verify company');
+          console.error(err);
+        } finally {
+          setProcessing(null);
+        }
+      },
+    });
   };
 
   const handleUnverify = async (companyId: string) => {
     if (!user) return;
-    if (!confirm('Revoke verification for this company? This may affect supervisor access.')) return;
-    setProcessing(companyId);
-    try {
-      const db = getFirestoreInstancePublic();
-      await updateDoc(doc(db, 'companies', companyId), {
-        verified: false,
-        verifiedBy: null,
-        verifiedAt: null,
-      });
-      await addDoc(collection(db, 'audit_logs'), {
-        timestamp: serverTimestamp(),
-        userId: user.uid,
-        action: 'update',
-        entityType: 'company',
-        entityId: companyId,
-        originalValue: true,
-        newValue: false,
-        metadata: { field: 'verified' },
-      });
-      fetchCompanies();
-    } catch (err) {
-      setError('Failed to unverify company');
-      console.error(err);
-    } finally {
-      setProcessing(null);
-    }
+    setConfirmDialog({
+      title: 'Revoke Verification',
+      message: 'Revoke verification for this company? This may affect supervisor access.',
+      danger: true,
+      onConfirm: async () => {
+        setProcessing(companyId);
+        try {
+          const db = getFirestoreInstancePublic();
+          await updateDoc(doc(db, 'companies', companyId), {
+            verified: false,
+            verifiedBy: null,
+            verifiedAt: null,
+          });
+          await addDoc(collection(db, 'audit_logs'), {
+            timestamp: serverTimestamp(),
+            userId: user.uid,
+            action: 'update',
+            entityType: 'company',
+            entityId: companyId,
+            originalValue: true,
+            newValue: false,
+            metadata: { field: 'verified' },
+          });
+          fetchCompanies();
+        } catch (err) {
+          setError('Failed to unverify company');
+          console.error(err);
+        } finally {
+          setProcessing(null);
+        }
+      },
+    });
   };
 
   return (
@@ -231,6 +249,14 @@ export function CompanyVerification() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={confirmDialog !== null}
+        title={confirmDialog?.title || ''}
+        message={confirmDialog?.message || ''}
+        danger={confirmDialog?.danger}
+        onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </div>
   );
 }
