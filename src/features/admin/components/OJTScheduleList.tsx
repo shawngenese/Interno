@@ -24,7 +24,6 @@ export function OJTScheduleList({ onEdit, onView, onDelete }: OJTScheduleListPro
   const [filters, setFilters] = useState<ListOJTSchedulesParams>({ page: 1, limit: 10 });
   const [total, setTotal] = useState(0);
   const [searchValue, setSearchValue] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Cleanup debounce timer
@@ -39,9 +38,6 @@ export function OJTScheduleList({ onEdit, onView, onDelete }: OJTScheduleListPro
     setError(null);
     try {
       const params: ListOJTSchedulesParams = { ...filters };
-      if (filterStatus) {
-        params.status = filterStatus;
-      }
       const result = await adminService.listOJTSchedules(params);
       const resolved = await Promise.all(
         result.data.map(async (s) => {
@@ -60,7 +56,7 @@ export function OJTScheduleList({ onEdit, onView, onDelete }: OJTScheduleListPro
     } finally {
       setLoading(false);
     }
-  }, [filters, filterStatus]);
+  }, [filters]);
 
   useEffect(() => {
     fetchSchedules();
@@ -109,19 +105,8 @@ export function OJTScheduleList({ onEdit, onView, onDelete }: OJTScheduleListPro
     return (
       <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
         <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <h2 className="text-lg font-semibold text-[#121212] dark:text-white">OJT Schedules</h2>
-            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Status</option>
-                <option value="active">Active</option>
-                <option value="upcoming">Upcoming</option>
-                <option value="completed">Completed</option>
-              </select>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <h2 className="text-lg font-semibold text-[#121212] dark:text-white">OJT Schedules</h2>
               <input
                 type="text"
                 placeholder="Search schedules..."
@@ -131,7 +116,6 @@ export function OJTScheduleList({ onEdit, onView, onDelete }: OJTScheduleListPro
               />
             </div>
           </div>
-        </div>
         <div className="flex items-center justify-center h-64">
           <svg className="animate-spin h-8 w-8 text-blue-600" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -147,18 +131,7 @@ export function OJTScheduleList({ onEdit, onView, onDelete }: OJTScheduleListPro
       <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <h2 className="text-lg font-semibold text-[#121212] dark:text-white">OJT Schedules</h2>
-            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Status</option>
-                <option value="active">Active</option>
-                <option value="upcoming">Upcoming</option>
-                <option value="completed">Completed</option>
-              </select>
-              <input
+            <input
               type="text"
               placeholder="Search schedules..."
               value={searchValue}
@@ -167,7 +140,6 @@ export function OJTScheduleList({ onEdit, onView, onDelete }: OJTScheduleListPro
             />
           </div>
         </div>
-      </div>
 
       {error && (
         <div role="alert" className="p-4 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">

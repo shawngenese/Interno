@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { adminService } from '../services/adminService';
 import { ActionsMenu } from '@/shared/components/ActionsMenu';
 import type { Company, ListCompaniesParams } from '../types';
@@ -21,6 +21,14 @@ export function CompanyList({ onEdit }: CompanyListProps) {
     page: 1,
     limit: 10,
   });
+  const [searchValue, setSearchValue] = useState('');
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, []);
 
   const fetchCompanies = useCallback(async () => {
     setLoading(true);
@@ -50,6 +58,14 @@ export function CompanyList({ onEdit }: CompanyListProps) {
     setFilters((p: typeof filters) => ({ ...p, page }));
   };
 
+  const handleSearch = (search: string) => {
+    setSearchValue(search);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setFilters(p => ({ ...p, search, page: 1 }));
+    }, 400);
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this company?')) return;
     try {
@@ -64,7 +80,16 @@ export function CompanyList({ onEdit }: CompanyListProps) {
   return (
     <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
       <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
-        <h3 className="text-lg font-semibold text-[#121212] dark:text-white">Companies</h3>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h3 className="text-lg font-semibold text-[#121212] dark:text-white">Companies</h3>
+          <input
+            type="text"
+            placeholder="Search companies..."
+            value={searchValue}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="w-full sm:w-64 px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
       </div>
 
       {error && (
