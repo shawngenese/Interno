@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { adminService } from '../services/adminService';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
+import { useFormValidation } from '@/shared/hooks/useFormValidation';
+import { required } from '@/shared/utils/validators';
+import { FormField, FormInput, FormSelect, FormTextarea } from '@/shared/components/FormField';
 import type { DepartmentFormData, Company, Supervisor } from '../types';
 
 interface DepartmentFormProps {
@@ -12,12 +15,26 @@ interface DepartmentFormProps {
 export function DepartmentForm({ editingId, onCancel, onSaved }: DepartmentFormProps) {
   const isEditing = !!editingId;
 
-  const [formData, setFormData] = useState<DepartmentFormData>({
-    companyId: '',
-    name: '',
-    description: '',
-    headSupervisorId: '',
-  });
+  const {
+    formData,
+    errors,
+    touched,
+    handleChange,
+    handleBlur,
+    handleSubmit,
+    setFormData,
+  } = useFormValidation<DepartmentFormData>(
+    {
+      companyId: '',
+      name: '',
+      description: '',
+      headSupervisorId: '',
+    },
+    {
+      companyId: [required('Company is required')],
+      name: [required('Department name is required')],
+    },
+  );
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [supervisors, setSupervisors] = useState<(Supervisor & { userName?: string; userEmail?: string })[]>([]);
@@ -85,20 +102,15 @@ export function DepartmentForm({ editingId, onCancel, onSaved }: DepartmentFormP
     }
   }, [formData.companyId]);
 
-  const handleChange = (field: keyof DepartmentFormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: DepartmentFormData) => {
     setError(null);
     setSaving(true);
 
     try {
       if (isEditing && editingId) {
-        await adminService.updateDepartment(editingId, formData);
+        await adminService.updateDepartment(editingId, data);
       } else {
-        await adminService.createDepartment(formData);
+        await adminService.createDepartment(data);
       }
       onSaved?.();
     } catch (err: unknown) {
@@ -136,70 +148,58 @@ export function DepartmentForm({ editingId, onCancel, onSaved }: DepartmentFormP
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="companyId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-            Company <span className="text-red-500">*</span>
-          </label>
-          <select
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <FormField id="companyId" label="Company" required error={touched.companyId ? errors.companyId : undefined}>
+          <FormSelect
             id="companyId"
             value={formData.companyId}
-            onChange={(e) => handleChange('companyId', e.target.value)}
-            required
-            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            onValueChange={handleChange('companyId')}
+            onBlur={handleBlur('companyId')}
+            error={touched.companyId ? errors.companyId : undefined}
           >
             <option value="">Select Company</option>
             {companies.map(company => (
               <option key={company.id} value={company.id}>{company.name}</option>
             ))}
-          </select>
-        </div>
+          </FormSelect>
+        </FormField>
 
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-            Department Name <span className="text-red-500">*</span>
-          </label>
-          <input
+        <FormField id="name" label="Department Name" required error={touched.name ? errors.name : undefined}>
+          <FormInput
             type="text"
             id="name"
             value={formData.name}
-            onChange={(e) => handleChange('name', e.target.value)}
-            required
-            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            onValueChange={handleChange('name')}
+            onBlur={handleBlur('name')}
+            error={touched.name ? errors.name : undefined}
             placeholder="Department Name"
           />
-        </div>
+        </FormField>
 
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-            Description
-          </label>
-          <textarea
+        <FormField id="description" label="Description">
+          <FormTextarea
             id="description"
             value={formData.description}
-            onChange={(e) => handleChange('description', e.target.value)}
+            onValueChange={handleChange('description')}
+            onBlur={handleBlur('description')}
             rows={3}
-            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="Department description"
           />
-        </div>
+        </FormField>
 
-        <div>
-          <label htmlFor="headSupervisorId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-            Head Supervisor (optional)
-          </label>
-          <select
+        <FormField id="headSupervisorId" label="Head Supervisor (optional)">
+          <FormSelect
             id="headSupervisorId"
             value={formData.headSupervisorId}
-            onChange={(e) => handleChange('headSupervisorId', e.target.value)}
-            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            onValueChange={handleChange('headSupervisorId')}
+            onBlur={handleBlur('headSupervisorId')}
           >
             <option value="">None</option>
             {supervisors.map(sup => (
               <option key={sup.id} value={sup.userId}>{sup.userName || sup.userEmail || sup.userId}</option>
             ))}
-          </select>
-        </div>
+          </FormSelect>
+        </FormField>
 
         <div className="flex justify-end gap-3 pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
           <button

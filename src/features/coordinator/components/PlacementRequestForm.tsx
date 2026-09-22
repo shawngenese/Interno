@@ -3,6 +3,9 @@ import { placementService } from '../services/placementService';
 import { useAuth } from '@/features/auth';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
+import { useFormValidation } from '@/shared/hooks/useFormValidation';
+import { required } from '@/shared/utils/validators';
+import { FormField, FormSelect, FormTextarea } from '@/shared/components/FormField';
 
 interface Company {
   id: string;
@@ -17,12 +20,23 @@ interface PlacementRequestFormProps {
 export function PlacementRequestForm({ onSuccess }: PlacementRequestFormProps) {
   const { user } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [selectedCompanyId, setSelectedCompanyId] = useState('');
-  const [requestNotes, setRequestNotes] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  const {
+    formData,
+    errors,
+    touched,
+    handleChange,
+    handleBlur,
+    handleSubmit,
+    setFormData,
+  } = useFormValidation(
+    { selectedCompanyId: '', requestNotes: '' },
+    { selectedCompanyId: [required('Please select a company')] },
+  );
 
   const fetchCompanies = async () => {
     setLoading(true);
@@ -48,28 +62,26 @@ export function PlacementRequestForm({ onSuccess }: PlacementRequestFormProps) {
     fetchCompanies();
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !selectedCompanyId) return;
+  const onSubmit = async (data: { selectedCompanyId: string; requestNotes: string }) => {
+    if (!user) return;
 
     setSubmitting(true);
     setError(null);
 
     try {
-      const selectedCompany = companies.find((c) => c.id === selectedCompanyId);
+      const selectedCompany = companies.find((c) => c.id === data.selectedCompanyId);
       if (!selectedCompany) throw new Error('Company not found');
 
       await placementService.requestExternalPlacement(
         user.uid,
         user.displayName || user.email || 'Unknown',
         user.email || '',
-        selectedCompanyId,
+        data.selectedCompanyId,
         selectedCompany.name,
-        requestNotes,
+        data.requestNotes,
       );
       setSuccess(true);
-      setSelectedCompanyId('');
-      setRequestNotes('');
+      setFormData({ selectedCompanyId: '', requestNotes: '' });
       onSuccess?.();
     } catch (err) {
       setError('Failed to submit placement request');
@@ -116,28 +128,25 @@ export function PlacementRequestForm({ onSuccess }: PlacementRequestFormProps) {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-4 space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="p-4 space-y-4">
         {error && (
           <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
             {error}
           </div>
         )}
 
-        <div>
-          <label htmlFor="external-company" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-            Select External Company <span className="text-red-500">*</span>
-          </label>
+        <FormField id="external-company" label="Select External Company" required error={touched.selectedCompanyId ? errors.selectedCompanyId : undefined}>
           {loading ? (
             <div className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-[#F5F5F5] dark:bg-[#3A3A3A] text-[#757575] dark:text-[#9E9E9E]">
               Loading companies...
             </div>
           ) : (
-            <select
+            <FormSelect
               id="external-company"
-              value={selectedCompanyId}
-              onChange={(e) => setSelectedCompanyId(e.target.value)}
-              required
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={formData.selectedCompanyId}
+              onValueChange={handleChange('selectedCompanyId')}
+              onBlur={handleBlur('selectedCompanyId')}
+              error={touched.selectedCompanyId ? errors.selectedCompanyId : undefined}
             >
               <option value="">Select a company...</option>
               {companies.map((company) => (
@@ -145,28 +154,25 @@ export function PlacementRequestForm({ onSuccess }: PlacementRequestFormProps) {
                   {company.name} {company.address ? `- ${company.address}` : ''}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           )}
-        </div>
+        </FormField>
 
-        <div>
-          <label htmlFor="request-notes" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-            Request Notes (optional)
-          </label>
-          <textarea
+        <FormField id="request-notes" label="Request Notes (optional)">
+          <FormTextarea
             id="request-notes"
-            value={requestNotes}
-            onChange={(e) => setRequestNotes(e.target.value)}
+            value={formData.requestNotes}
+            onValueChange={handleChange('requestNotes')}
+            onBlur={handleBlur('requestNotes')}
             rows={4}
-            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="Explain why you want to be placed at this company..."
           />
-        </div>
+        </FormField>
 
         <div className="flex justify-end pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
           <button
             type="submit"
-            disabled={submitting || !selectedCompanyId}
+            disabled={submitting}
             className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {submitting ? 'Submitting...' : 'Submit Request'}

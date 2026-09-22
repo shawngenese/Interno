@@ -1,6 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { adminService } from '../services/adminService';
 import type { OJTScheduleFormData, WorkSchedule, Company } from '../types';
+import { useFormValidation } from '@/shared/hooks/useFormValidation';
+import { required, minValue } from '@/shared/utils/validators';
+import { FormField, FormInput, FormSelect, FormTextarea } from '@/shared/components/FormField';
 
 interface OJTScheduleFormProps {
   editingId?: string;
@@ -12,15 +15,26 @@ interface OJTScheduleFormProps {
 export function OJTScheduleForm({ editingId, viewOnly, onCancel, onSaved }: OJTScheduleFormProps) {
   const isEditing = !!editingId;
 
-  const [formData, setFormData] = useState<OJTScheduleFormData>({
-    companyId: '',
-    name: '',
-    startDate: new Date(),
-    endDate: new Date(),
-    requiredHours: 480,
-    workScheduleId: '',
-    description: '',
-  });
+  const { formData, errors, touched, handleChange, handleBlur, handleSubmit, setFieldValue, setFormData } =
+    useFormValidation<OJTScheduleFormData>(
+      {
+        companyId: '',
+        name: '',
+        startDate: new Date(),
+        endDate: new Date(),
+        requiredHours: 480,
+        workScheduleId: '',
+        description: '',
+      },
+      {
+        companyId: [required('Company is required')],
+        name: [required('Schedule name is required')],
+        startDate: [required('Start date is required')],
+        endDate: [required('End date is required')],
+        requiredHours: [required('Required hours is required'), minValue(1)],
+        workScheduleId: [required('Work schedule is required')],
+      },
+    );
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [workSchedules, setWorkSchedules] = useState<WorkSchedule[]>([]);
@@ -81,7 +95,6 @@ export function OJTScheduleForm({ editingId, viewOnly, onCancel, onSaved }: OJTS
     init();
   }, [editingId, isEditing]);
 
-  // Load work schedules when company changes
   useEffect(() => {
     if (formData.companyId) {
       loadWorkSchedules(formData.companyId);
@@ -90,20 +103,15 @@ export function OJTScheduleForm({ editingId, viewOnly, onCancel, onSaved }: OJTS
     }
   }, [formData.companyId]);
 
-  const handleChange = (field: keyof OJTScheduleFormData, value: string | number | Date) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: OJTScheduleFormData) => {
     setError(null);
     setSaving(true);
 
     try {
       const submitData = {
-        ...formData,
-        startDate: formData.startDate instanceof Date ? formData.startDate : new Date(formData.startDate),
-        endDate: formData.endDate instanceof Date ? formData.endDate : new Date(formData.endDate),
+        ...data,
+        startDate: data.startDate instanceof Date ? data.startDate : new Date(data.startDate),
+        endDate: data.endDate instanceof Date ? data.endDate : new Date(data.endDate),
       };
 
       if (isEditing && editingId) {
@@ -147,126 +155,104 @@ export function OJTScheduleForm({ editingId, viewOnly, onCancel, onSaved }: OJTS
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="companyId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-            Company <span className="text-red-500">*</span>
-          </label>
-          <select
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <FormField id="companyId" label="Company" required error={touched.companyId ? errors.companyId : undefined}>
+          <FormSelect
             id="companyId"
             value={formData.companyId}
-            onChange={(e) => handleChange('companyId', e.target.value)}
-            required
+            onValueChange={handleChange('companyId')}
+            onBlur={handleBlur('companyId')}
             disabled={viewOnly}
-            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            error={touched.companyId ? errors.companyId : undefined}
           >
             <option value="">Select Company</option>
             {companies.map(c => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
-          </select>
-        </div>
+          </FormSelect>
+        </FormField>
 
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-            Schedule Name <span className="text-red-500">*</span>
-          </label>
-          <input
+        <FormField id="name" label="Schedule Name" required error={touched.name ? errors.name : undefined}>
+          <FormInput
             type="text"
             id="name"
             value={formData.name}
-            onChange={(e) => handleChange('name', e.target.value)}
-            required
+            onValueChange={handleChange('name')}
+            onBlur={handleBlur('name')}
             disabled={viewOnly}
-            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            error={touched.name ? errors.name : undefined}
             placeholder="OJT Schedule Name"
           />
-        </div>
+        </FormField>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="startDate" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              Start Date <span className="text-red-500">*</span>
-            </label>
-            <input
+          <FormField id="startDate" label="Start Date" required error={touched.startDate ? errors.startDate : undefined}>
+            <FormInput
               type="date"
               id="startDate"
               value={formData.startDate instanceof Date ? formData.startDate.toISOString().split('T')[0] : ''}
-              onChange={(e) => handleChange('startDate', new Date(e.target.value))}
-              required
+              onValueChange={(val) => setFieldValue('startDate', new Date(val))}
+              onBlur={handleBlur('startDate')}
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              error={touched.startDate ? errors.startDate : undefined}
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label htmlFor="endDate" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              End Date <span className="text-red-500">*</span>
-            </label>
-            <input
+          <FormField id="endDate" label="End Date" required error={touched.endDate ? errors.endDate : undefined}>
+            <FormInput
               type="date"
               id="endDate"
               value={formData.endDate instanceof Date ? formData.endDate.toISOString().split('T')[0] : ''}
-              onChange={(e) => handleChange('endDate', new Date(e.target.value))}
-              required
+              onValueChange={(val) => setFieldValue('endDate', new Date(val))}
+              onBlur={handleBlur('endDate')}
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              error={touched.endDate ? errors.endDate : undefined}
             />
-          </div>
+          </FormField>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="requiredHours" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              Required Hours <span className="text-red-500">*</span>
-            </label>
-            <input
+          <FormField id="requiredHours" label="Required Hours" required error={touched.requiredHours ? errors.requiredHours : undefined}>
+            <FormInput
               type="number"
               id="requiredHours"
               value={formData.requiredHours}
-              onChange={(e) => handleChange('requiredHours', parseInt(e.target.value) || 0)}
-              required
-              min="1"
+              onValueChange={(val) => setFieldValue('requiredHours', parseInt(val) || 0)}
+              onBlur={handleBlur('requiredHours')}
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              error={touched.requiredHours ? errors.requiredHours : undefined}
               placeholder="480"
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label htmlFor="workScheduleId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              Work Schedule <span className="text-red-500">*</span>
-            </label>
-            <select
+          <FormField id="workScheduleId" label="Work Schedule" required error={touched.workScheduleId ? errors.workScheduleId : undefined}>
+            <FormSelect
               id="workScheduleId"
               value={formData.workScheduleId}
-              onChange={(e) => handleChange('workScheduleId', e.target.value)}
-              required
+              onValueChange={handleChange('workScheduleId')}
+              onBlur={handleBlur('workScheduleId')}
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              error={touched.workScheduleId ? errors.workScheduleId : undefined}
             >
               <option value="">Select Work Schedule</option>
               {workSchedules.map(ws => (
                 <option key={ws.id} value={ws.id}>{ws.name} ({to12Hour(ws.timeIn)} - {to12Hour(ws.timeOut)})</option>
               ))}
-            </select>
-          </div>
+            </FormSelect>
+          </FormField>
         </div>
 
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-            Description
-          </label>
-          <textarea
+        <FormField id="description" label="Description">
+          <FormTextarea
             id="description"
             value={formData.description}
-            onChange={(e) => handleChange('description', e.target.value)}
+            onValueChange={handleChange('description')}
+            onBlur={handleBlur('description')}
             rows={3}
             disabled={viewOnly}
-            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder="Schedule description"
           />
-        </div>
+        </FormField>
 
         <div className="flex justify-end gap-3 pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
           <button

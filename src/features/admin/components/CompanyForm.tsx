@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { adminService } from '../services/adminService';
 import type { CompanyFormData } from '../types';
+import { useFormValidation } from '@/shared/hooks/useFormValidation';
+import { required } from '@/shared/utils/validators';
+import { FormField, FormInput, FormSelect, FormTextarea } from '@/shared/components/FormField';
 
 interface CompanyFormProps {
   editingId?: string;
@@ -8,17 +11,31 @@ interface CompanyFormProps {
   onSaved?: () => void;
 }
 
+const initialValues: CompanyFormData = {
+  name: '',
+  type: 'internal',
+  address: '',
+  contactPerson: '',
+  contactEmail: '',
+  contactPhone: '',
+  verified: false,
+};
+
 export function CompanyForm({ editingId, onCancel, onSaved }: CompanyFormProps) {
   const isEditing = !!editingId;
 
-  const [formData, setFormData] = useState<CompanyFormData>({
-    name: '',
-    type: 'internal',
-    address: '',
-    contactPerson: '',
-    contactEmail: '',
-    contactPhone: '',
-    verified: false,
+  const {
+    formData,
+    setFormData,
+    errors,
+    touched,
+    handleChange,
+    handleBlur,
+    handleSubmit,
+    setFieldValue,
+  } = useFormValidation<CompanyFormData>(initialValues, {
+    name: [required('Company name is required')],
+    type: [required('Company type is required')],
   });
 
   const [loading, setLoading] = useState(true);
@@ -53,20 +70,15 @@ export function CompanyForm({ editingId, onCancel, onSaved }: CompanyFormProps) 
     }
   }, [editingId, isEditing]);
 
-  const handleChange = (field: keyof CompanyFormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: CompanyFormData) => {
     setError(null);
     setSaving(true);
 
     try {
       if (isEditing && editingId) {
-        await adminService.updateCompany(editingId, formData);
+        await adminService.updateCompany(editingId, data);
       } else {
-        await adminService.createCompany(formData);
+        await adminService.createCompany(data);
       }
       onSaved?.();
     } catch (err: unknown) {
@@ -104,96 +116,106 @@ export function CompanyForm({ editingId, onCancel, onSaved }: CompanyFormProps) 
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-            Company Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          id="name"
+          label="Company Name"
+          required
+          error={touched.name ? errors.name : undefined}
+        >
+          <FormInput
             id="name"
             value={formData.name}
-            onChange={(e) => handleChange('name', e.target.value)}
-            required
-            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            onValueChange={handleChange('name')}
+            onBlur={handleBlur('name')}
+            error={touched.name ? errors.name : undefined}
             placeholder="Company Name"
           />
-        </div>
+        </FormField>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="type" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              Company Type <span className="text-red-500">*</span>
-            </label>
-            <select
+          <FormField
+            id="type"
+            label="Company Type"
+            required
+            error={touched.type ? errors.type : undefined}
+          >
+            <FormSelect
               id="type"
               value={formData.type}
-              onChange={(e) => handleChange('type', e.target.value)}
-              required
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onValueChange={handleChange('type')}
+              onBlur={handleBlur('type')}
+              error={touched.type ? errors.type : undefined}
             >
               <option value="internal">Internal</option>
               <option value="external">External</option>
-            </select>
-          </div>
+            </FormSelect>
+          </FormField>
 
-          <div>
-            <label htmlFor="contactPerson" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              Contact Person
-            </label>
-            <input
-              type="text"
+          <FormField
+            id="contactPerson"
+            label="Contact Person"
+            error={touched.contactPerson ? errors.contactPerson : undefined}
+          >
+            <FormInput
               id="contactPerson"
               value={formData.contactPerson}
-              onChange={(e) => handleChange('contactPerson', e.target.value)}
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onValueChange={handleChange('contactPerson')}
+              onBlur={handleBlur('contactPerson')}
+              error={touched.contactPerson ? errors.contactPerson : undefined}
               placeholder="Contact Person Name"
             />
-          </div>
+          </FormField>
         </div>
 
-        <div>
-          <label htmlFor="address" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-            Address
-          </label>
-          <textarea
+        <FormField
+          id="address"
+          label="Address"
+          error={touched.address ? errors.address : undefined}
+        >
+          <FormTextarea
             id="address"
             value={formData.address}
-            onChange={(e) => handleChange('address', e.target.value)}
+            onValueChange={handleChange('address')}
+            onBlur={handleBlur('address')}
+            error={touched.address ? errors.address : undefined}
             rows={3}
-            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="Company Address"
           />
-        </div>
+        </FormField>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="contactEmail" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              Contact Email
-            </label>
-            <input
-              type="email"
+          <FormField
+            id="contactEmail"
+            label="Contact Email"
+            error={touched.contactEmail ? errors.contactEmail : undefined}
+          >
+            <FormInput
               id="contactEmail"
+              type="email"
               value={formData.contactEmail}
-              onChange={(e) => handleChange('contactEmail', e.target.value)}
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onValueChange={handleChange('contactEmail')}
+              onBlur={handleBlur('contactEmail')}
+              error={touched.contactEmail ? errors.contactEmail : undefined}
               placeholder="contact@company.com"
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label htmlFor="contactPhone" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              Contact Phone
-            </label>
-            <input
-              type="tel"
+          <FormField
+            id="contactPhone"
+            label="Contact Phone"
+            error={touched.contactPhone ? errors.contactPhone : undefined}
+          >
+            <FormInput
               id="contactPhone"
+              type="tel"
               value={formData.contactPhone}
-              onChange={(e) => handleChange('contactPhone', e.target.value)}
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onValueChange={handleChange('contactPhone')}
+              onBlur={handleBlur('contactPhone')}
+              error={touched.contactPhone ? errors.contactPhone : undefined}
               placeholder="+1 (555) 123-4567"
             />
-          </div>
+          </FormField>
         </div>
 
         {isEditing && (
@@ -202,7 +224,7 @@ export function CompanyForm({ editingId, onCancel, onSaved }: CompanyFormProps) 
               type="checkbox"
               id="verified"
               checked={formData.verified}
-              onChange={(e) => setFormData(prev => ({ ...prev, verified: e.target.checked }))}
+              onChange={(e) => setFieldValue('verified', e.target.checked)}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-[#BDBDBD] rounded"
             />
             <label htmlFor="verified" className="text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD]">

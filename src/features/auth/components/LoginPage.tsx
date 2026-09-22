@@ -1,26 +1,34 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../AuthProvider';
+import { useFormValidation } from '@/shared/hooks/useFormValidation';
+import { required, email } from '@/shared/utils/validators';
+import { FormField, FormInput } from '@/shared/components/FormField';
 
 export function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
+  const { formData, errors, touched, handleChange, handleBlur, handleSubmit } = useFormValidation(
+    { email: '', password: '' },
+    {
+      email: [required('Email is required'), email()],
+      password: [required('Password is required')],
+    },
+  );
+
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const from = (location.state as { from?: Location })?.from?.pathname || '/dashboard';
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: { email: string; password: string }) => {
     setError('');
     setLoading(true);
 
     try {
-      await login(email, password);
+      await login(data.email, data.password);
       navigate(from, { replace: true });
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed';
@@ -55,40 +63,34 @@ export function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-                Email
-              </label>
-              <input
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <FormField id="email" label="Email" error={touched.email ? errors.email : undefined}>
+              <FormInput
                 id="email"
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={formData.email}
+                onValueChange={handleChange('email')}
+                onBlur={handleBlur('email')}
+                error={touched.email ? errors.email : undefined}
                 placeholder="Enter your email"
-                required
                 autoComplete="email"
                 disabled={loading}
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-                Password
-              </label>
-              <input
+            <FormField id="password" label="Password" error={touched.password ? errors.password : undefined}>
+              <FormInput
                 id="password"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={formData.password}
+                onValueChange={handleChange('password')}
+                onBlur={handleBlur('password')}
+                error={touched.password ? errors.password : undefined}
                 placeholder="Enter your password"
-                required
                 autoComplete="current-password"
                 disabled={loading}
               />
-            </div>
+            </FormField>
 
             <button
               type="submit"

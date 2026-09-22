@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { adminService } from '../services/adminService';
 import type { WorkScheduleFormData, Company } from '../types';
+import { useFormValidation } from '@/shared/hooks/useFormValidation';
+import { required, minValue } from '@/shared/utils/validators';
+import { FormField, FormInput, FormSelect } from '@/shared/components/FormField';
 
 interface WorkScheduleFormProps {
   editingId?: string;
@@ -19,17 +22,36 @@ const DAY_OPTIONS = [
   { value: 6, label: 'Saturday' },
 ];
 
+const validationRules = {
+  companyId: [required('Company is required')],
+  name: [required('Schedule name is required')],
+  timeIn: [required('Time in is required')],
+  timeOut: [required('Time out is required')],
+  breakDurationMinutes: [required('Break duration is required'), minValue(0)],
+};
+
+const initialValues: WorkScheduleFormData = {
+  companyId: '',
+  name: '',
+  timeIn: '08:00',
+  timeOut: '17:00',
+  breakDurationMinutes: 60,
+  workDays: [1, 2, 3, 4, 5],
+};
+
 export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: WorkScheduleFormProps) {
   const isEditing = !!editingId;
 
-  const [formData, setFormData] = useState<WorkScheduleFormData>({
-    companyId: '',
-    name: '',
-    timeIn: '08:00',
-    timeOut: '17:00',
-    breakDurationMinutes: 60,
-    workDays: [1, 2, 3, 4, 5],
-  });
+  const {
+    formData,
+    errors,
+    touched,
+    handleChange,
+    handleBlur,
+    handleSubmit,
+    setFieldValue,
+    setFormData,
+  } = useFormValidation<WorkScheduleFormData>(initialValues, validationRules);
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,10 +94,6 @@ export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: Wor
     init();
   }, [editingId, isEditing]);
 
-  const handleChange = (field: keyof WorkScheduleFormData, value: string | number | number[]) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
   const handleWorkDayToggle = (day: number) => {
     setFormData(prev => {
       if (prev.workDays.length === 1 && prev.workDays.includes(day)) {
@@ -88,16 +106,15 @@ export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: Wor
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: WorkScheduleFormData) => {
     setError(null);
     setSaving(true);
 
     try {
       if (isEditing && editingId) {
-        await adminService.updateWorkSchedule(editingId, formData);
+        await adminService.updateWorkSchedule(editingId, data);
       } else {
-        await adminService.createWorkSchedule(formData);
+        await adminService.createWorkSchedule(data);
       }
       onSaved?.();
     } catch (err: unknown) {
@@ -135,89 +152,98 @@ export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: Wor
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="companyId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-            Company <span className="text-red-500">*</span>
-          </label>
-          <select
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          id="companyId"
+          label="Company"
+          required
+          error={touched.companyId ? errors.companyId : undefined}
+        >
+          <FormSelect
             id="companyId"
             value={formData.companyId}
-            onChange={(e) => handleChange('companyId', e.target.value)}
-            required
+            onValueChange={handleChange('companyId')}
+            onBlur={handleBlur('companyId')}
             disabled={viewOnly}
-            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            error={touched.companyId ? errors.companyId : undefined}
           >
             <option value="">Select Company</option>
             {companies.map(c => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
-          </select>
-        </div>
+          </FormSelect>
+        </FormField>
 
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-            Schedule Name <span className="text-red-500">*</span>
-          </label>
-          <input
+        <FormField
+          id="name"
+          label="Schedule Name"
+          required
+          error={touched.name ? errors.name : undefined}
+        >
+          <FormInput
             type="text"
             id="name"
             value={formData.name}
-            onChange={(e) => handleChange('name', e.target.value)}
-            required
+            onValueChange={handleChange('name')}
+            onBlur={handleBlur('name')}
             disabled={viewOnly}
-            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            error={touched.name ? errors.name : undefined}
             placeholder="Work Schedule Name"
           />
-        </div>
+        </FormField>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label htmlFor="timeIn" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              Time In <span className="text-red-500">*</span>
-            </label>
-            <input
+          <FormField
+            id="timeIn"
+            label="Time In"
+            required
+            error={touched.timeIn ? errors.timeIn : undefined}
+          >
+            <FormInput
               type="time"
               id="timeIn"
               value={formData.timeIn}
-              onChange={(e) => handleChange('timeIn', e.target.value)}
-              required
+              onValueChange={handleChange('timeIn')}
+              onBlur={handleBlur('timeIn')}
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              error={touched.timeIn ? errors.timeIn : undefined}
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label htmlFor="timeOut" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              Time Out <span className="text-red-500">*</span>
-            </label>
-            <input
+          <FormField
+            id="timeOut"
+            label="Time Out"
+            required
+            error={touched.timeOut ? errors.timeOut : undefined}
+          >
+            <FormInput
               type="time"
               id="timeOut"
               value={formData.timeOut}
-              onChange={(e) => handleChange('timeOut', e.target.value)}
-              required
+              onValueChange={handleChange('timeOut')}
+              onBlur={handleBlur('timeOut')}
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              error={touched.timeOut ? errors.timeOut : undefined}
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label htmlFor="breakDurationMinutes" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              Break Duration (min) <span className="text-red-500">*</span>
-            </label>
-            <input
+          <FormField
+            id="breakDurationMinutes"
+            label="Break Duration (min)"
+            required
+            error={touched.breakDurationMinutes ? errors.breakDurationMinutes : undefined}
+          >
+            <FormInput
               type="number"
               id="breakDurationMinutes"
               value={formData.breakDurationMinutes}
-              onChange={(e) => handleChange('breakDurationMinutes', parseInt(e.target.value) || 0)}
-              required
-              min="0"
+              onValueChange={(val) => setFieldValue('breakDurationMinutes', parseInt(val) || 0)}
+              onBlur={handleBlur('breakDurationMinutes')}
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              error={touched.breakDurationMinutes ? errors.breakDurationMinutes : undefined}
               placeholder="60"
             />
-          </div>
+          </FormField>
         </div>
 
         <div>

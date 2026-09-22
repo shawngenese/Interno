@@ -4,6 +4,9 @@ import { collection, getDocs, addDoc, serverTimestamp, query, where } from 'fire
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useAuth } from '@/features/auth';
 import { COMPANY_TYPES } from '@/config/constants';
+import { useFormValidation } from '@/shared/hooks/useFormValidation';
+import { required, email } from '@/shared/utils/validators';
+import { FormField, FormInput, FormSelect } from '@/shared/components/FormField';
 
 interface Company {
   id: string;
@@ -16,17 +19,33 @@ interface SupervisorInviteProps {
   onSuccess?: () => void;
 }
 
+const validationRules = {
+  selectedCompanyId: [required('Please select a company')],
+  supervisorName: [required('Supervisor name is required')],
+  supervisorEmail: [required('Email is required'), email('Please enter a valid email address')],
+};
+
 export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
   const { role } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [selectedCompanyId, setSelectedCompanyId] = useState('');
-  const [supervisorName, setSupervisorName] = useState('');
-  const [supervisorEmail, setSupervisorEmail] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+
+  const {
+    formData,
+    errors,
+    touched,
+    handleChange,
+    handleBlur,
+    handleSubmit,
+    setFormData,
+  } = useFormValidation(
+    { selectedCompanyId: '', supervisorName: '', supervisorEmail: '' },
+    validationRules,
+  );
 
   const fetchCompanies = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
@@ -70,44 +89,31 @@ export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
     return () => clearTimeout(t);
   }, [success]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedCompanyId || !supervisorName || !supervisorEmail) return;
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(supervisorEmail)) {
-      setError('Please enter a valid email address');
-      return;
-    }
-
+  const onSubmit = async (data: { selectedCompanyId: string; supervisorName: string; supervisorEmail: string }) => {
     setSubmitting(true);
     setError(null);
 
     try {
       const db = getFirestoreInstancePublic();
       
-      // Call Cloud Function first to send invitation email
       const functions = getFunctions();
       const sendInvite = httpsCallable(functions, 'sendSupervisorInvite');
       await sendInvite({
-        companyId: selectedCompanyId,
-        supervisorName,
-        supervisorEmail,
+        companyId: data.selectedCompanyId,
+        supervisorName: data.supervisorName,
+        supervisorEmail: data.supervisorEmail,
       });
 
-      // Only create Firestore record after CF succeeds
       await addDoc(collection(db, 'supervisor_invitations'), {
-        companyId: selectedCompanyId,
-        supervisorName,
-        supervisorEmail,
+        companyId: data.selectedCompanyId,
+        supervisorName: data.supervisorName,
+        supervisorEmail: data.supervisorEmail,
         status: 'pending',
         createdAt: serverTimestamp(),
       });
 
       setSuccess(true);
-      setSelectedCompanyId('');
-      setSupervisorName('');
-      setSupervisorEmail('');
+      setFormData({ selectedCompanyId: '', supervisorName: '', supervisorEmail: '' });
       onSuccess?.();
     } catch (err) {
       setError('Failed to send invitation');
@@ -154,28 +160,30 @@ export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-4 space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="p-4 space-y-4">
         {error && (
           <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
             {error}
           </div>
         )}
 
-        <div>
-          <label htmlFor="company-select" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-            External Company <span className="text-red-500">*</span>
-          </label>
+        <FormField
+          id="company-select"
+          label="External Company"
+          required
+          error={touched.selectedCompanyId ? errors.selectedCompanyId : undefined}
+        >
           {loading ? (
             <div className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-[#F5F5F5] dark:bg-[#3A3A3A] text-[#757575] dark:text-[#9E9E9E]">
               Loading companies...
             </div>
           ) : (
-            <select
+            <FormSelect
               id="company-select"
-              value={selectedCompanyId}
-              onChange={(e) => setSelectedCompanyId(e.target.value)}
-              required
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={formData.selectedCompanyId}
+              onValueChange={handleChange('selectedCompanyId')}
+              onBlur={handleBlur('selectedCompanyId')}
+              error={touched.selectedCompanyId ? errors.selectedCompanyId : undefined}
             >
               <option value="">Select a company...</option>
               {companies.map((company) => (
@@ -183,45 +191,49 @@ export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
                   {company.name}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           )}
-        </div>
+        </FormField>
 
-        <div>
-          <label htmlFor="supervisor-name" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-            Supervisor Name <span className="text-red-500">*</span>
-          </label>
-          <input
+        <FormField
+          id="supervisor-name"
+          label="Supervisor Name"
+          required
+          error={touched.supervisorName ? errors.supervisorName : undefined}
+        >
+          <FormInput
             id="supervisor-name"
             type="text"
-            value={supervisorName}
-            onChange={(e) => setSupervisorName(e.target.value)}
-            required
-            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            value={formData.supervisorName}
+            onValueChange={handleChange('supervisorName')}
+            onBlur={handleBlur('supervisorName')}
+            error={touched.supervisorName ? errors.supervisorName : undefined}
             placeholder="Supervisor's full name"
           />
-        </div>
+        </FormField>
 
-        <div>
-          <label htmlFor="supervisor-email" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-            Supervisor Email <span className="text-red-500">*</span>
-          </label>
-          <input
+        <FormField
+          id="supervisor-email"
+          label="Supervisor Email"
+          required
+          error={touched.supervisorEmail ? errors.supervisorEmail : undefined}
+        >
+          <FormInput
             id="supervisor-email"
             type="email"
-            value={supervisorEmail}
-            onChange={(e) => setSupervisorEmail(e.target.value)}
-            required
-            className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            value={formData.supervisorEmail}
+            onValueChange={handleChange('supervisorEmail')}
+            onBlur={handleBlur('supervisorEmail')}
+            error={touched.supervisorEmail ? errors.supervisorEmail : undefined}
             placeholder="supervisor@company.com"
           />
-        </div>
+        </FormField>
 
         <div className="flex justify-end pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
           {(role === 'coordinator' || role === 'admin') && (
             <button
               type="submit"
-              disabled={submitting || !selectedCompanyId}
+              disabled={submitting || !formData.selectedCompanyId}
               className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {submitting ? 'Sending...' : 'Send Invitation'}

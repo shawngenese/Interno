@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { adminService } from '../services/adminService';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
+import { useFormValidation } from '@/shared/hooks/useFormValidation';
+import { required } from '@/shared/utils/validators';
+import { FormField, FormInput, FormSelect } from '@/shared/components/FormField';
 import type { TraineeFormData, Company, Department, Supervisor, Trainee, User, WorkSchedule } from '../types';
 
 interface TraineeFormProps {
@@ -13,30 +16,45 @@ interface TraineeFormProps {
 export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeFormProps) {
   const isEditing = !!editingId;
 
-  const [formData, setFormData] = useState<TraineeFormData>({
-    userId: '',
-    companyId: '',
-    departmentId: '',
-    supervisorId: '',
-    scheduleId: '',
-    status: 'active',
-    ojtStatus: 'pending',
-    placementType: 'internal',
-    externalCompanyId: '',
-    externalSupervisorId: '',
-    placementNotes: '',
-    profile: {
-      studentId: '',
-      course: '',
-      school: '',
-      yearLevel: '',
-      emergencyContact: {
-        name: '',
-        relationship: '',
-        phone: '',
+  const {
+    formData,
+    errors,
+    touched,
+    handleChange: hookHandleChange,
+    handleBlur,
+    handleSubmit,
+    setFormData,
+  } = useFormValidation<TraineeFormData>(
+    {
+      userId: '',
+      companyId: '',
+      departmentId: '',
+      supervisorId: '',
+      scheduleId: '',
+      status: 'active',
+      ojtStatus: 'pending',
+      placementType: 'internal',
+      externalCompanyId: '',
+      externalSupervisorId: '',
+      placementNotes: '',
+      profile: {
+        studentId: '',
+        course: '',
+        school: '',
+        yearLevel: '',
+        emergencyContact: {
+          name: '',
+          relationship: '',
+          phone: '',
+        },
       },
     },
-  });
+    {
+      companyId: [required('Company is required')],
+      departmentId: [required('Department is required')],
+      scheduleId: [required('Work schedule is required')],
+    },
+  );
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -51,6 +69,49 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserDisplayName, setNewUserDisplayName] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
+
+  const [newUserEmailTouched, setNewUserEmailTouched] = useState(false);
+  const [newUserDisplayNameTouched, setNewUserDisplayNameTouched] = useState(false);
+  const [newUserPasswordTouched, setNewUserPasswordTouched] = useState(false);
+
+  const handleChange = (field: string) => (value: string) => {
+    if (field.startsWith('profile.')) {
+      const profileField = field.slice(8) as keyof TraineeFormData['profile'];
+      setFormData(prev => ({
+        ...prev,
+        profile: {
+          ...prev.profile,
+          [profileField]: value,
+        } as TraineeFormData['profile'],
+      }));
+    } else if (field.startsWith('emergencyContact.')) {
+      const ecField = field.slice(17) as 'name' | 'relationship' | 'phone';
+      setFormData(prev => ({
+        ...prev,
+        profile: {
+          ...prev.profile,
+          emergencyContact: {
+            name: prev.profile?.emergencyContact?.name || '',
+            relationship: prev.profile?.emergencyContact?.relationship || '',
+            phone: prev.profile?.emergencyContact?.phone || '',
+            [ecField]: value,
+          },
+        },
+      }));
+    } else if (field === 'companyId') {
+      const selectedCompany = companies.find(c => c.id === value);
+      const isExternal = selectedCompany?.type === 'external';
+      setFormData(prev => ({
+        ...prev,
+        companyId: value,
+        placementType: isExternal ? 'external' : 'internal',
+        externalCompanyId: isExternal ? value : '',
+        externalSupervisorId: isExternal ? prev.externalSupervisorId : '',
+      }));
+    } else {
+      hookHandleChange(field as keyof TraineeFormData)(value);
+    }
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -92,7 +153,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
       }
     };
     init();
-  }, [isEditing, editingId]);
+  }, [isEditing, editingId, setFormData]);
 
   useEffect(() => {
     if (formData.companyId) {
@@ -165,87 +226,52 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
     }
   }, [useExistingUser, formData.companyId]);
 
-  const handleChange = (field: string, value: string) => {
-    if (field.startsWith('profile.')) {
-      const profileField = field.slice(8) as keyof TraineeFormData['profile'];
-      setFormData(prev => ({
-        ...prev,
-        profile: {
-          ...prev.profile,
-          [profileField]: value,
-        } as TraineeFormData['profile'],
-      }));
-    } else if (field.startsWith('emergencyContact.')) {
-      const ecField = field.slice(17) as 'name' | 'relationship' | 'phone';
-      setFormData(prev => ({
-        ...prev,
-        profile: {
-          ...prev.profile,
-          emergencyContact: {
-            name: prev.profile?.emergencyContact?.name || '',
-            relationship: prev.profile?.emergencyContact?.relationship || '',
-            phone: prev.profile?.emergencyContact?.phone || '',
-            [ecField]: value,
-          },
-        },
-      }));
-    } else if (field === 'companyId') {
-      const selectedCompany = companies.find(c => c.id === value);
-      const isExternal = selectedCompany?.type === 'external';
-      setFormData(prev => ({
-        ...prev,
-        companyId: value,
-        placementType: isExternal ? 'external' : 'internal',
-        externalCompanyId: isExternal ? value : '',
-        externalSupervisorId: isExternal ? prev.externalSupervisorId : '',
-      }));
-    } else {
-      setFormData(prev => ({ ...prev, [field]: value }));
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: TraineeFormData) => {
     setError(null);
     setSaving(true);
 
     try {
       if (isEditing && editingId) {
         await adminService.updateTrainee(editingId, {
-          companyId: formData.companyId,
-          departmentId: formData.departmentId,
-          supervisorId: formData.supervisorId,
-          scheduleId: formData.scheduleId,
-          status: formData.status,
-          ojtStatus: formData.ojtStatus,
-          profile: formData.profile,
+          companyId: data.companyId,
+          departmentId: data.departmentId,
+          supervisorId: data.supervisorId,
+          scheduleId: data.scheduleId,
+          status: data.status,
+          ojtStatus: data.ojtStatus,
+          profile: data.profile,
         } as Partial<Trainee>);
       } else {
-        let userId = formData.userId;
+        let userId = data.userId;
 
         if (useExistingUser) {
-          if (!userId) throw new Error('Select a user');
+          if (!userId) {
+            setError('Select a user');
+            setSaving(false);
+            return;
+          }
         } else {
           if (!newUserEmail || !newUserDisplayName || !newUserPassword) {
-            throw new Error('Email, display name, and password are required');
+            if (!newUserEmail) setNewUserEmailTouched(true);
+            if (!newUserDisplayName) setNewUserDisplayNameTouched(true);
+            if (!newUserPassword) setNewUserPasswordTouched(true);
+            setError('Email, display name, and password are required');
+            setSaving(false);
+            return;
           }
           const user = await adminService.createUser({
             email: newUserEmail,
             displayName: newUserDisplayName,
             role: 'trainee',
-            companyId: formData.companyId,
-            departmentId: formData.departmentId,
+            companyId: data.companyId,
+            departmentId: data.departmentId,
             password: newUserPassword,
           });
           userId = user.id;
         }
 
-        if (!formData.companyId || !formData.departmentId || !formData.scheduleId) {
-          throw new Error('Company, department, and work schedule are required');
-        }
-
         await adminService.createTrainee({
-          ...formData,
+          ...data,
           userId,
         });
       }
@@ -285,7 +311,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {!isEditing && (
           <div className="flex items-center gap-3 mb-4">
             <label className="flex items-center gap-2 text-sm text-[#3A3A3A] dark:text-[#BDBDBD]">
@@ -302,87 +328,96 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
         )}
 
         {!isEditing && (useExistingUser ? (
-          <div>
-            <label htmlFor="userId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              User <span className="text-red-500">*</span>
-            </label>
-            <select
+          <FormField
+            id="userId"
+            label="User"
+            required
+            error={touched.userId ? errors.userId : undefined}
+          >
+            <FormSelect
               id="userId"
               value={formData.userId}
-              onChange={(e) => handleChange('userId', e.target.value)}
-              required
+              onValueChange={handleChange('userId')}
+              onBlur={handleBlur('userId')}
+              error={touched.userId ? errors.userId : undefined}
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Select User</option>
               {existingUsers.map(user => (
                 <option key={user.id} value={user.id}>{user.displayName} ({user.email})</option>
               ))}
-            </select>
-          </div>
+            </FormSelect>
+          </FormField>
         ) : (
           <>
-            <div>
-              <label htmlFor="newEmail" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-                Email <span className="text-red-500">*</span>
-              </label>
-              <input
+            <FormField
+              id="newEmail"
+              label="Email"
+              required
+              error={newUserEmailTouched && !newUserEmail ? 'Email is required' : undefined}
+            >
+              <FormInput
                 type="email"
                 id="newEmail"
                 value={newUserEmail}
-                onChange={(e) => setNewUserEmail(e.target.value)}
-                required
+                onValueChange={setNewUserEmail}
+                onBlur={() => setNewUserEmailTouched(true)}
+                error={newUserEmailTouched && !newUserEmail ? 'Email is required' : undefined}
                 disabled={viewOnly}
-                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="trainee@example.com"
               />
-            </div>
-            <div>
-              <label htmlFor="newDisplayName" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-                Display Name <span className="text-red-500">*</span>
-              </label>
-              <input
+            </FormField>
+            <FormField
+              id="newDisplayName"
+              label="Display Name"
+              required
+              error={newUserDisplayNameTouched && !newUserDisplayName ? 'Display name is required' : undefined}
+            >
+              <FormInput
                 type="text"
                 id="newDisplayName"
                 value={newUserDisplayName}
-                onChange={(e) => setNewUserDisplayName(e.target.value)}
-                required
+                onValueChange={setNewUserDisplayName}
+                onBlur={() => setNewUserDisplayNameTouched(true)}
+                error={newUserDisplayNameTouched && !newUserDisplayName ? 'Display name is required' : undefined}
                 disabled={viewOnly}
-                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Juan Dela Cruz"
               />
-            </div>
-            <div>
-              <label htmlFor="newPassword" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-                Password <span className="text-red-500">*</span>
-              </label>
-              <input
+            </FormField>
+            <FormField
+              id="newPassword"
+              label="Password"
+              required
+              error={newUserPasswordTouched && !newUserPassword ? 'Password is required' : newUserPasswordTouched && newUserPassword.length < 6 ? 'Password must be at least 6 characters' : undefined}
+            >
+              <FormInput
                 type="password"
                 id="newPassword"
                 value={newUserPassword}
-                onChange={(e) => setNewUserPassword(e.target.value)}
-                required
-                minLength={6}
+                onValueChange={setNewUserPassword}
+                onBlur={() => setNewUserPasswordTouched(true)}
+                error={newUserPasswordTouched && !newUserPassword ? 'Password is required' : newUserPasswordTouched && newUserPassword.length < 6 ? 'Password must be at least 6 characters' : undefined}
                 disabled={viewOnly}
-                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="At least 6 characters"
               />
-            </div>
+            </FormField>
           </>
         ))}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="companyId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              Company <span className="text-red-500">*</span>
-            </label>
-            <select
+          <FormField
+            id="companyId"
+            label="Company"
+            required
+            error={touched.companyId ? errors.companyId : undefined}
+          >
+            <FormSelect
               id="companyId"
               value={formData.companyId}
-              onChange={(e) => handleChange('companyId', e.target.value)}
-              required
+              onValueChange={handleChange('companyId')}
+              onBlur={handleBlur('companyId')}
+              error={touched.companyId ? errors.companyId : undefined}
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Select Company</option>
               {companies.map(company => (
@@ -390,13 +425,10 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
                   {company.name} ({company.type === 'external' ? 'External' : 'Internal'})
                 </option>
               ))}
-            </select>
-          </div>
+            </FormSelect>
+          </FormField>
 
-          <div>
-            <label htmlFor="placementType" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              Placement Type
-            </label>
+          <FormField id="placementType" label="Placement Type">
             <div className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-[#F5F5F5] dark:bg-[#2A2A2A] text-[#121212] dark:text-white">
               <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full ${
                 formData.placementType === 'external'
@@ -409,112 +441,103 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
                 <span className="text-xs text-[#9E9E9E] ml-2">Select a company first</span>
               )}
             </div>
-          </div>
+          </FormField>
 
           {formData.placementType === 'external' && (
-            <div>
-              <label htmlFor="externalSupervisorId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-                External Supervisor ID
-              </label>
-              <input
+            <FormField id="externalSupervisorId" label="External Supervisor ID">
+              <FormInput
                 type="text"
                 id="externalSupervisorId"
                 value={formData.externalSupervisorId}
-                onChange={(e) => handleChange('externalSupervisorId', e.target.value)}
+                onValueChange={handleChange('externalSupervisorId')}
                 disabled={viewOnly}
-                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                 placeholder="External supervisor email or ID"
               />
-            </div>
+            </FormField>
           )}
 
-          <div>
-            <label htmlFor="departmentId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              Department <span className="text-red-500">*</span>
-            </label>
-            <select
+          <FormField
+            id="departmentId"
+            label="Department"
+            required
+            error={touched.departmentId ? errors.departmentId : undefined}
+          >
+            <FormSelect
               id="departmentId"
               value={formData.departmentId}
-              onChange={(e) => handleChange('departmentId', e.target.value)}
-              required
+              onValueChange={handleChange('departmentId')}
+              onBlur={handleBlur('departmentId')}
+              error={touched.departmentId ? errors.departmentId : undefined}
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Select Department</option>
               {departments.map(dept => (
                 <option key={dept.id} value={dept.id}>{dept.name}</option>
               ))}
-            </select>
-          </div>
+            </FormSelect>
+          </FormField>
 
-          <div>
-            <label htmlFor="supervisorId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              Supervisor
-            </label>
-            <select
+          <FormField id="supervisorId" label="Supervisor">
+            <FormSelect
               id="supervisorId"
               value={formData.supervisorId}
-              onChange={(e) => handleChange('supervisorId', e.target.value)}
+              onValueChange={handleChange('supervisorId')}
+              onBlur={handleBlur('supervisorId')}
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Select Supervisor</option>
               {supervisors.map(sup => (
                 <option key={sup.id} value={sup.id}>{sup.userName || sup.userEmail || sup.userId}</option>
               ))}
-            </select>
-          </div>
+            </FormSelect>
+          </FormField>
 
-          <div>
-            <label htmlFor="scheduleId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              Work Schedule <span className="text-red-500">*</span>
-            </label>
-            <select
+          <FormField
+            id="scheduleId"
+            label="Work Schedule"
+            required
+            error={touched.scheduleId ? errors.scheduleId : undefined}
+          >
+            <FormSelect
               id="scheduleId"
               value={formData.scheduleId}
-              onChange={(e) => handleChange('scheduleId', e.target.value)}
-              required
+              onValueChange={handleChange('scheduleId')}
+              onBlur={handleBlur('scheduleId')}
+              error={touched.scheduleId ? errors.scheduleId : undefined}
               disabled={viewOnly || !formData.companyId}
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Select Work Schedule</option>
               {workSchedules.map(ws => (
                 <option key={ws.id} value={ws.id}>{ws.name} ({ws.timeIn} - {ws.timeOut})</option>
               ))}
-            </select>
+            </FormSelect>
             {!formData.companyId && (
               <p className="text-xs text-[#9E9E9E] mt-1">Select a company first</p>
             )}
-          </div>
+          </FormField>
 
-          <div>
-            <label htmlFor="status" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              Account Status
-            </label>
-            <select
+          <FormField id="status" label="Account Status">
+            <FormSelect
               id="status"
               value={formData.status}
-              onChange={(e) => handleChange('status', e.target.value)}
+              onValueChange={handleChange('status')}
+              onBlur={handleBlur('status')}
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="pending">Pending</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
               <option value="archived">Archived</option>
-            </select>
-          </div>
+            </FormSelect>
+          </FormField>
 
-          <div>
-            <label htmlFor="ojtStatus" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              OJT Status
-            </label>
-            <select
+          <FormField id="ojtStatus" label="OJT Status">
+            <FormSelect
               id="ojtStatus"
               value={formData.ojtStatus}
-              onChange={(e) => handleChange('ojtStatus', e.target.value)}
+              onValueChange={handleChange('ojtStatus')}
+              onBlur={handleBlur('ojtStatus')}
               disabled={viewOnly}
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="pending">Pending</option>
               <option value="active">Active</option>
@@ -522,122 +545,94 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
               <option value="completed">Completed</option>
               <option value="terminated">Terminated</option>
               <option value="archived">Archived</option>
-            </select>
-          </div>
+            </FormSelect>
+          </FormField>
         </div>
 
         <div className="border-t border-[#D5D5D5] dark:border-[#3A3A3A] pt-6">
           <h3 className="text-lg font-medium text-[#121212] dark:text-white mb-4">Student Information</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="studentId" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-                Student ID
-              </label>
-              <input
+            <FormField id="studentId" label="Student ID">
+              <FormInput
                 type="text"
                 id="studentId"
                 value={formData.profile?.studentId || ''}
-                onChange={(e) => handleChange('profile.studentId', e.target.value)}
+                onValueChange={handleChange('profile.studentId')}
                 disabled={viewOnly}
-                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="e.g., 2024-00123"
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label htmlFor="course" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-                Course
-              </label>
-              <input
+            <FormField id="course" label="Course">
+              <FormInput
                 type="text"
                 id="course"
                 value={formData.profile?.course || ''}
-                onChange={(e) => handleChange('profile.course', e.target.value)}
+                onValueChange={handleChange('profile.course')}
                 disabled={viewOnly}
-                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="e.g., BS Computer Science"
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label htmlFor="school" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-                School
-              </label>
-              <input
+            <FormField id="school" label="School">
+              <FormInput
                 type="text"
                 id="school"
                 value={formData.profile?.school || ''}
-                onChange={(e) => handleChange('profile.school', e.target.value)}
+                onValueChange={handleChange('profile.school')}
                 disabled={viewOnly}
-                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="e.g., University of the Philippines"
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label htmlFor="yearLevel" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-                Year Level
-              </label>
-              <input
+            <FormField id="yearLevel" label="Year Level">
+              <FormInput
                 type="text"
                 id="yearLevel"
                 value={formData.profile?.yearLevel || ''}
-                onChange={(e) => handleChange('profile.yearLevel', e.target.value)}
+                onValueChange={handleChange('profile.yearLevel')}
                 disabled={viewOnly}
-                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="e.g., 3rd Year"
               />
-            </div>
+            </FormField>
           </div>
         </div>
 
         <div className="border-t border-[#D5D5D5] dark:border-[#3A3A3A] pt-6">
           <h3 className="text-lg font-medium text-[#121212] dark:text-white mb-4">Emergency Contact</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label htmlFor="ecName" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-                Name
-              </label>
-              <input
+            <FormField id="ecName" label="Name">
+              <FormInput
                 type="text"
                 id="ecName"
                 value={formData.profile?.emergencyContact?.name || ''}
-                onChange={(e) => handleChange('emergencyContact.name', e.target.value)}
+                onValueChange={handleChange('emergencyContact.name')}
                 disabled={viewOnly}
-                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Contact name"
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label htmlFor="ecRelationship" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-                Relationship
-              </label>
-              <input
+            <FormField id="ecRelationship" label="Relationship">
+              <FormInput
                 type="text"
                 id="ecRelationship"
                 value={formData.profile?.emergencyContact?.relationship || ''}
-                onChange={(e) => handleChange('emergencyContact.relationship', e.target.value)}
+                onValueChange={handleChange('emergencyContact.relationship')}
                 disabled={viewOnly}
-                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="e.g., Parent"
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label htmlFor="ecPhone" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-                Phone
-              </label>
-              <input
+            <FormField id="ecPhone" label="Phone">
+              <FormInput
                 type="tel"
                 id="ecPhone"
                 value={formData.profile?.emergencyContact?.phone || ''}
-                onChange={(e) => handleChange('emergencyContact.phone', e.target.value)}
+                onValueChange={handleChange('emergencyContact.phone')}
                 disabled={viewOnly}
-                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="+63 9XX XXX XXXX"
               />
-            </div>
+            </FormField>
           </div>
         </div>
 

@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { calculateDTR, getDTRSummary, createCorrectionRequest } from '../services/dtrService';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useToast } from '@/shared/components/Toast';
+import { FormField, FormTextarea } from '@/shared/components/FormField';
+import { required } from '@/shared/utils/validators';
 import { formatDateFull, formatTime12 } from '@/shared/utils/dateUtils';
 import type { DTREntry, DTRSummary } from '../types';
 
@@ -31,9 +33,12 @@ export function TraineeDTRView() {
   const [period, setPeriod] = useState({ start: '', end: '' });
   const [showCorrection, setShowCorrection] = useState<DTREntry | null>(null);
   const [correctionReason, setCorrectionReason] = useState('');
+  const [correctionReasonError, setCorrectionReasonError] = useState<string | null>(null);
   const [correctionTimeIn, setCorrectionTimeIn] = useState('');
   const [correctionTimeOut, setCorrectionTimeOut] = useState('');
   const [traineeId, setTraineeId] = useState<string | null>(null);
+
+  const validateReason = required('Reason is required');
 
   const refresh = useCallback(async () => {
     if (!user?.uid) return;
@@ -106,7 +111,9 @@ export function TraineeDTRView() {
   };
 
   const handleCorrectionSubmit = async (entry: DTREntry) => {
-    if (!correctionReason.trim()) return;
+    const reasonError = validateReason(correctionReason);
+    setCorrectionReasonError(reasonError);
+    if (reasonError) return;
     try {
       const entryDate = new Date(entry.date);
       const proposedTimeIn = correctionTimeIn
@@ -121,6 +128,7 @@ export function TraineeDTRView() {
       });
       setShowCorrection(null);
       setCorrectionReason('');
+      setCorrectionReasonError(null);
       setCorrectionTimeIn('');
       setCorrectionTimeOut('');
       await refresh();
@@ -245,7 +253,7 @@ export function TraineeDTRView() {
                     <td className="px-4 py-3 text-right">
                       {entry.status === 'draft' && (
                         <button
-                          onClick={() => { setShowCorrection(entry); setCorrectionReason(''); setCorrectionTimeIn(''); setCorrectionTimeOut(''); }}
+                          onClick={() => { setShowCorrection(entry); setCorrectionReason(''); setCorrectionReasonError(null); setCorrectionTimeIn(''); setCorrectionTimeOut(''); }}
                           className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                         >
                           Request Correction
@@ -267,12 +275,12 @@ export function TraineeDTRView() {
           aria-modal="true"
           aria-labelledby="correction-modal-title"
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          onClick={(e) => { if (e.target === e.currentTarget) { setShowCorrection(null); setCorrectionReason(''); setCorrectionTimeIn(''); setCorrectionTimeOut(''); } }}
+          onClick={(e) => { if (e.target === e.currentTarget) { setShowCorrection(null); setCorrectionReason(''); setCorrectionReasonError(null); setCorrectionTimeIn(''); setCorrectionTimeOut(''); } }}
         >
           {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
           <div
             className="bg-white dark:bg-[#1E1E1E] rounded-xl p-6 max-w-md w-full"
-            onKeyDown={(e) => { if (e.key === 'Escape') { setShowCorrection(null); setCorrectionReason(''); setCorrectionTimeIn(''); setCorrectionTimeOut(''); } }}
+            onKeyDown={(e) => { if (e.key === 'Escape') { setShowCorrection(null); setCorrectionReason(''); setCorrectionReasonError(null); setCorrectionTimeIn(''); setCorrectionTimeOut(''); } }}
           >
             <h3 id="correction-modal-title" className="text-lg font-semibold text-[#121212] dark:text-white mb-4">Request Correction for {formatDateFull(showCorrection.date)}</h3>
             <p className="text-sm text-[#757575] dark:text-[#9E9E9E] mb-4">
@@ -300,17 +308,20 @@ export function TraineeDTRView() {
                 />
               </div>
             </div>
-            <textarea
-              value={correctionReason}
-              onChange={(e) => setCorrectionReason(e.target.value)}
-              placeholder="Reason for correction (e.g., forgot to time out, system error, etc.)"
-              aria-label="Reason for correction"
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white min-h-[80px] resize-none"
-              required
-            />
+            <FormField id="correction-reason" error={correctionReasonError ?? undefined}>
+              <FormTextarea
+                id="correction-reason"
+                value={correctionReason}
+                onValueChange={(value) => { setCorrectionReason(value); setCorrectionReasonError(null); }}
+                placeholder="Reason for correction (e.g., forgot to time out, system error, etc.)"
+                aria-label="Reason for correction"
+                error={correctionReasonError ?? undefined}
+                className="min-h-[80px] resize-none"
+              />
+            </FormField>
             <div className="flex justify-end gap-3 mt-4">
               <button
-                onClick={() => { setShowCorrection(null); setCorrectionReason(''); setCorrectionTimeIn(''); setCorrectionTimeOut(''); }}
+                onClick={() => { setShowCorrection(null); setCorrectionReason(''); setCorrectionReasonError(null); setCorrectionTimeIn(''); setCorrectionTimeOut(''); }}
                 aria-label="Close"
                 className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg"
               >
