@@ -89,13 +89,17 @@ functions/node_modules/
 # Supabase
 supabase/.temp/
 
-# Local utility scripts
+# Local utility scripts (dev-only, never commit)
 assign-admin.cjs
 check-admin.cjs
 check-admin.js
 set-claims.cjs
-scripts/
 seed-test-data.cjs
+scripts/*
+!scripts/generate-sw.cjs
+
+# Generated service worker (built from .template.js via prebuild, never commit)
+public/firebase-messaging-sw.js
 
 # Local temp/notes
 emulator.txt

@@ -1,16 +1,19 @@
-// Firebase Cloud Messaging Service Worker
-// Handles background push notifications when app is minimized or closed
+// Firebase Cloud Messaging Service Worker (TEMPLATE - tracked in git)
+// Generates public/firebase-messaging-sw.js at build time via:
+//   node scripts/generate-sw.cjs
+// The generated file is gitignored and NEVER committed.
+// Placeholders below are replaced from VITE_FIREBASE_* env vars.
 
 importScripts('https://www.gstatic.com/firebasejs/12.0.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/12.0.0/firebase-messaging-compat.js');
 
 firebase.initializeApp({
-  apiKey: '***REMOVED***',
-  authDomain: 'interno-cec9f.firebaseapp.com',
-  projectId: 'interno-cec9f',
-  storageBucket: 'interno-cec9f.firebasestorage.app',
-  messagingSenderId: '1019800228',
-  appId: '1:1019800228:web:2c6fdc6c29d73d99551431',
+  apiKey: '__VITE_FIREBASE_API_KEY__',
+  authDomain: '__VITE_FIREBASE_AUTH_DOMAIN__',
+  projectId: '__VITE_FIREBASE_PROJECT_ID__',
+  storageBucket: '__VITE_FIREBASE_STORAGE_BUCKET__',
+  messagingSenderId: '__VITE_FIREBASE_MESSAGING_SENDER_ID__',
+  appId: '__VITE_FIREBASE_APP_ID__',
 });
 
 const messaging = firebase.messaging();
