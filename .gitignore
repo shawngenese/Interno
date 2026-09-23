@@ -126,3 +126,16 @@ NEEDED_FIX.md
 tests.json
 
 ISSUES-FOUND.md
+
+# PRODUCTION STRIP - dev-only, never push to production repo
+.hallmark/
+design-system/
+design.md
+REDESIGN-PLAN.md
+SAMPLE.HTML
+sample.html
+TESTING-PROMPT.md
+flowchart*.mmd
+*.mmd
+
+.gitignore
