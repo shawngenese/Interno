@@ -212,8 +212,16 @@ export function SupervisorTraineeAssignment({ supervisor, onClose, onSuccess }: 
               return (
                 <div
                   key={trainee.id}
+                  role="button"
+                  tabIndex={hasOtherSupervisor ? -1 : 0}
                   onClick={() => {
                     if (!hasOtherSupervisor) handleToggleTrainee(trainee.id);
+                  }}
+                  onKeyDown={(e) => {
+                    if (!hasOtherSupervisor && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault();
+                      handleToggleTrainee(trainee.id);
+                    }
                   }}
                   className={`flex items-center p-3 rounded-lg border transition-colors ${
                     hasOtherSupervisor

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { adminService } from '../services/adminService';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
 import { useFormValidation } from '@/shared/hooks/useFormValidation';
@@ -54,25 +54,25 @@ export function UserForm({ editingId, defaultRole, onCancel, onSaved }: UserForm
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadCompanies = async () => {
+  const loadCompanies = useCallback(async () => {
     try {
       const result = await adminService.listCompanies({ limit: 100 });
       setCompanies(result.data);
     } catch (err) {
       console.error('Failed to load companies:', err);
     }
-  };
+  }, []);
 
-  const loadDepartments = async (companyId: string) => {
+  const loadDepartments = useCallback(async (companyId: string) => {
     try {
       const result = await adminService.listDepartments({ companyId, limit: 100 });
       setDepartments(result.data);
     } catch (err) {
       console.error('Failed to load departments:', err);
     }
-  };
+  }, []);
 
-  const loadSupervisors = async (companyId: string) => {
+  const loadSupervisors = useCallback(async (companyId: string) => {
     try {
       const result = await adminService.listSupervisors({ companyId, limit: 100 });
       const resolved = await Promise.all(
@@ -88,9 +88,9 @@ export function UserForm({ editingId, defaultRole, onCancel, onSaved }: UserForm
     } catch (err) {
       console.error('Failed to load supervisors:', err);
     }
-  };
+  }, []);
 
-  const loadUser = async (userId: string) => {
+  const loadUser = useCallback(async (userId: string) => {
     try {
       const user = await adminService.getUser(userId);
       setFormData({
@@ -108,7 +108,7 @@ export function UserForm({ editingId, defaultRole, onCancel, onSaved }: UserForm
     } finally {
       setLoading(false);
     }
-  };
+  }, [setFormData]);
 
   useEffect(() => {
     loadCompanies();
@@ -117,7 +117,7 @@ export function UserForm({ editingId, defaultRole, onCancel, onSaved }: UserForm
     } else {
       setLoading(false);
     }
-  }, [editingId, isEditing]);
+  }, [editingId, isEditing, loadCompanies, loadUser]);
 
   useEffect(() => {
     if (formData.companyId) {
@@ -127,7 +127,7 @@ export function UserForm({ editingId, defaultRole, onCancel, onSaved }: UserForm
       setDepartments([]);
       setSupervisors([]);
     }
-  }, [formData.companyId]);
+  }, [formData.companyId, loadDepartments, loadSupervisors]);
 
   const onSubmit = async (data: UserFormData) => {
     setError(null);

@@ -36,7 +36,7 @@ export function CoordinatorTraineeAssignment() {
 
       const [traineeData, supervisorData] = await Promise.all([
         getCoordinatorTrainees(user.uid, cid),
-        getSupervisors(),
+        getSupervisors(cid),
       ]);
 
       if (!signal?.aborted) {

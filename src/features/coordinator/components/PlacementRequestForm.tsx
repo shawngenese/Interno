@@ -42,7 +42,11 @@ export function PlacementRequestForm({ onSuccess }: PlacementRequestFormProps) {
     setLoading(true);
     try {
       const db = getFirestoreInstancePublic();
-      const q = query(collection(db, 'companies'), where('type', '==', 'external'));
+      const q = query(
+        collection(db, 'companies'),
+        where('type', '==', 'external'),
+        where('verified', '==', true),
+      );
       const snap = await getDocs(q);
       const data = snap.docs.map((doc) => ({
         id: doc.id,

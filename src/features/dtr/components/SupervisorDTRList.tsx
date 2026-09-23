@@ -229,7 +229,15 @@ export function SupervisorDTRList() {
               {dtrs.map((dtr) => (
                 <div
                   key={dtr.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => handleView(dtr)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleView(dtr);
+                    }
+                  }}
                   className="bg-card border border-border rounded-xl p-4 space-y-3 hover:border-primary transition-colors cursor-pointer"
                 >
                   <div className="flex items-center justify-between">

@@ -34,13 +34,14 @@ export function PlacementRequestList({ onRefresh }: PlacementRequestListProps) {
   } | null>(null);
 
   // Resolve coordinator's companyId
+  const userId = user?.uid;
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!userId) return;
     let cancelled = false;
-    async function resolveCompanyId() {
+    async function resolveCompanyId(uid: string) {
       try {
         const db = getFirestoreInstancePublic();
-        const snap = await getDoc(doc(db, 'coordinators', user!.uid));
+        const snap = await getDoc(doc(db, 'coordinators', uid));
         if (!cancelled && snap.exists()) {
           setCompanyId(snap.data().companyId as string);
         }
@@ -48,11 +49,11 @@ export function PlacementRequestList({ onRefresh }: PlacementRequestListProps) {
         console.error('Failed to resolve coordinator companyId:', err);
       }
     }
-    resolveCompanyId();
+    resolveCompanyId(userId);
     return () => {
       cancelled = true;
     };
-  }, [user?.uid]);
+  }, [userId]);
 
   const fetchRequests = useCallback(async (signal?: AbortSignal) => {
     if (!companyId) {

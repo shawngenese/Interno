@@ -36,7 +36,7 @@ export async function getCoordinatorTrainees(_coordinatorId: string, companyId: 
   const userMap = new Map<string, Record<string, unknown>>();
   for (const batch of chunk(userIds, FIRESTORE_IN_MAX)) {
     const userSnap = await getDocs(
-      query(collection(db, 'users'), where(documentId(), 'in', batch)),
+      query(collection(db, 'users'), where('companyId', '==', companyId), where(documentId(), 'in', batch)),
     );
     userSnap.docs.forEach((doc) => userMap.set(doc.id, doc.data()));
   }
@@ -80,7 +80,7 @@ export async function getAttendanceSummary(
   const userMap = new Map<string, string>();
   for (const batch of chunk(userIds, FIRESTORE_IN_MAX)) {
     const userSnap = await getDocs(
-      query(collection(db, 'users'), where(documentId(), 'in', batch)),
+      query(collection(db, 'users'), where('companyId', '==', companyId), where(documentId(), 'in', batch)),
     );
     userSnap.docs.forEach((doc) => userMap.set(doc.id, (doc.data().displayName as string) || 'Unknown'));
   }
@@ -151,7 +151,7 @@ export async function getTaskSummary(companyId: string): Promise<CoordinatorTask
   const userMap = new Map<string, string>();
   for (const batch of chunk(userIds, FIRESTORE_IN_MAX)) {
     const userSnap = await getDocs(
-      query(collection(db, 'users'), where(documentId(), 'in', batch)),
+      query(collection(db, 'users'), where('companyId', '==', companyId), where(documentId(), 'in', batch)),
     );
     userSnap.docs.forEach((doc) => userMap.set(doc.id, (doc.data().displayName as string) || 'Unknown'));
   }
@@ -380,17 +380,17 @@ export async function getCompanies(): Promise<{ id: string; name: string; type?:
   }));
 }
 
-/** Get all supervisors for coordinator management. */
-export async function getSupervisors(): Promise<{ id: string; name: string; email: string; companyId?: string }[]> {
+/** Get supervisors in a company for coordinator management. */
+export async function getSupervisors(companyId: string): Promise<{ id: string; name: string; email: string; companyId?: string }[]> {
   const db = getFirestoreInstancePublic();
-  const snap = await getDocs(collection(db, 'supervisors'));
+  const snap = await getDocs(query(collection(db, 'supervisors'), where('companyId', '==', companyId)));
 
   const userIds = [...new Set(snap.docs.map((d) => d.data().userId).filter(Boolean))];
 
   const userMap = new Map<string, Record<string, unknown>>();
   for (const batch of chunk(userIds, FIRESTORE_IN_MAX)) {
     const userSnap = await getDocs(
-      query(collection(db, 'users'), where(documentId(), 'in', batch)),
+      query(collection(db, 'users'), where('companyId', '==', companyId), where(documentId(), 'in', batch)),
     );
     userSnap.docs.forEach((doc) => userMap.set(doc.id, doc.data()));
   }

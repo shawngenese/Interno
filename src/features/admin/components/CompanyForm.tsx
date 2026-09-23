@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { adminService } from '../services/adminService';
 import type { CompanyFormData } from '../types';
 import { useFormValidation } from '@/shared/hooks/useFormValidation';
@@ -45,7 +45,7 @@ export function CompanyForm({ editingId, onCancel, onSaved }: CompanyFormProps) 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadCompany = async (companyId: string) => {
+  const loadCompany = useCallback(async (companyId: string) => {
     try {
       const company = await adminService.getCompany(companyId);
       setFormData({
@@ -63,7 +63,7 @@ export function CompanyForm({ editingId, onCancel, onSaved }: CompanyFormProps) 
     } finally {
       setLoading(false);
     }
-  };
+  }, [setFormData]);
 
   useEffect(() => {
     if (isEditing && editingId) {
@@ -71,7 +71,7 @@ export function CompanyForm({ editingId, onCancel, onSaved }: CompanyFormProps) 
     } else {
       setLoading(false);
     }
-  }, [editingId, isEditing]);
+  }, [editingId, isEditing, loadCompany]);
 
   const onSubmit = async (data: CompanyFormData) => {
     setError(null);

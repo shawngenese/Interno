@@ -24,7 +24,7 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
 
 interface EvaluationListProps {
   companyId?: string;
-  role?: 'admin' | 'coordinator' | 'supervisor' | 'trainee';
+  viewerRole?: 'admin' | 'coordinator' | 'supervisor' | 'trainee';
   userId?: string;
   traineeId?: string;
 }
@@ -36,7 +36,7 @@ const STATUS_LABELS: Record<EvaluationStatus, { label: string; color: string }> 
   finalized: { label: 'Finalized', color: 'bg-success/10 text-success border-success/20' },
 };
 
-export function EvaluationList({ companyId: companyIdProp, role, userId: userIdProp, traineeId: traineeIdProp }: EvaluationListProps) {
+export function EvaluationList({ companyId: companyIdProp, viewerRole, userId: userIdProp, traineeId: traineeIdProp }: EvaluationListProps) {
   const { user, companyId: userCompanyId } = useAuth();
   const companyId = companyIdProp || userCompanyId || '';
   const userId = userIdProp || user?.uid || '';
@@ -56,9 +56,9 @@ export function EvaluationList({ companyId: companyIdProp, role, userId: userIdP
       setLoading(true);
       let data: Evaluation[] = [];
 
-      if (role === 'trainee' && traineeIdProp) {
+      if (viewerRole === 'trainee' && traineeIdProp) {
         data = await evaluationService.getTraineeEvaluations(traineeIdProp);
-      } else if (role === 'supervisor' && userId) {
+      } else if (viewerRole === 'supervisor' && userId) {
         data = await evaluationService.getSupervisorEvaluations(userId);
       } else {
         data = await evaluationService.getEvaluations(companyId);
@@ -70,7 +70,7 @@ export function EvaluationList({ companyId: companyIdProp, role, userId: userIdP
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
-  }, [companyId, role, userId, traineeIdProp]);
+  }, [companyId, viewerRole, userId, traineeIdProp]);
 
   useEffect(() => {
     abortRef.current?.abort();
@@ -83,7 +83,7 @@ export function EvaluationList({ companyId: companyIdProp, role, userId: userIdP
   useEffect(() => {
     let isMounted = true;
     async function loadTrainees() {
-      if (!user?.uid || role !== 'supervisor') return;
+      if (!user?.uid || viewerRole !== 'supervisor') return;
       try {
         const db = getFirestoreInstancePublic();
         const userSnap = await getDocs(
@@ -123,7 +123,7 @@ export function EvaluationList({ companyId: companyIdProp, role, userId: userIdP
     }
     loadTrainees();
     return () => { isMounted = false; };
-  }, [user?.uid, role]);
+  }, [user?.uid, viewerRole]);
 
   const filtered = evaluations.filter((e) => {
     if (filterType && e.type !== filterType) return false;
@@ -154,7 +154,7 @@ export function EvaluationList({ companyId: companyIdProp, role, userId: userIdP
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h2 className="text-lg font-bold text-foreground">
-              {role === 'trainee' ? 'My Evaluations' : 'Evaluations'}
+              {viewerRole === 'trainee' ? 'My Evaluations' : 'Evaluations'}
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">Performance reviews, monthly assessments, and final evaluations</p>
           </div>
@@ -182,7 +182,7 @@ export function EvaluationList({ companyId: companyIdProp, role, userId: userIdP
               <option value="reviewed">Reviewed</option>
               <option value="finalized">Finalized</option>
             </select>
-            {role === 'supervisor' && (
+            {viewerRole === 'supervisor' && (
               <Button
                 onClick={() => { setShowForm(!showForm); setSelectedTraineeId(''); setSelectedTraineeName(''); }}
                 variant={showForm ? 'secondary' : 'primary'}
@@ -199,7 +199,7 @@ export function EvaluationList({ companyId: companyIdProp, role, userId: userIdP
           </div>
         </div>
 
-        {showForm && role === 'supervisor' && (
+        {showForm && viewerRole === 'supervisor' && (
           <div className="mb-6 p-4 bg-muted/40 rounded-xl border border-border">
             <label htmlFor="select-trainee" className="block text-xs font-semibold text-foreground mb-1.5">
               Select Trainee to Evaluate

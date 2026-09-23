@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { adminService } from '../services/adminService';
 import type { WorkScheduleFormData, Company } from '../types';
 import { useFormValidation } from '@/shared/hooks/useFormValidation';
@@ -60,7 +60,7 @@ export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: Wor
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadSchedule = async (scheduleId: string) => {
+  const loadSchedule = useCallback(async (scheduleId: string) => {
     try {
       const schedule = await adminService.getWorkSchedule(scheduleId);
       setFormData({
@@ -77,7 +77,7 @@ export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: Wor
     } finally {
       setLoading(false);
     }
-  };
+  }, [setFormData]);
 
   useEffect(() => {
     const init = async () => {
@@ -94,7 +94,7 @@ export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: Wor
       }
     };
     init();
-  }, [editingId, isEditing]);
+  }, [editingId, isEditing, loadSchedule]);
 
   const handleWorkDayToggle = (day: number) => {
     if (viewOnly) return;
@@ -253,10 +253,10 @@ export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: Wor
         </FormField>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-foreground mb-2">
+      <fieldset>
+        <legend className="block text-sm font-medium text-foreground mb-2">
           Working Days <span className="text-destructive">*</span>
-        </label>
+        </legend>
         <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
           {DAY_OPTIONS.map((day) => {
             const isSelected = formData.workDays.includes(day.value);
@@ -281,7 +281,7 @@ export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: Wor
         {formData.workDays.length === 0 && (
           <p className="text-xs text-destructive mt-1.5">Please select at least one working day.</p>
         )}
-      </div>
+      </fieldset>
 
       <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
         <Button variant="secondary" type="button" onClick={onCancel}>

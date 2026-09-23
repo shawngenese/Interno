@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { adminService } from '../services/adminService';
 import type { OJTScheduleFormData, WorkSchedule, Company } from '../types';
 import { useFormValidation } from '@/shared/hooks/useFormValidation';
@@ -60,7 +60,7 @@ export function OJTScheduleForm({ editingId, viewOnly, onCancel, onSaved }: OJTS
     }
   };
 
-  const loadSchedule = async (scheduleId: string) => {
+  const loadSchedule = useCallback(async (scheduleId: string) => {
     try {
       const schedule = await adminService.getOJTSchedule(scheduleId);
       setFormData({
@@ -78,7 +78,7 @@ export function OJTScheduleForm({ editingId, viewOnly, onCancel, onSaved }: OJTS
     } finally {
       setLoading(false);
     }
-  };
+  }, [setFormData]);
 
   useEffect(() => {
     const init = async () => {
@@ -95,7 +95,7 @@ export function OJTScheduleForm({ editingId, viewOnly, onCancel, onSaved }: OJTS
       }
     };
     init();
-  }, [editingId, isEditing]);
+  }, [editingId, isEditing, loadSchedule]);
 
   useEffect(() => {
     if (formData.companyId) {

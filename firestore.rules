@@ -95,7 +95,7 @@ service cloud.firestore {
       allow read: if isSignedIn() && (
         isOwner(userId) ||
         isAdmin() ||
-        isCoordinator() ||
+        (isCoordinator() && sameCompany(resource.data.companyId)) ||
         isSupervisor()
       );
       
@@ -201,7 +201,13 @@ service cloud.firestore {
     // COMPANIES Collection
     // ============================================
     match /companies/{companyId} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        isCoordinator() ||
+        isSupervisor() ||
+        sameCompany(companyId) ||
+        (isTrainee() && resource.data.type == 'external' && resource.data.verified == true)
+      );
       allow write: if isSignedIn() && isAdmin();
       allow update: if isSignedIn() && (
         isAdmin() ||

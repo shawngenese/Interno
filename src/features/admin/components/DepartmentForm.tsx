@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { adminService } from '../services/adminService';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
 import { useFormValidation } from '@/shared/hooks/useFormValidation';
@@ -44,16 +44,16 @@ export function DepartmentForm({ editingId, onCancel, onSaved }: DepartmentFormP
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadCompanies = async () => {
+  const loadCompanies = useCallback(async () => {
     try {
       const result = await adminService.listCompanies({ limit: 100 });
       setCompanies(result.data);
     } catch (err) {
       console.error('Failed to load companies:', err);
     }
-  };
+  }, []);
 
-  const loadDepartment = async (departmentId: string) => {
+  const loadDepartment = useCallback(async (departmentId: string) => {
     try {
       const department = await adminService.getDepartment(departmentId);
       setFormData({
@@ -68,7 +68,7 @@ export function DepartmentForm({ editingId, onCancel, onSaved }: DepartmentFormP
     } finally {
       setLoading(false);
     }
-  };
+  }, [setFormData]);
 
   useEffect(() => {
     loadCompanies();
@@ -77,7 +77,7 @@ export function DepartmentForm({ editingId, onCancel, onSaved }: DepartmentFormP
     } else {
       setLoading(false);
     }
-  }, [editingId, isEditing]);
+  }, [editingId, isEditing, loadCompanies, loadDepartment]);
 
   useEffect(() => {
     if (formData.companyId) {

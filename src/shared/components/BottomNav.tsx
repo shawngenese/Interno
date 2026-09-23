@@ -56,7 +56,7 @@ const coordinatorItems: BottomNavItem[] = [
   { label: 'Announcements', href: '/coordinator/announcements', icon: Bell },
 ];
 
-export const BottomNav = React.memo(function BottomNav() {
+export const BottomNav = React.memo(function BottomNav({ alwaysVisible = false }: { alwaysVisible?: boolean }) {
   const { role } = useAuth();
 
   const items = role === 'admin'
@@ -76,7 +76,7 @@ export const BottomNav = React.memo(function BottomNav() {
   return (
     <nav
       aria-label="Main navigation"
-      className="fixed bottom-[calc(0.875rem+env(safe-area-inset-bottom,0px))] left-1/2 z-50 w-max max-w-[calc(100vw-1.5rem)] -translate-x-1/2 lg:hidden"
+      className={`fixed bottom-[calc(0.875rem+env(safe-area-inset-bottom,0px))] left-1/2 z-50 w-max max-w-[calc(100vw-1.5rem)] -translate-x-1/2 ${alwaysVisible ? '' : 'lg:hidden'}`}
     >
       <div className="no-scrollbar flex items-end gap-0.5 overflow-x-auto rounded-[26px] border border-border bg-card/70 px-2 py-1.5 shadow-lg backdrop-blur-xl backdrop-saturate-150">
         {items.map((item) => (

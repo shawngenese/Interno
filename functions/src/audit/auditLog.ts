@@ -31,6 +31,10 @@ export function deepClean<T>(obj?: T): T | undefined {
     return (cleaned.length ? cleaned : undefined) as T;
   }
   if (typeof obj === 'object') {
+    // Only recurse into plain objects — preserve class instances such as
+    // Firestore Timestamp / GeoPoint / DocumentReference as-is.
+    const proto = Object.getPrototypeOf(obj);
+    if (proto !== Object.prototype && proto !== null) return obj;
     const cleaned: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
       const val = deepClean(v);
@@ -45,11 +49,16 @@ export async function logAction(
   entry: Omit<AuditLogEntry, 'timestamp'>,
   context?: AuditLogContext
 ): Promise<void> {
-  // Build the raw entry with all fields, then deep clean to remove any undefined values
+  // Merge entry metadata + context into the `metadata` field (consistent with
+  // logActionBatch / logActionInTransaction), then deep clean undefined values.
+  const mergedMeta = deepClean({
+    ...entry.metadata,
+    ...context,
+  });
   const rawEntry = {
     ...entry,
     timestamp: Timestamp.now(),
-    ...context,
+    metadata: mergedMeta,
   };
   const auditEntry = deepClean(rawEntry);
   if (!auditEntry) {

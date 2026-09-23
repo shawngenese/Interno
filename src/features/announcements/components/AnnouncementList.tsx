@@ -16,10 +16,10 @@ import type { Announcement, AnnouncementStatus, AnnouncementPriority } from '../
 
 interface AnnouncementListProps {
   companyId?: string;
-  role?: 'admin' | 'coordinator' | 'supervisor' | 'trainee';
+  viewerRole?: 'admin' | 'coordinator' | 'supervisor' | 'trainee';
 }
 
-export function AnnouncementList({ companyId: companyIdProp, role }: AnnouncementListProps) {
+export function AnnouncementList({ companyId: companyIdProp, viewerRole }: AnnouncementListProps) {
   const { user } = useAuth();
   const [resolvedCompanyId, setResolvedCompanyId] = useState<string>(companyIdProp || '');
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -45,7 +45,7 @@ export function AnnouncementList({ companyId: companyIdProp, role }: Announcemen
       setResolvedCompanyId(companyIdProp);
       return;
     }
-    if (!user?.uid || role === 'trainee') return;
+    if (!user?.uid || viewerRole === 'trainee') return;
     let cancelled = false;
     async function resolveCompanyId() {
       try {
@@ -65,16 +65,16 @@ export function AnnouncementList({ companyId: companyIdProp, role }: Announcemen
     resolveCompanyId();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.uid, companyIdProp, role]);
+  }, [user?.uid, companyIdProp, viewerRole]);
 
   const loadAnnouncements = useCallback(async (signal?: AbortSignal) => {
     // Admin sees all announcements (no companyId filter)
     // Trainees without companyId also see all (system-wide)
-    if (role !== 'admin' && role !== 'trainee' && !resolvedCompanyId) return;
+    if (viewerRole !== 'admin' && viewerRole !== 'trainee' && !resolvedCompanyId) return;
     try {
       setLoading(true);
       const data = await announcementService.getAnnouncements(
-        role === 'admin' || (role === 'trainee' && !resolvedCompanyId) ? undefined : resolvedCompanyId,
+        viewerRole === 'admin' || (viewerRole === 'trainee' && !resolvedCompanyId) ? undefined : resolvedCompanyId,
         {
           status: filterStatus || undefined,
         }
@@ -88,7 +88,7 @@ export function AnnouncementList({ companyId: companyIdProp, role }: Announcemen
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
-  }, [resolvedCompanyId, filterStatus, role]);
+  }, [resolvedCompanyId, filterStatus, viewerRole]);
 
   useEffect(() => {
     abortRef.current?.abort();
@@ -128,7 +128,7 @@ export function AnnouncementList({ companyId: companyIdProp, role }: Announcemen
     addToast('success', wasEditing ? 'Announcement updated' : 'Announcement created');
   };
 
-  const showActions = role === 'admin' || role === 'coordinator';
+  const showActions = viewerRole === 'admin' || viewerRole === 'coordinator';
 
   return (
     <div className="space-y-6">
@@ -141,7 +141,7 @@ export function AnnouncementList({ companyId: companyIdProp, role }: Announcemen
             <p className="text-xs text-muted-foreground mt-0.5">Stay updated with the latest news, notices, and updates</p>
           </div>
           <div className="flex flex-wrap items-center gap-2.5">
-            {(role === 'admin' || role === 'coordinator') ? (
+            {(viewerRole === 'admin' || viewerRole === 'coordinator') ? (
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value as AnnouncementStatus | '')}

@@ -58,7 +58,7 @@ export function CoordinatorTaskView() {
       const userMap = new Map<string, string>();
       for (const batch of chunkArray(userIds, 30)) {
         const userSnap = await getDocs(
-          query(collection(db, 'users'), where(documentId(), 'in', batch)),
+          query(collection(db, 'users'), where('companyId', '==', companyId), where(documentId(), 'in', batch)),
         );
         if (signal?.aborted) return;
         userSnap.docs.forEach((doc) => {

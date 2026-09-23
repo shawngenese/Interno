@@ -79,7 +79,7 @@ function App() {
             <AdminRoute>
               <AdminLayout>
                 <PageTransition>
-                  <AnnouncementList role="admin" />
+                  <AnnouncementList viewerRole="admin" />
                 </PageTransition>
               </AdminLayout>
             </AdminRoute>
@@ -179,7 +179,7 @@ function App() {
             <SupervisorRoute>
               <SupervisorLayout>
                 <PageTransition>
-                  <EvaluationList role="supervisor" />
+                  <EvaluationList viewerRole="supervisor" />
                 </PageTransition>
               </SupervisorLayout>
             </SupervisorRoute>
@@ -189,7 +189,7 @@ function App() {
             <SupervisorRoute>
               <SupervisorLayout>
                 <PageTransition>
-                  <AnnouncementList role="supervisor" />
+                  <AnnouncementList viewerRole="supervisor" />
                 </PageTransition>
               </SupervisorLayout>
             </SupervisorRoute>
@@ -289,7 +289,7 @@ function App() {
             <CoordinatorRoute>
               <CoordinatorLayout>
                 <PageTransition>
-                  <EvaluationList role="coordinator" />
+                  <EvaluationList viewerRole="coordinator" />
                 </PageTransition>
               </CoordinatorLayout>
             </CoordinatorRoute>
@@ -299,7 +299,7 @@ function App() {
             <CoordinatorRoute>
               <CoordinatorLayout>
                 <PageTransition>
-                  <AnnouncementList role="coordinator" />
+                  <AnnouncementList viewerRole="coordinator" />
                 </PageTransition>
               </CoordinatorLayout>
             </CoordinatorRoute>
@@ -376,7 +376,7 @@ function App() {
           <Route path="/trainee/announcements" element={
             <TraineeRoute>
               <PrivateLayout>
-                <AnnouncementList role="trainee" />
+                <AnnouncementList viewerRole="trainee" />
               </PrivateLayout>
             </TraineeRoute>
           } />
@@ -424,7 +424,7 @@ function PrivateLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background text-foreground">
       <SkipToContent />
       <header className="bg-card border-b border-border sticky top-0 z-40" role="banner">
-        <div className="container mx-auto px-4">
+        <div className="mx-auto w-full max-w-[1024px] px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-2.5">
               <img src="/interno-logo.jpg" alt="Interno logo" className="w-8 h-8 rounded-lg bg-white object-contain shadow-sm shrink-0" />
@@ -440,14 +440,12 @@ function PrivateLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
-      <main id="main-content" className="container mx-auto px-4 py-6 pb-24 lg:pb-6" role="main">
+      <main id="main-content" className="mx-auto w-full max-w-[1024px] px-4 py-6 pb-24" role="main">
         <PageTransition>
           {children}
         </PageTransition>
       </main>
-      <div className="lg:hidden">
-        <BottomNav />
-      </div>
+      <BottomNav alwaysVisible />
     </div>
   );
 }

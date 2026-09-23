@@ -307,7 +307,15 @@ export function TaskList() {
               {tasks.map((task) => (
                 <div
                   key={task.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setSelectedTask(task)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelectedTask(task);
+                    }
+                  }}
                   className="bg-card border border-border rounded-xl p-4 space-y-3 hover:border-primary transition-colors cursor-pointer"
                 >
                   <div className="flex items-start justify-between gap-2">

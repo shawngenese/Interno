@@ -53,7 +53,7 @@ let auth: Auth | null = null;
 let db: Firestore | null = null;
 let storage: FirebaseStorage | null = null;
 let functions: Functions | null = null;
-let messaging: Messaging | null = null;
+const messaging: Messaging | null = null;
 let appCheck: AppCheck | null = null;
 
 export function initializeFirebase(): FirebaseApp {
