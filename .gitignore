@@ -20,6 +20,10 @@ build
 .env.local
 .env.*.local
 *.local
+functions/.env
+functions/.env.*
+!.env.example
+!functions/.env.example
 
 # Editor directories and files
 .vscode/*
@@ -32,22 +36,49 @@ build
 *.sln
 *.sw?
 
-# TypeScript cache
+# TypeScript / lint cache
 *.tsbuildinfo
+.eslintcache
+.prettiercache
+.vite/
 
-# Coverage
+# Coverage / test reports
 coverage
+.nyc_output/
+test-results/
+playwright-report/
 
 # Firebase
 firebase-debug.log
 firebase-debug.*.log
 firestore-debug.log
 firestore-debug.*.log
+ui-debug.log
+*.debug.log
 serviceAccountKey.json
 *service-account*.json
 *serviceAccount*.json
+*-key.json
+*credentials*.json
 .firebase/
 emulator-data/
+.emulator-data/
+firebase-export-*/
+
+# Mobile / keystore secrets - NEVER commit
+google-services.json
+GoogleService-Info.plist
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+.secrets/
+
+# Cloud Functions build output (mirrors functions/.gitignore for root git add safety)
+functions/lib/
+functions/node_modules/
 
 # Temporary files
 *.tmp
@@ -91,7 +122,6 @@ AGENTS.md
 
 # OTHER
 docs/
-firestore/
 NEEDED_FIX.md
 tests.json
 
