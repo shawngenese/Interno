@@ -124,8 +124,8 @@ export async function getDTRSummary(traineeId: string, startDate: number, endDat
     totalDays: entries.length,
     totalRegularHours: Number(totalRegularHours.toFixed(2)),
     totalOvertimeHours: Number(totalOvertimeHours.toFixed(2)),
-    totalLateMinutes,
-    totalUndertimeMinutes,
+    totalLateMinutes: Math.round(totalLateMinutes),
+    totalUndertimeMinutes: Math.round(totalUndertimeMinutes),
     totalNightDiffHours: Number(totalNightDiffHours.toFixed(2)),
     entries,
   };

@@ -3,6 +3,7 @@ import { announcementService } from '../services/announcementService';
 import { useAuth } from '@/features/auth';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { Button } from '@/shared/components/ui/Button';
 import { ANNOUNCEMENT_PRIORITY_LABELS, ROLE_LABELS } from '../types';
 import type { Announcement, AnnouncementFormData, AnnouncementPriority } from '../types';
 
@@ -111,112 +112,75 @@ export function AnnouncementForm({
   };
 
   return (
-    <div className="bg-white dark:bg-[#1E1E1E]">
-      <div className="p-4 space-y-6">
-        {error && (
-          <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
-            {error}
-          </div>
-        )}
+    <div className="space-y-5">
+      {error && (
+        <div role="alert" className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm">
+          {error}
+        </div>
+      )}
 
-        {needsCompanySelection && (
-          <div>
-            <label htmlFor="company-select" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              Company
-            </label>
-            <select
-              id="company-select"
-              value={selectedCompanyId}
-              onChange={(e) => setSelectedCompanyId(e.target.value)}
-              className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">Select Company</option>
-              {companies.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
+      {needsCompanySelection && (
         <div>
-          <label htmlFor="announcement-title" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-            Title
+          <label htmlFor="company-select" className="block text-xs font-semibold text-foreground mb-1.5">
+            Target Company
           </label>
-          <input
-            id="announcement-title"
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Enter announcement title"
-          />
+          <select
+            id="company-select"
+            value={selectedCompanyId}
+            onChange={(e) => setSelectedCompanyId(e.target.value)}
+            className="w-full h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">Select Company</option>
+            {companies.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
         </div>
+      )}
 
+      <div>
+        <label htmlFor="announcement-title" className="block text-xs font-semibold text-foreground mb-1.5">
+          Announcement Title
+        </label>
+        <input
+          id="announcement-title"
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="w-full h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
+          placeholder="e.g. Schedule update, holiday notice, company policy..."
+        />
+      </div>
+
+      <div>
+        <label htmlFor="announcement-content" className="block text-xs font-semibold text-foreground mb-1.5">
+          Content / Message
+        </label>
+        <textarea
+          id="announcement-content"
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          rows={5}
+          className="w-full p-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
+          placeholder="Write the full announcement details here..."
+        />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="announcement-content" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-            Content
-          </label>
-          <textarea
-            id="announcement-content"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={6}
-            className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Write your announcement content..."
-          />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <span className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              Priority
-            </span>
-            <div className="flex gap-2">
-              {Object.entries(ANNOUNCEMENT_PRIORITY_LABELS).map(([value, { label, color }]) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setPriority(value as AnnouncementPriority)}
-                  className={`px-3 py-2 text-sm rounded-lg transition-colors ${
-                    priority === value
-                      ? 'bg-blue-600 text-white'
-                      : `${color} hover:opacity-80`
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="announcement-expires" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              Expires At (optional)
-            </label>
-            <input
-              id="announcement-expires"
-              type="date"
-              value={expiresAt}
-              onChange={(e) => setExpiresAt(e.target.value)}
-              className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-        </div>
-
-        <div>
-          <span className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-2">
-            Target Roles
+          <span className="block text-xs font-semibold text-foreground mb-1.5">
+            Priority Level
           </span>
           <div className="flex flex-wrap gap-2">
-            {Object.entries(ROLE_LABELS).map(([role, label]) => (
+            {Object.entries(ANNOUNCEMENT_PRIORITY_LABELS).map(([value, { label }]) => (
               <button
-                key={role}
+                key={value}
                 type="button"
-                onClick={() => handleRoleToggle(role)}
-                className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                  targetRoles.includes(role)
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-[#EFEFEF] text-[#3A3A3A] dark:bg-[#3A3A3A] dark:text-[#BDBDBD] hover:bg-[#D5D5D5] dark:hover:bg-[#555555]'
+                onClick={() => setPriority(value as AnnouncementPriority)}
+                className={`min-h-[40px] px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
+                  priority === value
+                    ? 'bg-primary text-on-primary border-primary'
+                    : 'bg-card border-border text-foreground hover:bg-muted'
                 }`}
               >
                 {label}
@@ -225,43 +189,80 @@ export function AnnouncementForm({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="pinned"
-            checked={pinned}
-            onChange={(e) => setPinned(e.target.checked)}
-            className="w-4 h-4 text-blue-600 border-[#BDBDBD] rounded focus:ring-blue-500"
-          />
-          <label htmlFor="pinned" className="text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD]">
-            Pin this announcement
+        <div>
+          <label htmlFor="announcement-expires" className="block text-xs font-semibold text-foreground mb-1.5">
+            Expiration Date (optional)
           </label>
+          <input
+            id="announcement-expires"
+            type="date"
+            value={expiresAt}
+            onChange={(e) => setExpiresAt(e.target.value)}
+            className="w-full h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
         </div>
+      </div>
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
-          {onCancel && (
+      <div>
+        <span className="block text-xs font-semibold text-foreground mb-1.5">
+          Target Audience Roles
+        </span>
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(ROLE_LABELS).map(([role, label]) => (
             <button
-              onClick={onCancel}
-              className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#555555]"
+              key={role}
+              type="button"
+              onClick={() => handleRoleToggle(role)}
+              className={`min-h-[38px] px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
+                targetRoles.includes(role)
+                  ? 'bg-primary text-on-primary border-primary'
+                  : 'bg-card border-border text-foreground hover:bg-muted'
+              }`}
             >
-              Cancel
+              {label}
             </button>
-          )}
-          <button
-            onClick={() => handleSave(true)}
-            disabled={saving || !title.trim() || !content.trim() || (needsCompanySelection && !selectedCompanyId)}
-            className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#555555] disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Save Draft'}
-          </button>
-          <button
-            onClick={() => handleSave(false)}
-            disabled={saving || !title.trim() || !content.trim() || (needsCompanySelection && !selectedCompanyId)}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-          >
-            {saving ? 'Publishing...' : 'Publish'}
-          </button>
+          ))}
         </div>
+      </div>
+
+      <div className="flex items-center gap-2.5 pt-1">
+        <input
+          type="checkbox"
+          id="pinned"
+          checked={pinned}
+          onChange={(e) => setPinned(e.target.checked)}
+          className="w-4 h-4 text-primary border-input rounded focus:ring-primary"
+        />
+        <label htmlFor="pinned" className="text-sm font-medium text-foreground cursor-pointer">
+          Pin this announcement to top
+        </label>
+      </div>
+
+      <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-border">
+        {onCancel && (
+          <Button
+            variant="secondary"
+            onClick={onCancel}
+          >
+            Cancel
+          </Button>
+        )}
+        <Button
+          variant="secondary"
+          isLoading={saving}
+          disabled={!title.trim() || !content.trim() || (needsCompanySelection && !selectedCompanyId)}
+          onClick={() => handleSave(true)}
+        >
+          Save Draft
+        </Button>
+        <Button
+          variant="primary"
+          isLoading={saving}
+          disabled={!title.trim() || !content.trim() || (needsCompanySelection && !selectedCompanyId)}
+          onClick={() => handleSave(false)}
+        >
+          Publish
+        </Button>
       </div>
     </div>
   );

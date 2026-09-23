@@ -5,6 +5,9 @@ import { getFunctionsInstancePublic, getFirestoreInstancePublic } from '@/config
 import { httpsCallable } from 'firebase/functions';
 import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { formatTime12 } from '@/shared/utils/dateUtils';
+import { Button } from '@/shared/components/ui/Button';
+import { Skeleton } from '@/shared/components/Skeleton';
+import { RefreshCw, CheckCircle2, QrCode, Clock, ShieldCheck, UserCheck } from 'lucide-react';
 
 interface SupervisorQRDisplayProps {
   action: 'time_in' | 'time_out';
@@ -44,94 +47,98 @@ export function SupervisorQRDisplay({
   const MAX_RETRIES = 3;
   const generateQRRef = useRef<((isRetry?: boolean) => Promise<void>) | null>(null);
 
-  const generateQR = useCallback(async (isRetry = false) => {
-    if (!user?.uid) return;
-    if (generatingRef.current && !isRetry) return;
-    generatingRef.current = true;
-    setLoading(true);
-    setError(null);
-    setScans([]);
+  const generateQR = useCallback(
+    async (isRetry = false) => {
+      if (!user?.uid) return;
+      if (generatingRef.current && !isRetry) return;
+      generatingRef.current = true;
+      setLoading(true);
+      setError(null);
+      setScans([]);
 
-    if (unsubscribeRef.current) {
-      unsubscribeRef.current();
-      unsubscribeRef.current = null;
-    }
-
-    try {
-      const functions = getFunctionsInstancePublic();
-      const generateQRToken = httpsCallable<{ action: string; expirationSeconds: number }, {
-        token: string;
-        qrDataUrl: string;
-        expiresAt: number;
-        sessionId: string;
-      }>(functions, 'generateQRToken');
-
-      const result = await generateQRToken({ action, expirationSeconds });
-      const data = result.data;
-
-      setToken(data.token);
-      setQrDataUrl(data.qrDataUrl);
-      setExpiresAt(data.expiresAt);
-      setSessionId(data.sessionId);
-      retryCountRef.current = 0;
-      onGenerated?.({ token: data.token, expiresAt: data.expiresAt, sessionId: data.sessionId });
-
-      const db = getFirestoreInstancePublic();
-      const scansQuery = query(
-        collection(db, 'attendance_records'),
-        where('qrSessionId', '==', data.sessionId),
-        orderBy('timestamp', 'desc'),
-        limit(10),
-      );
-
-      const unsubscribe = onSnapshot(scansQuery, (snapshot) => {
-        const newScans: ScanNotification[] = [];
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          newScans.push({
-            id: doc.id,
-            traineeId: data.traineeId,
-            type: data.type,
-            timestamp: data.timestamp,
-            deviceInfo: data.deviceInfo,
-          });
-        });
-        setScans(newScans);
-      });
-
-      unsubscribeRef.current = unsubscribe;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to generate QR';
-      if (!isRetry && retryCountRef.current < MAX_RETRIES) {
-        retryCountRef.current++;
-        const delay = Math.min(1000 * 2 ** (retryCountRef.current - 1), 8000);
-        setTimeout(() => generateQRRef.current?.(true), delay);
-        return;
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
       }
-      setError(message);
-      retryCountRef.current = 0;
-    } finally {
-      setLoading(false);
-      generatingRef.current = false;
-    }
-  }, [user?.uid, action, expirationSeconds, onGenerated]);
+
+      try {
+        const functions = getFunctionsInstancePublic();
+        const generateQRToken = httpsCallable<
+          { action: string; expirationSeconds: number },
+          {
+            token: string;
+            qrDataUrl: string;
+            expiresAt: number;
+            sessionId: string;
+          }
+        >(functions, 'generateQRToken');
+
+        const result = await generateQRToken({ action, expirationSeconds });
+        const data = result.data;
+
+        setToken(data.token);
+        setQrDataUrl(data.qrDataUrl);
+        setExpiresAt(data.expiresAt);
+        setSessionId(data.sessionId);
+        retryCountRef.current = 0;
+        onGenerated?.({ token: data.token, expiresAt: data.expiresAt, sessionId: data.sessionId });
+
+        const db = getFirestoreInstancePublic();
+        const scansQuery = query(
+          collection(db, 'attendance_records'),
+          where('qrSessionId', '==', data.sessionId),
+          orderBy('timestamp', 'desc'),
+          limit(10),
+        );
+
+        const unsubscribe = onSnapshot(scansQuery, (snapshot) => {
+          const newScans: ScanNotification[] = [];
+          snapshot.forEach((doc) => {
+            const docData = doc.data();
+            newScans.push({
+              id: doc.id,
+              traineeId: docData.traineeId,
+              type: docData.type,
+              timestamp: docData.timestamp,
+              deviceInfo: docData.deviceInfo,
+            });
+          });
+          setScans(newScans);
+        });
+
+        unsubscribeRef.current = unsubscribe;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to generate QR';
+        if (!isRetry && retryCountRef.current < MAX_RETRIES) {
+          retryCountRef.current++;
+          const delay = Math.min(1000 * 2 ** (retryCountRef.current - 1), 8000);
+          setTimeout(() => generateQRRef.current?.(true), delay);
+          return;
+        }
+        setError(message);
+        retryCountRef.current = 0;
+      } finally {
+        setLoading(false);
+        generatingRef.current = false;
+      }
+    },
+    [user?.uid, action, expirationSeconds, onGenerated],
+  );
 
   useEffect(() => {
     generateQRRef.current = generateQR;
   });
 
-  // Cleanup listener on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
-      }
+      if (unsubscribeRef.current) unsubscribeRef.current();
       if (countdownRef.current) cancelAnimationFrame(countdownRef.current);
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     };
   }, []);
 
-  // Countdown timer — calculates from expiresAt to avoid drift
+  // Countdown timer
   useEffect(() => {
     if (countdownRef.current) cancelAnimationFrame(countdownRef.current);
 
@@ -170,7 +177,7 @@ export function SupervisorQRDisplay({
     };
   }, [isActive, expiresAt]);
 
-  // Initial generation — only when active and auth is ready
+  // Handle active toggle
   useEffect(() => {
     if (isActive && user?.uid) {
       generateQRRef.current?.();
@@ -199,141 +206,165 @@ export function SupervisorQRDisplay({
   };
 
   const actionLabel = action === 'time_in' ? 'Time In' : 'Time Out';
-  const actionColor = action === 'time_in' ? 'bg-green-600' : 'bg-red-600';
-  const actionColorDark = action === 'time_in' ? 'dark:bg-green-500' : 'dark:bg-red-500';
 
   return (
-    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-[#121212] dark:text-white">{actionLabel} QR Code</h2>
-        <span className={`px-2 py-1 text-xs font-medium text-white rounded ${actionColor} ${actionColorDark}`}>
+    <div className="bg-card rounded-xl border border-border shadow-sm p-6 space-y-6">
+      <div className="flex items-center justify-between pb-4 border-b border-border">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="w-5 h-5 text-primary" />
+          <h3 className="font-semibold text-foreground text-base">{actionLabel} Display View</h3>
+        </div>
+        <span
+          className={`px-2.5 py-0.5 text-xs font-semibold rounded-full ${
+            action === 'time_in'
+              ? 'bg-success/15 text-success'
+              : 'bg-destructive/15 text-destructive'
+          }`}
+        >
           {actionLabel}
         </span>
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
+        <div role="alert" className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm">
           {error}
         </div>
       )}
 
-      <div className="flex flex-col items-center gap-4">
-        {!token && !loading && isActive && (
-          <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">
-            Generating QR code...
-          </p>
+      <div className="flex flex-col items-center gap-5">
+        {!isActive && !token && (
+          <div className="py-12 text-center max-w-sm space-y-3">
+            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto text-muted-foreground">
+              <QrCode className="w-6 h-6" />
+            </div>
+            <h4 className="font-medium text-foreground">QR Scanner Inactive</h4>
+            <p className="text-xs text-muted-foreground">
+              Click &quot;Start QR&quot; above to start generating encrypted, rotating QR codes for trainees.
+            </p>
+          </div>
         )}
 
-        {token && qrDataUrl && (
+        {loading && (
+          <div className="py-12 flex flex-col items-center gap-3">
+            <Skeleton variant="rectangular" width={256} height={256} className="rounded-2xl" />
+            <Skeleton variant="text" width={160} height={18} />
+          </div>
+        )}
+
+        {token && qrDataUrl && !loading && (
           <>
-            <div className="relative">
-              <div className="bg-white p-4 rounded-lg shadow-inner border border-[#D5D5D5] dark:border-[#3A3A3A]">
+            {/* Viewfinder Wrapper with Corner Accents */}
+            <div className="relative p-4 bg-background border-2 border-primary/40 rounded-2xl shadow-md">
+              {/* Top-Left Corner Accent */}
+              <div className="absolute -top-1.5 -left-1.5 w-4 h-4 border-t-2 border-l-2 border-primary" />
+              {/* Top-Right Corner Accent */}
+              <div className="absolute -top-1.5 -right-1.5 w-4 h-4 border-t-2 border-r-2 border-primary" />
+              {/* Bottom-Left Corner Accent */}
+              <div className="absolute -bottom-1.5 -left-1.5 w-4 h-4 border-b-2 border-l-2 border-primary" />
+              {/* Bottom-Right Corner Accent */}
+              <div className="absolute -bottom-1.5 -right-1.5 w-4 h-4 border-b-2 border-r-2 border-primary" />
+
+              <div className="bg-white p-3 rounded-xl">
                 <QRCodeSVG
                   value={token}
-                  size={256}
+                  size={240}
                   level="M"
                   includeMargin={true}
                   bgColor="#ffffff"
                   fgColor="#000000"
                 />
               </div>
-              <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#121212] dark:bg-[#EFEFEF] text-white dark:text-[#121212] text-xs px-2 py-1 rounded whitespace-nowrap">
-                Expires in {formatTime(timeLeft)}
+
+              <div className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 bg-foreground text-background text-xs font-medium px-3 py-0.5 rounded-full shadow whitespace-nowrap flex items-center gap-1.5">
+                <Clock className="w-3 h-3 text-primary animate-spin" />
+                <span>Expires in {formatTime(timeLeft)}</span>
               </div>
             </div>
 
-            <div className="w-full max-w-md text-center">
-              <div className="h-3 bg-[#D5D5D5] dark:bg-[#3A3A3A] rounded-full overflow-hidden">
+            {/* Countdown Progress Bar */}
+            <div className="w-full max-w-sm space-y-1.5 text-center pt-2">
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
                 <div
-                  className={`h-full transition-all duration-1000 ease-linear ${actionColor} ${actionColorDark}`}
+                  className={`h-full transition-all duration-1000 ease-linear ${
+                    action === 'time_in' ? 'bg-success' : 'bg-destructive'
+                  }`}
                   style={{ width: `${Math.max(0, (timeLeft / expirationSeconds) * 100)}%` }}
                 />
               </div>
-              <p className="mt-2 text-sm font-mono text-[#555555] dark:text-[#9E9E9E]">
-                {formatTime(timeLeft)} remaining
+              <p className="text-xs font-mono text-muted-foreground">
+                {formatTime(timeLeft)} remaining until next rotation
               </p>
             </div>
 
-            <div className="w-full max-w-md space-y-2 text-xs text-[#757575] dark:text-[#9E9E9E]">
-              <p>Session ID: <code className="font-mono">{sessionId?.slice(0, 8)}...</code></p>
-              <p>Expires: {expiresAt ? formatTime12(expiresAt) : '—'}</p>
+            {/* Session Metadata */}
+            <div className="w-full max-w-sm flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border">
+              <span>Session: <code className="font-mono text-foreground">{sessionId?.slice(0, 8)}...</code></span>
+              <span>Expires at: {expiresAt ? formatTime12(expiresAt) : '—'}</span>
             </div>
 
             {isActive && (
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => generateQR()}
-                disabled={loading}
-                className="w-full max-w-md px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                isLoading={loading}
+                className="gap-2"
               >
-                {loading ? 'Generating...' : 'Refresh QR Code'}
-              </button>
+                <RefreshCw className="w-3.5 h-3.5" />
+                Refresh QR Now
+              </Button>
             )}
           </>
         )}
-
-        {!isActive && !token && (
-          <p className="text-sm text-[#757575] dark:text-[#9E9E9E] text-center py-4">
-            Click &quot;Start QR&quot; above to generate a QR code for trainees to scan.
-          </p>
-        )}
       </div>
 
-      {/* Real-time scan notifications */}
+      {/* Real-time scan notifications feed */}
       {token && (
-      <div className="mt-6 w-full max-w-md">
-        <h3 className="text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-3">
-          Active Scans
-          {scans.length > 0 && (
-            <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
-              {scans.length}
-            </span>
-          )}
-        </h3>
-        {scans.length === 0 ? (
-          <p className="text-sm text-[#757575] dark:text-[#9E9E9E] text-center py-4 bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 rounded-lg">
-            Waiting for scans...
-          </p>
-        ) : (
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            {scans.map((scan) => (
-              <div
-                key={scan.id}
-                className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-1.5 bg-green-100 dark:bg-green-800/40 rounded-full">
-                    <svg className="h-4 w-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
+        <div className="pt-4 border-t border-border space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <UserCheck className="w-4 h-4 text-primary" />
+              Live Scan Activity
+            </h4>
+            {scans.length > 0 && (
+              <span className="px-2 py-0.5 text-xs font-semibold bg-success/15 text-success rounded-full">
+                {scans.length} {scans.length === 1 ? 'scan' : 'scans'}
+              </span>
+            )}
+          </div>
+
+          {scans.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-4 bg-muted/20 rounded-xl border border-dashed border-border">
+              Waiting for trainees to scan...
+            </p>
+          ) : (
+            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              {scans.map((scan) => (
+                <div
+                  key={scan.id}
+                  className="flex items-center justify-between p-3 bg-success/5 border border-success/20 rounded-xl"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-full bg-success/15 text-success flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-foreground">
+                        {scan.type === 'time_in' ? 'Time In Recorded' : 'Time Out Recorded'}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Trainee ID: {scan.traineeId.slice(0, 8)}...
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                      {scan.type === 'time_in' ? 'Time In' : 'Time Out'}
-                    </p>
-                    <p className="text-xs text-green-600 dark:text-green-400">
-                      {scan.traineeId.slice(0, 8)}...
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-green-600 dark:text-green-400">
+                  <span className="text-xs text-muted-foreground font-mono">
                     {formatTime12(scan.timestamp)}
-                  </p>
+                  </span>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      )}
-
-      {token && (
-        <details className="mt-4 w-full max-w-md">
-          <summary className="text-sm text-[#757575] dark:text-[#9E9E9E] cursor-pointer">Show token (for manual entry)</summary>
-          <div className="mt-2 p-2 bg-[#EFEFEF] dark:bg-[#121212] rounded text-xs font-mono text-[#3A3A3A] dark:text-[#BDBDBD] break-all select-all">
-            {token}
-          </div>
-        </details>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

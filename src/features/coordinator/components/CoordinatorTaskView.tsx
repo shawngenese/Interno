@@ -150,8 +150,8 @@ export function CoordinatorTaskView() {
             <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{totalPending}</p>
             <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">In Progress</p>
           </div>
-          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
-            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalSubmitted}</p>
+          <div className="p-4 bg-primary-light dark:bg-primary/10 rounded-lg text-center">
+            <p className="text-2xl font-bold text-primary dark:text-primary">{totalSubmitted}</p>
             <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Awaiting Review</p>
           </div>
         </div>
@@ -191,7 +191,7 @@ export function CoordinatorTaskView() {
                     <td className="px-4 py-3 text-sm text-center text-[#121212] dark:text-white">{s.total}</td>
                     <td className="px-4 py-3 text-sm text-center text-yellow-600 dark:text-yellow-400">{s.pending}</td>
                     <td className="px-4 py-3 text-sm text-center text-orange-600 dark:text-orange-400">{s.inProgress}</td>
-                    <td className="px-4 py-3 text-sm text-center text-blue-600 dark:text-blue-400">{s.submitted}</td>
+                    <td className="px-4 py-3 text-sm text-center text-primary dark:text-primary">{s.submitted}</td>
                     <td className="px-4 py-3 text-sm text-center text-green-600 dark:text-green-400">{s.approved}</td>
                     <td className="px-4 py-3 text-sm text-center text-red-600 dark:text-red-400">{s.returned}</td>
                   </tr>

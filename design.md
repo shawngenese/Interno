@@ -2,8 +2,8 @@
 
 Genre: modern-minimal
 Theme: Teal Flat (custom — based on ui-ux-pro-max MASTER.md)
-Paper: light (#F0FDFA)
-Accent: teal (#0D9488)
+Paper: oklch(0.97 0.02 175)
+Accent: oklch(0.62 0.13 175)
 Display: geometric-sans (Fira Sans)
 Body: geometric-sans (Fira Sans)
 Mono: Fira Code
@@ -145,6 +145,71 @@ Flat design — minimal. Use borders for separation.
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 }
 ```
+
+---
+
+## Component Voice
+
+Copy should be direct and specific. Never generic, never apologetic.
+
+**Buttons** — short, imperative, no trailing context words.
+- "Save" not "Save Changes"
+- "Delete" not "Delete Item"
+- "Submit" not "Submit Form"
+
+**Errors** — name the exact field and reason.
+- "Email is required" not "Field is required"
+- "Password must be at least 8 characters" not "Invalid input"
+- "That email is already in use" not "Something went wrong"
+
+**Empty states** — tell the user what to do next, not what is missing.
+- "No trainees yet. Add one to get started." not "No trainees found."
+- "Nothing assigned. Create a task above." not "No tasks available."
+
+---
+
+## Animation Timing
+
+Apply consistently. Never animate layout properties (width, height, top, left) — use transform and opacity only.
+
+| Element        | Duration | Easing   |
+| -------------- | -------- | -------- |
+| Button press   | 100ms    | ease-out |
+| Modal enter    | 150ms    | ease-out |
+| Modal exit     | 100ms    | ease-out |
+| Toast enter    | 200ms    | ease-out |
+| Toast exit     | 150ms    | ease-out |
+| Skeleton pulse | 2s       | infinite |
+| Card hover     | 200ms    | ease     |
+
+```css
+/* Reference */
+.btn:active          { transition: transform 100ms ease-out, opacity 100ms ease-out; }
+.modal[data-state="open"]   { transition: opacity 150ms ease-out, transform 150ms ease-out; }
+.modal[data-state="closed"] { transition: opacity 100ms ease-out, transform 100ms ease-out; }
+.toast[data-state="open"]   { transition: opacity 200ms ease-out, transform 200ms ease-out; }
+.toast[data-state="closed"] { transition: opacity 150ms ease-out, transform 150ms ease-out; }
+.skeleton { animation: pulse 2s ease-in-out infinite; }
+.card { transition: box-shadow 200ms ease, transform 200ms ease; }
+```
+
+---
+
+## Anti-Patterns
+
+Never do these. If you see them in a PR, reject.
+
+| Wrong | Correct |
+| ----- | ------- |
+| `text-blue-600` | `text-primary` |
+| `bg-blue-600` | `bg-primary` |
+| `text-gray-500` | `text-muted-foreground` |
+| `bg-gray-500` | `bg-muted-foreground` |
+| `w-[372px]` | use a spacing token or layout primitive |
+| `color: #0D9488` | `color: var(--color-primary)` |
+| `color: oklch(...)` inline | `color: var(--color-*)` |
+
+General rule: **no raw values in components — tokens only.**
 
 ---
 

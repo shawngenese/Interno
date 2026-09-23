@@ -3,14 +3,89 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-* {
+/* ============================================================
+   TAILWIND V4 @theme
+   Maps CSS custom properties → Tailwind utility names.
+   All raw values live in tokens.css; this is reference-only.
+   bg-primary, text-muted-foreground, border-border, etc.
+   ============================================================ */
+@theme {
+  /* Colors */
+  --color-primary:           var(--color-primary);
+  --color-primary-hover:     var(--color-primary-hover);
+  --color-primary-light:     var(--color-primary-light);
+  --color-on-primary:        var(--color-on-primary);
+
+  --color-secondary:         var(--color-secondary);
+  --color-on-secondary:      var(--color-on-secondary);
+
+  --color-accent:            var(--color-accent);
+  --color-accent-hover:      var(--color-accent-hover);
+  --color-on-accent:         var(--color-on-accent);
+
+  --color-destructive:       var(--color-destructive);
+  --color-destructive-hover: var(--color-destructive-hover);
+  --color-on-destructive:    var(--color-on-destructive);
+  --color-success:           var(--color-success);
+  --color-warning:           var(--color-warning);
+  --color-info:              var(--color-info);
+
+  --color-background:        var(--color-background);
+  --color-foreground:        var(--color-foreground);
+  --color-card:              var(--color-card);
+  --color-card-foreground:   var(--color-card-foreground);
+  --color-muted:             var(--color-muted);
+  --color-muted-foreground:  var(--color-muted-foreground);
+  --color-border:            var(--color-border);
+  --color-input:             var(--color-input);
+  --color-ring:              var(--color-ring);
+
+  /* Fonts → font-display, font-body, font-mono */
+  --font-display: var(--font-display);
+  --font-body:    var(--font-body);
+  --font-mono:    var(--font-mono);
+
+  /* Border radius → rounded-sm … rounded-full */
+  --radius-sm:   var(--radius-sm);
+  --radius-md:   var(--radius-md);
+  --radius-lg:   var(--radius-lg);
+  --radius-xl:   var(--radius-xl);
+  --radius-full: var(--radius-full);
+
+  /* Shadows → shadow-sm, shadow-md, shadow-lg */
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+
+  /* Spacing → p-1 … p-16, m-*, gap-*, etc. */
+  --spacing-0:  var(--space-0);
+  --spacing-1:  var(--space-1);
+  --spacing-2:  var(--space-2);
+  --spacing-3:  var(--space-3);
+  --spacing-4:  var(--space-4);
+  --spacing-5:  var(--space-5);
+  --spacing-6:  var(--space-6);
+  --spacing-8:  var(--space-8);
+  --spacing-10: var(--space-10);
+  --spacing-12: var(--space-12);
+  --spacing-16: var(--space-16);
+}
+
+/* ============================================================
+   BASE — box-sizing reset
+   ============================================================ */
+*, *::before, *::after {
   box-sizing: border-box;
 }
 
+/* ============================================================
+   HTML / BODY BASE STYLES
+   ============================================================ */
 html {
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;
   overscroll-behavior: none;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -35,18 +110,24 @@ h1, h2, h3, h4, h5, h6 {
   font-style: normal;
 }
 
-/* Focus styles — visible for keyboard nav */
+/* ============================================================
+   FOCUS — visible ring for keyboard nav
+   ============================================================ */
 :focus-visible {
   outline: 2px solid var(--color-ring);
   outline-offset: 2px;
 }
 
-/* Inputs — prevent iOS zoom (mobile-native rule) */
+/* ============================================================
+   INPUT FONT SIZE — prevent iOS zoom on focus
+   ============================================================ */
 input, textarea, select {
   font-size: 16px;
 }
 
-/* Tappable elements — mobile-native baseline */
+/* ============================================================
+   TAPPABLE ELEMENTS — mobile-native baseline
+   ============================================================ */
 button, a, [role="button"] {
   touch-action: manipulation;
   user-select: none;
@@ -54,31 +135,33 @@ button, a, [role="button"] {
 }
 
 /* ============================================================
-   CUSTOM EASING CURVES (emil-design-eng)
+   EASING CURVES (emil-design-eng)
    Stronger than CSS defaults — feels intentional
    ============================================================ */
 :root {
-  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-out:    cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Native controls (date picker icons, scrollbars, checkboxes) follow the
+     APP theme, not the OS — otherwise a dark OS paints pale icons onto
+     light inputs and they vanish. */
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+/* Card hover — only on fine pointer devices (no sticky hover on touch) */
+@media (hover: hover) and (pointer: fine) {
+  .card-hover:hover {
+    border-color: var(--color-primary);
+  }
 }
 
 /* ============================================================
-   BUTTON PRESS FEEDBACK (emil-design-eng + apple-design)
-   Respond on pointer-down, not release
-   ============================================================ */
-.btn,
-button:not([disabled]) {
-  transition: transform 100ms var(--ease-out), background 150ms ease, opacity 150ms ease;
-}
-
-.btn:active,
-button:not([disabled]):active {
-  transform: scale(0.97);
-}
-
-/* ============================================================
-   HOVER EFFECTS — gated for touch devices
+   HOVER EFFECTS — gated behind pointer: fine so touch
+   devices never see sticky hover states
    ============================================================ */
 @media (hover: hover) and (pointer: fine) {
   .hover-lift {
@@ -98,132 +181,11 @@ button:not([disabled]):active {
 }
 
 /* ============================================================
-   CARD — flat design, subtle interaction
-   ============================================================ */
-.card {
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  color: var(--color-card-foreground);
-  transition: border-color 200ms ease, box-shadow 200ms ease;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .card:hover {
-    border-color: var(--color-primary);
-  }
-}
-
-/* ============================================================
-   BUTTON COMPONENTS — with proper press feedback
-   ============================================================ */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  padding: 0 var(--space-4);
-  height: 40px;
-  border-radius: var(--radius-md);
-  font-family: var(--font-body);
-  font-size: var(--text-body);
-  font-weight: var(--weight-medium);
-  cursor: pointer;
-  border: none;
-  white-space: nowrap;
-}
-
-@media (pointer: coarse) {
-  .btn {
-    height: 44px;
-  }
-}
-
-.btn-primary {
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-}
-
-.btn-primary:hover {
-  background: var(--color-primary-hover);
-}
-
-.btn-secondary {
-  background: transparent;
-  color: var(--color-primary);
-  border: 1px solid var(--color-primary);
-}
-
-.btn-secondary:hover {
-  background: var(--color-primary-light);
-}
-
-.btn-danger {
-  background: var(--color-destructive);
-  color: var(--color-on-destructive);
-}
-
-.btn-danger:hover {
-  background: var(--color-destructive-hover);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--color-foreground);
-}
-
-.btn-ghost:hover {
-  background: var(--color-muted);
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* ============================================================
-   INPUT — with focus ring and error state
-   ============================================================ */
-.input {
-  width: 100%;
-  height: 40px;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--color-input);
-  border-radius: var(--radius-md);
-  background: var(--color-card);
-  color: var(--color-foreground);
-  font-family: var(--font-body);
-  font-size: 16px;
-  transition: border-color 150ms ease, box-shadow 150ms ease;
-}
-
-@media (pointer: coarse) {
-  .input {
-    height: 44px;
-  }
-}
-
-.input:focus {
-  outline: none;
-  border-color: var(--color-ring);
-  box-shadow: 0 0 0 2px var(--color-primary-light);
-}
-
-.input-error {
-  border-color: var(--color-destructive);
-}
-
-.input-error:focus {
-  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
-}
-
-/* ============================================================
    SKELETON LOADING — pulsing placeholder
    ============================================================ */
 @keyframes skeleton-pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  50%       { opacity: 0.5; }
 }
 
 .skeleton {
@@ -233,57 +195,33 @@ button:not([disabled]):active {
 }
 
 /* ============================================================
-   MODAL — fade + scale (apple-design: scale from 0.95)
+   MODAL — fade + scale (apple-design: 0.95 origin)
    ============================================================ */
 @keyframes modal-enter {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
 @keyframes modal-exit {
-  from {
-    opacity: 1;
-    transform: scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: scale(0.95);
-  }
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.95); }
 }
 
 /* ============================================================
-   TOAST — slide up + fade
+   TOAST — slide up + fade in, slide right + fade out
    ============================================================ */
 @keyframes toast-enter {
-  from {
-    opacity: 0;
-    transform: translateY(100%);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(100%); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes toast-exit {
-  from {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateX(100%);
-  }
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(100%); }
 }
 
 /* ============================================================
-   SCROLLBAR — minimal, matches theme
+   SCROLLBAR — minimal, theme-matched
    ============================================================ */
 ::-webkit-scrollbar {
   width: 6px;
@@ -304,10 +242,59 @@ button:not([disabled]):active {
 }
 
 /* ============================================================
-   SAFE AREA — for notch, dynamic island, home indicator
+   SAFE AREA — notch, Dynamic Island, home indicator
    ============================================================ */
 .safe-area-inset-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ============================================================
+   FLOATING DOCK NAV (macOS-style) — tooltip bubble per tab.
+   Magnification transform is set from BottomNav (JS); the
+   tooltip + press feedback live here so they follow tokens.
+   ============================================================ */
+.dock-item {
+  transform-origin: bottom center;
+}
+
+.dock-item::before {
+  content: attr(data-label);
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%) scale(0.9);
+  background: var(--color-foreground);
+  color: var(--color-background);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 11px;
+  border-radius: 8px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease-out, transform 120ms ease-out;
+}
+
+.dock-item:hover::before,
+.dock-item:focus-visible::before {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+@media (hover: none) {
+  .dock-item::before {
+    display: none;
+  }
+  .dock-item:active {
+    transform: scale(1.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dock-item,
+  .dock-item::before {
+    transition: none;
+  }
 }
 
 .safe-area-inset-top {
@@ -315,7 +302,7 @@ button:not([disabled]):active {
 }
 
 /* ============================================================
-   TOUCH TARGET — 44x44px minimum
+   TOUCH TARGET — 44×44 px minimum (WCAG 2.5.5)
    ============================================================ */
 .touch-target {
   min-height: 44px;
@@ -325,20 +312,25 @@ button:not([disabled]):active {
 /* ============================================================
    TEXT UTILITIES
    ============================================================ */
-.text-muted {
-  color: var(--color-muted-foreground);
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.text-primary {
-  color: var(--color-primary);
+.no-scrollbar {
+  -ms-overflow-style: none;   /* IE / Edge */
+  scrollbar-width: none;      /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;              /* Chrome / Safari / Opera */
 }
 
-.text-destructive {
-  color: var(--color-destructive);
-}
-
-.text-success {
-  color: var(--color-success);
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* ============================================================
@@ -391,7 +383,7 @@ button:not([disabled]):active {
   }
 
   th, td {
-    border: 1px solid #ccc !important;
+    border: 1px solid oklch(0.8 0 0) !important;
     padding: 4px 8px !important;
   }
 }

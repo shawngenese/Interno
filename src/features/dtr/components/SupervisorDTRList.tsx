@@ -5,6 +5,11 @@ import { useAuth } from '@/features/auth';
 import { useToast } from '@/shared/components/Toast';
 import { formatDateFull, formatTime12 } from '@/shared/utils/dateUtils';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
+import { Modal } from '@/shared/components/Modal';
+import { Button } from '@/shared/components/ui/Button';
+import { Skeleton } from '@/shared/components/Skeleton';
+import { EmptyState } from '@/shared/components/EmptyState';
+import { FileCheck, Clock, AlertTriangle, Moon, CheckCircle2, XCircle, Eye } from 'lucide-react';
 import type { DTREntry, DTRStatus, DTRCorrectionRequest, ListDTRParams } from '../types';
 
 function minutesToHours(mins: number): string {
@@ -13,13 +18,17 @@ function minutesToHours(mins: number): string {
 
 function statusBadge(status: DTREntry['status']): React.ReactNode {
   const styles: Record<DTREntry['status'], string> = {
-    draft: 'bg-[#EFEFEF] text-[#3A3A3A] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]',
-    pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-    approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-    rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-    corrected: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+    draft: 'bg-muted text-muted-foreground border-border',
+    pending: 'bg-warning/10 text-warning border-warning/20',
+    approved: 'bg-success/10 text-success border-success/20',
+    rejected: 'bg-destructive/10 text-destructive border-destructive/20',
+    corrected: 'bg-primary/10 text-primary border-primary/20',
   };
-  return <span className={`px-2 py-0.5 text-xs font-medium rounded ${styles[status]}`}>{status}</span>;
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-full border capitalize ${styles[status]}`}>
+      {status}
+    </span>
+  );
 }
 
 export function SupervisorDTRList() {
@@ -35,6 +44,7 @@ export function SupervisorDTRList() {
   const [showDetail, setShowDetail] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [corrections, setCorrections] = useState<DTRCorrectionRequest[]>([]);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
     title: string;
     message: string;
@@ -84,8 +94,9 @@ export function SupervisorDTRList() {
   const handleApprove = async (dtr: DTREntry) => {
     setConfirmDialog({
       title: 'Approve DTR',
-      message: 'Approve this DTR?',
+      message: `Approve DTR entry for ${formatDateFull(dtr.date)}?`,
       onConfirm: async () => {
+        setActionLoadingId(dtr.id);
         try {
           await approveDTR(dtr.id);
           addToast('success', 'DTR approved');
@@ -96,6 +107,8 @@ export function SupervisorDTRList() {
         } catch (err) {
           console.error('Approve failed:', err);
           addToast('error', 'Failed to approve DTR');
+        } finally {
+          setActionLoadingId(null);
         }
       },
     });
@@ -104,9 +117,10 @@ export function SupervisorDTRList() {
   const handleReject = async (dtr: DTREntry) => {
     setConfirmDialog({
       title: 'Reject DTR',
-      message: 'Reject this DTR?',
+      message: `Reject DTR entry for ${formatDateFull(dtr.date)}?`,
       danger: true,
       onConfirm: async () => {
+        setActionLoadingId(dtr.id);
         try {
           await rejectDTR(dtr.id);
           addToast('success', 'DTR rejected');
@@ -117,6 +131,8 @@ export function SupervisorDTRList() {
         } catch (err) {
           console.error('Reject failed:', err);
           addToast('error', 'Failed to reject DTR');
+        } finally {
+          setActionLoadingId(null);
         }
       },
     });
@@ -137,15 +153,18 @@ export function SupervisorDTRList() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
+      <div className="bg-card rounded-xl shadow-sm border border-border p-4 md:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <h2 className="text-lg font-semibold text-[#121212] dark:text-white">DTR Approval</h2>
-          <div className="flex flex-wrap gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">DTR Approval</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Review and approve daily time records submitted by trainees</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2.5">
             <select
               value={filters.status || ''}
               onChange={(e) => setFilters(f => ({ ...f, status: e.target.value as DTRStatus | undefined, page: 1 }))}
               aria-label="Filter by status"
-              className="px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
+              className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">All Status</option>
               <option value="draft">Draft</option>
@@ -159,7 +178,7 @@ export function SupervisorDTRList() {
               value={filters.startDate ? new Date(filters.startDate).toISOString().split('T')[0] : ''}
               onChange={(e) => setFilters(f => ({ ...f, startDate: e.target.value ? new Date(e.target.value).getTime() : undefined, page: 1 }))}
               aria-label="Start date"
-              className="px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
+              className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder="Start Date"
             />
             <input
@@ -167,220 +186,299 @@ export function SupervisorDTRList() {
               value={filters.endDate ? new Date(filters.endDate).toISOString().split('T')[0] : ''}
               onChange={(e) => setFilters(f => ({ ...f, endDate: e.target.value ? new Date(e.target.value).getTime() + 86400000 - 1 : undefined, page: 1 }))}
               aria-label="End date"
-              className="px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
+              className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder="End Date"
             />
-            <select
-              value={filters.page || 1}
-              onChange={(e) => setFilters(f => ({ ...f, page: Number(e.target.value) }))}
-              className="px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white w-32"
-            >
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <option key={p} value={p}>Page {p}</option>
-              ))}
-            </select>
+            {totalPages > 1 && (
+              <select
+                value={filters.page || 1}
+                onChange={(e) => setFilters(f => ({ ...f, page: Number(e.target.value) }))}
+                aria-label="Page navigation"
+                className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm w-28 focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <option key={p} value={p}>Page {p}</option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm flex items-center justify-between">
+          <div role="alert" className="mb-4 p-3.5 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm flex items-center justify-between">
             <span>{error}</span>
-            <button onClick={() => { setError(null); fetchDTRs(); }} className="text-sm font-medium text-red-700 dark:text-red-400 hover:underline">Retry</button>
+            <Button variant="ghost" size="sm" onClick={() => { setError(null); fetchDTRs(); }}>Retry</Button>
           </div>
         )}
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Trainee</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Date</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Regular (hrs)</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">OT (hrs)</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Late (min)</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Undertime (min)</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Status</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
-              {loading ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center">
-                    <svg className="animate-spin mx-auto h-8 w-8 text-blue-600" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                  </td>
-                </tr>
-              ) : dtrs.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">No DTR entries found</td>
-                </tr>
-              ) : (
-                dtrs.map((dtr) => (
-                  <tr key={dtr.id} className="hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50 cursor-pointer" onClick={() => handleView(dtr)}>
-                    <td className="px-4 py-3 text-sm font-medium text-[#121212] dark:text-white">{dtr.traineeId.slice(0, 8)}...</td>
-                    <td className="px-4 py-3 text-sm text-[#757575] dark:text-[#9E9E9E]">{formatDateFull(dtr.date)}</td>
-                    <td className="px-4 py-3 text-sm text-[#121212] dark:text-white">{minutesToHours(dtr.regularMinutes)}</td>
-                    <td className="px-4 py-3 text-sm text-blue-600 dark:text-blue-400">{minutesToHours(dtr.overtimeMinutes)}</td>
-                    <td className="px-4 py-3 text-sm text-red-600 dark:text-red-400">{dtr.lateMinutes}</td>
-                    <td className="px-4 py-3 text-sm text-orange-600 dark:text-orange-400">{dtr.undertimeMinutes}</td>
-                    <td className="px-4 py-3 text-sm">{statusBadge(dtr.status)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {dtr.status === 'pending' && (role === 'supervisor' || role === 'admin') && (
-                          <>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleApprove(dtr); }}
-                              className="px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleReject(dtr); }}
-                              className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700"
-                            >
-                              Reject
-                            </button>
-                          </>
-                        )}
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleView(dtr); }}
-                          className="px-3 py-1.5 text-xs font-medium text-[#555555] dark:text-[#9E9E9E] hover:text-[#121212] dark:hover:text-white"
-                        >
-                          View
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} variant="rectangular" height={52} className="rounded-lg" />
+            ))}
+          </div>
+        ) : dtrs.length === 0 ? (
+          <EmptyState
+            title="No DTR records found"
+            description="Adjust your filters or wait for trainees to submit attendance logs."
+          />
+        ) : (
+          <>
+            {/* Mobile Card Layout */}
+            <div className="space-y-3 md:hidden">
+              {dtrs.map((dtr) => (
+                <div
+                  key={dtr.id}
+                  onClick={() => handleView(dtr)}
+                  className="bg-card border border-border rounded-xl p-4 space-y-3 hover:border-primary transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-foreground text-sm">Trainee #{dtr.traineeId.slice(0, 8)}</p>
+                      <p className="text-xs text-muted-foreground">{formatDateFull(dtr.date)}</p>
+                    </div>
+                    {statusBadge(dtr.status)}
+                  </div>
 
-          {totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-between">
-              <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">
-                Showing {((filters.page ?? 1) - 1) * (filters.limit || 20) + 1} to {Math.min((filters.page ?? 1) * (filters.limit || 20), total)} of {total}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {showDetail && selectedDTR && (
-        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="dtr-detail-modal-title"
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
-          onClick={(e) => { if (e.target === e.currentTarget) { setShowDetail(false); setSelectedDTR(null); } }}
-        >
-          {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
-          <div
-            className="bg-white dark:bg-[#1E1E1E] rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
-            onKeyDown={(e) => { if (e.key === 'Escape') { setShowDetail(false); setSelectedDTR(null); } }}
-          >
-            <div className="p-6 border-b border-[#D5D5D5] dark:border-[#3A3A3A] flex items-center justify-between">
-              <h3 id="dtr-detail-modal-title" className="text-lg font-semibold text-[#121212] dark:text-white">
-                DTR Detail: {selectedDTR.traineeId.slice(0, 8)}... - {formatDateFull(selectedDTR.date)}
-              </h3>
-              <button aria-label="Close" onClick={() => { setShowDetail(false); setSelectedDTR(null); }} className="text-[#9E9E9E] hover:text-[#555555]">✕</button>
-            </div>
-
-            {detailLoading ? (
-              <div className="flex items-center justify-center h-64">
-                <svg className="animate-spin h-8 w-8 text-blue-600" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-              </div>
-            ) : (
-              <div className="p-6 space-y-6">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg">
-                    <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Time In</p>
-                    <p className="text-xl font-bold text-[#121212] dark:text-white">{selectedDTR.actualTimeIn ? formatTime12(selectedDTR.actualTimeIn) : '—'}</p>
-                  </div>
-                  <div className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg">
-                    <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Time Out</p>
-                    <p className="text-xl font-bold text-[#121212] dark:text-white">{selectedDTR.actualTimeOut ? formatTime12(selectedDTR.actualTimeOut) : '—'}</p>
-                  </div>
-                  <div className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg">
-                    <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Regular (hrs)</p>
-                    <p className="text-xl font-bold text-[#121212] dark:text-white">{minutesToHours(selectedDTR.regularMinutes)}</p>
-                  </div>
-                  <div className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg">
-                    <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">OT (hrs)</p>
-                    <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{minutesToHours(selectedDTR.overtimeMinutes)}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg">
-                    <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Late (min)</p>
-                    <p className="text-xl font-bold text-red-600 dark:text-red-400">{selectedDTR.lateMinutes}</p>
-                  </div>
-                  <div className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg">
-                    <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Undertime (min)</p>
-                    <p className="text-xl font-bold text-orange-600 dark:text-orange-400">{selectedDTR.undertimeMinutes}</p>
-                  </div>
-                  <div className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg">
-                    <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Night Diff (min)</p>
-                    <p className="text-xl font-bold text-purple-600 dark:text-purple-400">{selectedDTR.nightDiffMinutes}</p>
-                  </div>
-                  <div className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg">
-                    <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Status</p>
-                    <p className="text-xl font-bold">{statusBadge(selectedDTR.status)}</p>
-                  </div>
-                </div>
-
-                {selectedDTR.status === 'pending' && (role === 'supervisor' || role === 'admin') && (
-                  <div className="flex justify-end gap-3 pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
-                    <button onClick={() => handleReject(selectedDTR)} className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">
-                      Reject
-                    </button>
-                    <button onClick={() => handleApprove(selectedDTR)} className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700">
-                      Approve
-                    </button>
-                  </div>
-                )}
-
-                {corrections.length > 0 && (
-                  <div className="pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
-                    <h4 className="text-md font-medium text-[#121212] dark:text-white mb-3">Correction Requests ({corrections.length})</h4>
-                    <div className="space-y-3">
-                      {corrections.map((c) => (
-                        <div key={c.id} className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg border">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium text-[#121212] dark:text-white">{c.status}</span>
-                            <span className="text-xs text-[#757575]">by {c.requestedBy.slice(0, 8)}...</span>
-                          </div>
-                          <p className="text-sm text-[#555555] dark:text-[#9E9E9E] mb-2">Reason: {c.reason}</p>
-                          <div className="text-xs text-[#757575] mb-2">
-                            Proposed: {c.proposedValue.actualTimeIn ? formatTime12(c.proposedValue.actualTimeIn) : '—'} - {c.proposedValue.actualTimeOut ? formatTime12(c.proposedValue.actualTimeOut) : '—'}
-                          </div>
-                          {c.status === 'pending' && (role === 'supervisor' || role === 'admin') && (
-                            <div className="flex gap-2 mt-2">
-                              <button onClick={() => handleCorrectionAction(c, 'approve')} className="px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700">
-                                Approve Correction
-                              </button>
-                              <button onClick={() => handleCorrectionAction(c, 'reject')} className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700">
-                                Reject
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                  <div className="grid grid-cols-2 gap-2 text-xs bg-muted/40 p-2.5 rounded-lg border border-border">
+                    <div>
+                      <span className="text-muted-foreground">Regular:</span>{' '}
+                      <span className="font-semibold text-foreground">{minutesToHours(dtr.regularMinutes)} hrs</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">OT:</span>{' '}
+                      <span className="font-semibold text-primary">{minutesToHours(dtr.overtimeMinutes)} hrs</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Late:</span>{' '}
+                      <span className="font-semibold text-warning">{Math.round(dtr.lateMinutes)} min</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Undertime:</span>{' '}
+                      <span className="font-semibold text-warning">{Math.round(dtr.undertimeMinutes)} min</span>
                     </div>
                   </div>
-                )}
+
+                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-border">
+                    {dtr.status === 'pending' && (role === 'supervisor' || role === 'admin') && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          isLoading={actionLoadingId === dtr.id}
+                          onClick={(e) => { e.stopPropagation(); handleReject(dtr); }}
+                        >
+                          Reject
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          isLoading={actionLoadingId === dtr.id}
+                          onClick={(e) => { e.stopPropagation(); handleApprove(dtr); }}
+                        >
+                          Approve
+                        </Button>
+                      </>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => { e.stopPropagation(); handleView(dtr); }}
+                    >
+                      <Eye className="w-3.5 h-3.5 mr-1" /> View
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto rounded-lg border border-border">
+              <table className="w-full text-sm">
+                <thead className="bg-muted">
+                  <tr>
+                    <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Trainee</th>
+                    <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Date</th>
+                    <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Regular (hrs)</th>
+                    <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">OT (hrs)</th>
+                    <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Late (min)</th>
+                    <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Undertime (min)</th>
+                    <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
+                    <th className="h-[44px] px-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wide">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {dtrs.map((dtr) => (
+                    <tr
+                      key={dtr.id}
+                      className="h-[44px] hover:bg-muted/50 cursor-pointer transition-colors"
+                      onClick={() => handleView(dtr)}
+                    >
+                      <td className="px-4 py-3 font-medium text-foreground">{dtr.traineeId.slice(0, 8)}...</td>
+                      <td className="px-4 py-3 text-muted-foreground">{formatDateFull(dtr.date)}</td>
+                      <td className="px-4 py-3 font-semibold text-foreground">{minutesToHours(dtr.regularMinutes)}</td>
+                      <td className="px-4 py-3 font-semibold text-primary">{minutesToHours(dtr.overtimeMinutes)}</td>
+                      <td className="px-4 py-3 text-warning font-medium">{Math.round(dtr.lateMinutes)}</td>
+                      <td className="px-4 py-3 text-warning font-medium">{Math.round(dtr.undertimeMinutes)}</td>
+                      <td className="px-4 py-3">{statusBadge(dtr.status)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {dtr.status === 'pending' && (role === 'supervisor' || role === 'admin') && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="primary"
+                                isLoading={actionLoadingId === dtr.id}
+                                onClick={(e) => { e.stopPropagation(); handleApprove(dtr); }}
+                              >
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                isLoading={actionLoadingId === dtr.id}
+                                onClick={(e) => { e.stopPropagation(); handleReject(dtr); }}
+                              >
+                                Reject
+                              </Button>
+                            </>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => { e.stopPropagation(); handleView(dtr); }}
+                          >
+                            View
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {totalPages > 1 && (
+              <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+                <p>
+                  Showing {((filters.page ?? 1) - 1) * (filters.limit || 20) + 1} to {Math.min((filters.page ?? 1) * (filters.limit || 20), total)} of {total} records
+                </p>
               </div>
             )}
-          </div>
-        </div>
+          </>
+        )}
+      </div>
+
+      {/* DTR Detail Modal */}
+      {selectedDTR && (
+        <Modal
+          open={showDetail}
+          title={`DTR Detail: ${selectedDTR.traineeId.slice(0, 8)}... - ${formatDateFull(selectedDTR.date)}`}
+          size="lg"
+          onClose={() => { setShowDetail(false); setSelectedDTR(null); }}
+        >
+          {detailLoading ? (
+            <div className="space-y-4">
+              <Skeleton variant="rectangular" height={80} className="rounded-xl" />
+              <Skeleton variant="rectangular" height={80} className="rounded-xl" />
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3.5 bg-muted/40 rounded-xl border border-border">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+                    <Clock className="w-3.5 h-3.5" /> Time In
+                  </div>
+                  <p className="text-lg font-bold text-foreground">{selectedDTR.actualTimeIn ? formatTime12(selectedDTR.actualTimeIn) : '—'}</p>
+                </div>
+                <div className="p-3.5 bg-muted/40 rounded-xl border border-border">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+                    <Clock className="w-3.5 h-3.5" /> Time Out
+                  </div>
+                  <p className="text-lg font-bold text-foreground">{selectedDTR.actualTimeOut ? formatTime12(selectedDTR.actualTimeOut) : '—'}</p>
+                </div>
+                <div className="p-3.5 bg-muted/40 rounded-xl border border-border">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+                    <FileCheck className="w-3.5 h-3.5 text-primary" /> Regular (hrs)
+                  </div>
+                  <p className="text-lg font-bold text-foreground">{minutesToHours(selectedDTR.regularMinutes)}</p>
+                </div>
+                <div className="p-3.5 bg-muted/40 rounded-xl border border-border">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+                    <FileCheck className="w-3.5 h-3.5 text-primary" /> OT (hrs)
+                  </div>
+                  <p className="text-lg font-bold text-primary">{minutesToHours(selectedDTR.overtimeMinutes)}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3.5 bg-muted/40 rounded-xl border border-border">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+                    <AlertTriangle className="w-3.5 h-3.5 text-warning" /> Late (min)
+                  </div>
+                  <p className="text-lg font-bold text-warning">{Math.round(selectedDTR.lateMinutes)} min</p>
+                </div>
+                <div className="p-3.5 bg-muted/40 rounded-xl border border-border">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+                    <AlertTriangle className="w-3.5 h-3.5 text-warning" /> Undertime (min)
+                  </div>
+                  <p className="text-lg font-bold text-warning">{Math.round(selectedDTR.undertimeMinutes)} min</p>
+                </div>
+                <div className="p-3.5 bg-muted/40 rounded-xl border border-border">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+                    <Moon className="w-3.5 h-3.5 text-primary" /> Night Diff (min)
+                  </div>
+                  <p className="text-lg font-bold text-primary">{selectedDTR.nightDiffMinutes}</p>
+                </div>
+                <div className="p-3.5 bg-muted/40 rounded-xl border border-border">
+                  <p className="text-xs text-muted-foreground mb-1">Status</p>
+                  <div className="mt-1">{statusBadge(selectedDTR.status)}</div>
+                </div>
+              </div>
+
+              {selectedDTR.status === 'pending' && (role === 'supervisor' || role === 'admin') && (
+                <div className="flex justify-end gap-3 pt-4 border-t border-border">
+                  <Button variant="destructive" onClick={() => handleReject(selectedDTR)}>
+                    Reject
+                  </Button>
+                  <Button variant="primary" onClick={() => handleApprove(selectedDTR)}>
+                    Approve
+                  </Button>
+                </div>
+              )}
+
+              {corrections.length > 0 && (
+                <div className="pt-4 border-t border-border">
+                  <h4 className="text-sm font-semibold text-foreground mb-3">Correction Requests ({corrections.length})</h4>
+                  <div className="space-y-3">
+                    {corrections.map((c) => (
+                      <div key={c.id} className="p-4 bg-muted/30 rounded-xl border border-border space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold uppercase px-2 py-0.5 rounded bg-muted text-foreground">{c.status}</span>
+                          <span className="text-xs text-muted-foreground">by {c.requestedBy.slice(0, 8)}...</span>
+                        </div>
+                        <p className="text-sm text-foreground"><span className="text-muted-foreground">Reason:</span> {c.reason}</p>
+                        <div className="text-xs text-muted-foreground">
+                          Proposed: {c.proposedValue.actualTimeIn ? formatTime12(c.proposedValue.actualTimeIn) : '—'} – {c.proposedValue.actualTimeOut ? formatTime12(c.proposedValue.actualTimeOut) : '—'}
+                        </div>
+                        {c.status === 'pending' && (role === 'supervisor' || role === 'admin') && (
+                          <div className="flex gap-2 pt-2">
+                            <Button size="sm" variant="primary" onClick={() => handleCorrectionAction(c, 'approve')}>
+                              <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Approve Correction
+                            </Button>
+                            <Button size="sm" variant="destructive" onClick={() => handleCorrectionAction(c, 'reject')}>
+                              <XCircle className="w-3.5 h-3.5 mr-1" /> Reject
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </Modal>
       )}
 
       <ConfirmDialog
@@ -393,4 +491,4 @@ export function SupervisorDTRList() {
       />
     </div>
   );
-}
+}

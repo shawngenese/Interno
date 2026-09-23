@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { getCoordinatorTrainees, getSupervisors, updateTraineeAssignment } from '../services/coordinatorService';
 import { useAuth } from '@/features/auth';
 import type { CoordinatorTrainee } from '../types';
+import { Skeleton } from '@/shared/components/Skeleton';
+import { Users, UserCheck, X, GripVertical } from 'lucide-react';
 
 interface Supervisor {
   id: string;
@@ -39,7 +41,7 @@ export function CoordinatorTraineeAssignment() {
 
       if (!signal?.aborted) {
         setTrainees(traineeData);
-        setSupervisors(supervisorData.filter(s => s.companyId === cid));
+        setSupervisors(supervisorData.filter((s) => s.companyId === cid));
       }
     } catch (err) {
       if (!signal?.aborted) {
@@ -97,9 +99,11 @@ export function CoordinatorTraineeAssignment() {
     setDraggedTrainee(null);
     setDragSource(null);
 
-    setTrainees(prev => prev.map(t =>
-      t.traineeId === traineeId ? { ...t, supervisorId: supervisorId || undefined } : t
-    ));
+    setTrainees((prev) =>
+      prev.map((t) =>
+        t.traineeId === traineeId ? { ...t, supervisorId: supervisorId || undefined } : t,
+      ),
+    );
 
     setSaving(true);
     try {
@@ -114,9 +118,11 @@ export function CoordinatorTraineeAssignment() {
   };
 
   const handleRemoveAssignment = async (trainee: CoordinatorTrainee) => {
-    setTrainees(prev => prev.map(t =>
-      t.traineeId === trainee.traineeId ? { ...t, supervisorId: undefined } : t
-    ));
+    setTrainees((prev) =>
+      prev.map((t) =>
+        t.traineeId === trainee.traineeId ? { ...t, supervisorId: undefined } : t,
+      ),
+    );
 
     setSaving(true);
     try {
@@ -131,20 +137,21 @@ export function CoordinatorTraineeAssignment() {
   };
 
   const getTraineesForSupervisor = (supervisorId: string) => {
-    return trainees.filter(t => t.supervisorId === supervisorId);
+    return trainees.filter((t) => t.supervisorId === supervisorId);
   };
 
   const getUnassignedTrainees = () => {
-    return trainees.filter(t => !t.supervisorId);
+    return trainees.filter((t) => !t.supervisorId);
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <svg className="animate-spin h-8 w-8 text-blue-600" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
+      <div className="space-y-6">
+        <Skeleton variant="text" width="40%" height={28} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Skeleton variant="rectangular" height={300} className="rounded-xl" />
+          <Skeleton variant="rectangular" height={300} className="lg:col-span-2 rounded-xl" />
+        </div>
       </div>
     );
   }
@@ -152,14 +159,17 @@ export function CoordinatorTraineeAssignment() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-[#121212] dark:text-white">Assign Trainees to Supervisors</h2>
-        {saving && (
-          <span className="text-sm text-[#757575] dark:text-[#9E9E9E]">Saving...</span>
-        )}
+        <div>
+          <h2 className="text-xl font-bold text-foreground">Assign Trainees to Supervisors</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Drag and drop trainees between panels to quickly assign or reassign supervisors
+          </p>
+        </div>
+        {saving && <span className="text-xs text-muted-foreground animate-pulse font-medium">Saving...</span>}
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
+        <div role="alert" className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm">
           {error}
         </div>
       )}
@@ -167,24 +177,37 @@ export function CoordinatorTraineeAssignment() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Unassigned Trainees */}
         <div
-          onDragOver={(e) => { e.preventDefault(); setDragOverUnassigned(true); }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOverUnassigned(true);
+          }}
           onDragLeave={() => setDragOverUnassigned(false)}
-          onDrop={(e) => { handleDrop(e, ''); setDragOverUnassigned(false); }}
-          className={`bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border transition-colors ${
+          onDrop={(e) => {
+            handleDrop(e, '');
+            setDragOverUnassigned(false);
+          }}
+          className={`bg-card rounded-xl shadow-sm border transition-colors ${
             dragOverUnassigned
-              ? 'border-2 border-dashed border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-              : 'border border-[#D5D5D5] dark:border-[#3A3A3A]'
+              ? 'border-2 border-dashed border-primary bg-primary/5'
+              : 'border-border'
           }`}
         >
-          <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
-            <h3 className="font-semibold text-[#121212] dark:text-white">
-              Unassigned Trainees ({getUnassignedTrainees().length})
-            </h3>
+          <div className="p-4 border-b border-border flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-warning" />
+              <h3 className="font-semibold text-foreground text-sm">
+                Unassigned Trainees
+              </h3>
+            </div>
+            <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full bg-warning/15 text-warning">
+              {getUnassignedTrainees().length}
+            </span>
           </div>
-          <div className="p-4 space-y-2 min-h-[200px]">
+
+          <div className="p-4 space-y-2 min-h-[220px]">
             {getUnassignedTrainees().length === 0 ? (
-              <p className="text-sm text-[#757575] dark:text-[#9E9E9E] text-center py-4">
-                All trainees are assigned
+              <p className="text-xs text-muted-foreground text-center py-8">
+                All trainees are currently assigned
               </p>
             ) : (
               getUnassignedTrainees().map((trainee) => (
@@ -193,10 +216,13 @@ export function CoordinatorTraineeAssignment() {
                   draggable
                   onDragStart={() => handleDragStart(trainee)}
                   onDragEnd={handleDragEnd}
-                  className="p-3 bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 rounded-lg border border-[#D5D5D5] dark:border-[#555555] cursor-move hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
+                  className="flex items-center gap-2 p-3 bg-muted/40 rounded-lg border border-border cursor-grab active:cursor-grabbing hover:border-primary transition-colors"
                 >
-                  <div className="font-medium text-[#121212] dark:text-white text-sm">{trainee.name}</div>
-                  <div className="text-xs text-[#757575] dark:text-[#9E9E9E]">{trainee.email}</div>
+                  <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-foreground text-sm truncate">{trainee.name}</div>
+                    <div className="text-xs text-muted-foreground truncate">{trainee.email}</div>
+                  </div>
                 </div>
               ))
             )}
@@ -204,14 +230,18 @@ export function CoordinatorTraineeAssignment() {
         </div>
 
         {/* Supervisors */}
-        <div className="lg:col-span-2 bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
-          <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
-            <h3 className="font-semibold text-[#121212] dark:text-white">Supervisors</h3>
+        <div className="lg:col-span-2 bg-card rounded-xl shadow-sm border border-border">
+          <div className="p-4 border-b border-border">
+            <div className="flex items-center gap-2">
+              <UserCheck className="w-4 h-4 text-primary" />
+              <h3 className="font-semibold text-foreground text-sm">Supervisors ({supervisors.length})</h3>
+            </div>
           </div>
+
           <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
             {supervisors.length === 0 ? (
-              <p className="text-sm text-[#757575] dark:text-[#9E9E9E] text-center py-4 col-span-2">
-                No supervisors found
+              <p className="text-sm text-muted-foreground text-center py-8 col-span-2">
+                No departmental supervisors found.
               </p>
             ) : (
               supervisors.map((supervisor) => {
@@ -226,24 +256,24 @@ export function CoordinatorTraineeAssignment() {
                     onDrop={(e) => handleDrop(e, supervisor.id)}
                     className={`p-4 rounded-xl border transition-colors ${
                       isDragOver
-                        ? 'border-2 border-dashed border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border border-[#D5D5D5] dark:border-[#3A3A3A] bg-[#F5F5F5] dark:bg-[#3A3A3A]/30'
+                        ? 'border-2 border-dashed border-primary bg-primary/5'
+                        : 'border-border bg-muted/30'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-3">
                       <div>
-                        <h4 className="font-medium text-[#121212] dark:text-white">{supervisor.name}</h4>
-                        <p className="text-xs text-[#757575] dark:text-[#9E9E9E]">{supervisor.email}</p>
+                        <h4 className="font-semibold text-foreground text-sm">{supervisor.name}</h4>
+                        <p className="text-xs text-muted-foreground">{supervisor.email}</p>
                       </div>
-                      <span className="inline-flex items-center justify-center w-6 h-6 text-xs font-medium text-[#757575] dark:text-[#9E9E9E] bg-[#EFEFEF] dark:bg-[#555555] rounded-full">
-                        {assignedTrainees.length}
+                      <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full bg-primary/15 text-primary">
+                        {assignedTrainees.length} trainees
                       </span>
                     </div>
 
-                    <div className="space-y-2 min-h-[60px]">
+                    <div className="space-y-2 min-h-[70px]">
                       {assignedTrainees.length === 0 ? (
-                        <p className="text-xs text-[#9E9E9E] dark:text-[#757575] text-center py-2">
-                          Drop trainees here
+                        <p className="text-xs text-muted-foreground text-center py-4 border border-dashed border-border rounded-lg">
+                          Drop trainees here to assign
                         </p>
                       ) : (
                         assignedTrainees.map((trainee) => (
@@ -252,20 +282,22 @@ export function CoordinatorTraineeAssignment() {
                             draggable
                             onDragStart={() => handleDragStart(trainee)}
                             onDragEnd={handleDragEnd}
-                            className="flex items-center justify-between p-3 bg-white dark:bg-[#1E1E1E] rounded-lg border border-[#D5D5D5] dark:border-[#555555] cursor-move hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
+                            className="flex items-center justify-between p-2.5 bg-card rounded-lg border border-border cursor-grab active:cursor-grabbing hover:border-primary transition-colors"
                           >
-                            <div className="min-w-0">
-                              <div className="text-sm font-medium text-[#121212] dark:text-white truncate">{trainee.name}</div>
-                              <div className="text-xs text-[#757575] dark:text-[#9E9E9E] truncate">{trainee.email}</div>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <GripVertical className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                              <div className="min-w-0">
+                                <div className="text-xs font-medium text-foreground truncate">{trainee.name}</div>
+                                <div className="text-[11px] text-muted-foreground truncate">{trainee.email}</div>
+                              </div>
                             </div>
                             <button
+                              type="button"
                               onClick={() => handleRemoveAssignment(trainee)}
-                              className="ml-2 shrink-0 p-1 text-[#757575] hover:text-red-600 dark:text-[#9E9E9E] dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                              title="Remove assignment"
+                              className="ml-2 shrink-0 p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+                              title="Unassign trainee"
                             >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
+                              <X className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         ))

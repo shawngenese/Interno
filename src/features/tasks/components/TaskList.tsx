@@ -5,8 +5,11 @@ import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { TaskForm } from './TaskForm';
 import { TaskDetail } from './TaskDetail';
-import { EmptyState, ClipboardIcon } from '@/shared/components/EmptyState';
+import { EmptyState } from '@/shared/components/EmptyState';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
+import { Button } from '@/shared/components/ui/Button';
+import { Skeleton } from '@/shared/components/Skeleton';
+import { Search, Plus, Archive, Filter, CheckSquare, Clock } from 'lucide-react';
 import type { Task, TaskStatus, TaskPriority } from '../types';
 import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS, TASK_STATUS_COLORS, TASK_PRIORITY_COLORS } from '../types';
 
@@ -166,52 +169,62 @@ export function TaskList() {
   if (selectedTask) {
     return (
       <div className="space-y-4">
-        <button onClick={() => setSelectedTask(null)} className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700">
+        <Button variant="ghost" size="sm" onClick={() => setSelectedTask(null)}>
           ← Back to tasks
-        </button>
+        </Button>
         <TaskDetail taskId={selectedTask.id} onBack={() => setSelectedTask(null)} />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h2 className="text-lg font-semibold text-[#121212] dark:text-white">Tasks</h2>
+        <div>
+          <div className="flex items-center gap-2">
+            <CheckSquare className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-bold text-foreground">Task Management</h2>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">Assign, monitor, and review tasks for trainees</p>
+        </div>
         {(role === 'supervisor' || role === 'admin') && (
-          <button
+          <Button
+            variant="primary"
             onClick={() => setShowForm(true)}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            + Create Task
-          </button>
+            <Plus className="w-4 h-4 mr-1.5" /> Create Task
+          </Button>
         )}
       </div>
 
-      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
+      <div className="bg-card rounded-xl shadow-sm border border-border p-4 md:p-6 space-y-4">
         {error && (
-          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm flex items-center justify-between">
+          <div role="alert" className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm flex items-center justify-between">
             <span>{error}</span>
-            <button onClick={() => { setError(null); fetchTasks(); }} className="text-sm font-medium text-red-700 dark:text-red-400 hover:underline">Retry</button>
+            <Button variant="ghost" size="sm" onClick={() => { setError(null); fetchTasks(); }}>Retry</Button>
           </div>
         )}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-          <input
-            type="text"
-            placeholder="Search tasks..."
-            value={filters.search}
-            onChange={(e) => updateFilter('search', e.target.value)}
-            aria-label="Search tasks"
-            className="w-full sm:w-64 px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search tasks by title or description..."
+              value={filters.search}
+              onChange={(e) => updateFilter('search', e.target.value)}
+              aria-label="Search tasks"
+              className="w-full h-10 pl-9 pr-4 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           <select
             value={filters.status}
             onChange={(e) => updateFilter('status', e.target.value as TaskStatus | '')}
             aria-label="Filter by status"
-            className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="">All Status</option>
             {Object.entries(TASK_STATUS_LABELS).map(([key, label]) => (
@@ -223,7 +236,7 @@ export function TaskList() {
             value={filters.priority}
             onChange={(e) => updateFilter('priority', e.target.value as TaskPriority | '')}
             aria-label="Filter by priority"
-            className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="">All Priority</option>
             {Object.entries(TASK_PRIORITY_LABELS).map(([key, label]) => (
@@ -235,7 +248,7 @@ export function TaskList() {
             value={filters.traineeId}
             onChange={(e) => updateFilter('traineeId', e.target.value)}
             aria-label="Filter by trainee"
-            className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="">All Trainees</option>
             {trainees.map((t) => (
@@ -248,7 +261,7 @@ export function TaskList() {
             value={filters.dueDateFrom}
             onChange={(e) => updateFilter('dueDateFrom', e.target.value)}
             aria-label="Due date from"
-            className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
 
           <input
@@ -256,88 +269,136 @@ export function TaskList() {
             value={filters.dueDateTo}
             onChange={(e) => updateFilter('dueDateTo', e.target.value)}
             aria-label="Due date to"
-            className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
 
           {(filters.status || filters.priority || filters.traineeId || filters.dueDateFrom || filters.dueDateTo) && (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setFilters({ status: '', priority: '', traineeId: '', dueDateFrom: '', dueDateTo: '', search: filters.search })}
-              className="px-3 py-2 text-xs font-medium text-[#555555] dark:text-[#9E9E9E] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]"
+              className="border border-border"
             >
-              Clear Filters
-            </button>
+              <Filter className="w-3.5 h-3.5 mr-1" /> Clear Filters
+            </Button>
           )}
         </div>
-      </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" />
-        </div>
-      ) : tasks.length === 0 ? (
-        <EmptyState
-          icon={ClipboardIcon}
-          title="No tasks found"
-          description="Create a new task or adjust your filters."
-        />
-      ) : (
-        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[#D5D5D5] dark:border-[#3A3A3A] bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
-                <th className="text-left px-4 py-3 font-medium text-[#3A3A3A] dark:text-[#BDBDBD]">Task</th>
-                <th className="text-center px-4 py-3 font-medium text-[#3A3A3A] dark:text-[#BDBDBD] hidden sm:table-cell">Status</th>
-                <th className="text-center px-4 py-3 font-medium text-[#3A3A3A] dark:text-[#BDBDBD] hidden md:table-cell">Priority</th>
-                <th className="text-center px-4 py-3 font-medium text-[#3A3A3A] dark:text-[#BDBDBD] hidden lg:table-cell">Due</th>
-                <th className="w-20 px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody>
+        {loading ? (
+          <div className="space-y-3 pt-2">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} variant="rectangular" height={52} className="rounded-lg" />
+            ))}
+          </div>
+        ) : tasks.length === 0 ? (
+          <EmptyState
+            title="No tasks found"
+            description="Create a new task or adjust your filter criteria."
+            action={
+              role === 'supervisor' || role === 'admin'
+                ? { label: 'Create Task', onClick: () => setShowForm(true) }
+                : undefined
+            }
+          />
+        ) : (
+          <>
+            {/* Mobile Cards */}
+            <div className="space-y-3 md:hidden pt-2">
               {tasks.map((task) => (
-                <tr
+                <div
                   key={task.id}
-                  className="border-b border-gray-100 dark:border-[#3A3A3A]/50 hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/30 cursor-pointer"
                   onClick={() => setSelectedTask(task)}
+                  className="bg-card border border-border rounded-xl p-4 space-y-3 hover:border-primary transition-colors cursor-pointer"
                 >
-                  <td className="px-4 py-3">
+                  <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="font-medium text-[#121212] dark:text-white">{task.title}</p>
-                      <p className="text-xs text-[#757575] dark:text-[#9E9E9E] truncate max-w-xs">{task.description}</p>
+                      <h3 className="font-semibold text-foreground text-sm">{task.title}</h3>
+                      <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{task.description}</p>
                     </div>
-                  </td>
-                  <td className="px-4 py-3 text-center hidden sm:table-cell">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${TASK_STATUS_COLORS[task.status].bg} ${TASK_STATUS_COLORS[task.status].text}`}>
-                      {TASK_STATUS_LABELS[task.status]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center hidden md:table-cell">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${TASK_PRIORITY_COLORS[task.priority].bg} ${TASK_PRIORITY_COLORS[task.priority].text}`}>
-                      {TASK_PRIORITY_LABELS[task.priority]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center text-[#555555] dark:text-[#9E9E9E] text-xs hidden lg:table-cell">
-                    {new Date(task.dueDate).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     {(role === 'supervisor' || role === 'admin') && (
                       <button
-                        onClick={() => handleArchive(task.id)}
-                        className="text-[#9E9E9E] hover:text-orange-500"
+                        onClick={(e) => { e.stopPropagation(); handleArchive(task.id); }}
+                        className="text-muted-foreground hover:text-destructive p-1 rounded-md transition-colors shrink-0"
                         aria-label="Archive task"
-                        title="Archive task"
                       >
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                        </svg>
+                        <Archive className="w-4 h-4" />
                       </button>
                     )}
-                  </td>
-                </tr>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-border text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`px-2 py-0.5 font-semibold rounded-full ${TASK_STATUS_COLORS[task.status].bg} ${TASK_STATUS_COLORS[task.status].text}`}>
+                        {TASK_STATUS_LABELS[task.status]}
+                      </span>
+                      <span className={`px-2 py-0.5 font-semibold rounded-full ${TASK_PRIORITY_COLORS[task.priority].bg} ${TASK_PRIORITY_COLORS[task.priority].text}`}>
+                        {TASK_PRIORITY_LABELS[task.priority]}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </div>
+
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto rounded-lg border border-border mt-2">
+              <table className="w-full text-sm">
+                <thead className="bg-muted">
+                  <tr>
+                    <th className="h-[44px] text-left px-4 font-semibold text-xs text-muted-foreground uppercase tracking-wider">Task</th>
+                    <th className="h-[44px] text-center px-4 font-semibold text-xs text-muted-foreground uppercase tracking-wider">Status</th>
+                    <th className="h-[44px] text-center px-4 font-semibold text-xs text-muted-foreground uppercase tracking-wider">Priority</th>
+                    <th className="h-[44px] text-center px-4 font-semibold text-xs text-muted-foreground uppercase tracking-wider">Due Date</th>
+                    <th className="h-[44px] text-right px-4 font-semibold text-xs text-muted-foreground uppercase tracking-wider w-20">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {tasks.map((task) => (
+                    <tr
+                      key={task.id}
+                      className="h-[44px] hover:bg-muted/50 cursor-pointer transition-colors"
+                      onClick={() => setSelectedTask(task)}
+                    >
+                      <td className="px-4 py-3">
+                        <p className="font-semibold text-foreground text-sm">{task.title}</p>
+                        <p className="text-xs text-muted-foreground truncate max-w-md">{task.description}</p>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full ${TASK_STATUS_COLORS[task.status].bg} ${TASK_STATUS_COLORS[task.status].text}`}>
+                          {TASK_STATUS_LABELS[task.status]}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full ${TASK_PRIORITY_COLORS[task.priority].bg} ${TASK_PRIORITY_COLORS[task.priority].text}`}>
+                          {TASK_PRIORITY_LABELS[task.priority]}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center text-xs text-muted-foreground">
+                        {new Date(task.dueDate).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                        {(role === 'supervisor' || role === 'admin') && (
+                          <button
+                            onClick={() => handleArchive(task.id)}
+                            className="text-muted-foreground hover:text-destructive p-1 rounded-md transition-colors"
+                            aria-label="Archive task"
+                            title="Archive task"
+                          >
+                            <Archive className="w-4 h-4" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
 
       <ConfirmDialog
         open={confirmDialog !== null}
@@ -350,3 +411,4 @@ export function TaskList() {
     </div>
   );
 }
+

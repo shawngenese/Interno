@@ -5,6 +5,11 @@ import { useToast } from '@/shared/components/Toast';
 import { FormField, FormTextarea } from '@/shared/components/FormField';
 import { required } from '@/shared/utils/validators';
 import { formatDateFull, formatTime12 } from '@/shared/utils/dateUtils';
+import { Button } from '@/shared/components/ui/Button';
+import { Skeleton } from '@/shared/components/Skeleton';
+import { EmptyState } from '@/shared/components/EmptyState';
+import { Modal } from '@/shared/components/Modal';
+import { Calculator } from 'lucide-react';
 import type { DTREntry, DTRSummary } from '../types';
 
 function minutesToHours(mins: number): string {
@@ -13,13 +18,17 @@ function minutesToHours(mins: number): string {
 
 function statusBadge(status: DTREntry['status']): React.ReactNode {
   const styles: Record<DTREntry['status'], string> = {
-    draft: 'bg-[#EFEFEF] text-[#3A3A3A] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]',
-    pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-    approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-    rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-    corrected: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+    draft: 'bg-muted text-muted-foreground border-border',
+    pending: 'bg-warning/10 text-warning border-warning/20',
+    approved: 'bg-success/10 text-success border-success/20',
+    rejected: 'bg-destructive/10 text-destructive border-destructive/20',
+    corrected: 'bg-primary/10 text-primary border-primary/20',
   };
-  return <span className={`px-2 py-0.5 text-xs font-medium rounded ${styles[status]}`}>{status}</span>;
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full border capitalize ${styles[status]}`}>
+      {status}
+    </span>
+  );
 }
 
 export function TraineeDTRView() {
@@ -37,6 +46,7 @@ export function TraineeDTRView() {
   const [correctionTimeIn, setCorrectionTimeIn] = useState('');
   const [correctionTimeOut, setCorrectionTimeOut] = useState('');
   const [traineeId, setTraineeId] = useState<string | null>(null);
+  const [submittingCorrection, setSubmittingCorrection] = useState(false);
 
   const validateReason = required('Reason is required');
 
@@ -101,6 +111,7 @@ export function TraineeDTRView() {
       const end = period.end ? new Date(period.end).getTime() : new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getTime();
 
       await calculateDTR({ traineeId: resolvedId, startDate: start, endDate: end, forceRecalc: true, timezoneOffsetMinutes: new Date().getTimezoneOffset() });
+      addToast('success', 'DTR successfully recalculated');
       await refresh();
     } catch (err) {
       console.error('Calculate DTR failed:', err);
@@ -114,6 +125,7 @@ export function TraineeDTRView() {
     const reasonError = validateReason(correctionReason);
     setCorrectionReasonError(reasonError);
     if (reasonError) return;
+    setSubmittingCorrection(true);
     try {
       const entryDate = new Date(entry.date);
       const proposedTimeIn = correctionTimeIn
@@ -126,6 +138,7 @@ export function TraineeDTRView() {
         actualTimeIn: proposedTimeIn,
         actualTimeOut: proposedTimeOut,
       });
+      addToast('success', 'Correction request submitted');
       setShowCorrection(null);
       setCorrectionReason('');
       setCorrectionReasonError(null);
@@ -135,207 +148,287 @@ export function TraineeDTRView() {
     } catch (err) {
       console.error('Correction request failed:', err);
       addToast('error', 'Failed to submit correction request');
+    } finally {
+      setSubmittingCorrection(false);
     }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <svg className="animate-spin h-8 w-8 text-blue-600" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
+      <div className="space-y-4">
+        <Skeleton variant="rectangular" height={100} className="rounded-xl" />
+        <Skeleton variant="rectangular" height={220} className="rounded-xl" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <p className="text-red-500 dark:text-red-400">{error}</p>
-        <button
-          onClick={refresh}
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-        >
+      <div className="flex flex-col items-center justify-center p-8 bg-card border border-border rounded-xl gap-4">
+        <p className="text-destructive text-sm font-medium">{error}</p>
+        <Button onClick={refresh} variant="primary" size="sm">
           Retry
-        </button>
+        </Button>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
+      <div className="bg-card rounded-xl shadow-sm border border-border p-4 md:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <h2 className="text-lg font-semibold text-[#121212] dark:text-white">My DTR</h2>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex gap-2">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">My Daily Time Record (DTR)</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Track your regular hours, overtime, tardiness, and submit corrections</p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+            <div className="flex items-center gap-2">
               <input
                 type="date"
                 value={period.start}
                 onChange={(e) => setPeriod(p => ({ ...p, start: e.target.value }))}
                 aria-label="Start date"
-                className="px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
+                className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
-              <span className="flex items-center text-[#757575]">to</span>
+              <span className="text-xs text-muted-foreground">to</span>
               <input
                 type="date"
                 value={period.end}
                 onChange={(e) => setPeriod(p => ({ ...p, end: e.target.value }))}
                 aria-label="End date"
-                className="px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
+                className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
-            <button
+            <Button
               onClick={handleCalculate}
-              disabled={calculating}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              isLoading={calculating}
+              variant="primary"
+              size="md"
             >
-              {calculating ? 'Calculating...' : 'Calculate DTR'}
-            </button>
+              <Calculator className="w-4 h-4 mr-1.5" />
+              Calculate DTR
+            </Button>
           </div>
         </div>
 
         {summary && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-            <div className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg">
-              <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Total Regular Hours</p>
-              <p className="text-2xl font-bold text-[#121212] dark:text-white">{minutesToHours(summary.totalRegularHours * 60)}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <div className="p-4 bg-muted/40 rounded-xl border border-border">
+              <p className="text-xs text-muted-foreground">Total Regular Hours</p>
+              <p className="text-2xl font-bold text-foreground mt-1">{minutesToHours(summary.totalRegularHours * 60)} hrs</p>
             </div>
-            <div className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg">
-              <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Total Overtime Hours</p>
-              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{minutesToHours(summary.totalOvertimeHours * 60)}</p>
+            <div className="p-4 bg-muted/40 rounded-xl border border-border">
+              <p className="text-xs text-muted-foreground">Total Overtime</p>
+              <p className="text-2xl font-bold text-primary mt-1">{minutesToHours(summary.totalOvertimeHours * 60)} hrs</p>
             </div>
-            <div className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg">
-              <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Total Late (min)</p>
-              <p className="text-2xl font-bold text-red-600 dark:text-red-400">{summary.totalLateMinutes}</p>
+            <div className="p-4 bg-muted/40 rounded-xl border border-border">
+              <p className="text-xs text-muted-foreground">Total Late</p>
+              <p className="text-2xl font-bold text-warning mt-1">{Math.round(summary.totalLateMinutes)} min</p>
             </div>
-            <div className="p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg">
-              <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Total Undertime (min)</p>
-              <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{summary.totalUndertimeMinutes}</p>
+            <div className="p-4 bg-muted/40 rounded-xl border border-border">
+              <p className="text-xs text-muted-foreground">Total Undertime</p>
+              <p className="text-2xl font-bold text-warning mt-1">{Math.round(summary.totalUndertimeMinutes)} min</p>
             </div>
           </div>
         )}
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Date</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Time In</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Time Out</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Regular (hrs)</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">OT (hrs)</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Late (min)</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Undertime (min)</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Status</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
-              {entries.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">
-                    No DTR entries for this period. Click "Calculate DTR" to generate.
-                  </td>
-                </tr>
-              ) : (
-                entries.map((entry) => (
-                  <tr key={entry.id} className="hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50">
-                    <td className="px-4 py-3 text-sm text-[#121212] dark:text-white">{formatDateFull(entry.date)}</td>
-                    <td className="px-4 py-3 text-sm text-[#757575] dark:text-[#9E9E9E]">{entry.actualTimeIn ? formatTime12(entry.actualTimeIn) : '—'}</td>
-                    <td className="px-4 py-3 text-sm text-[#757575] dark:text-[#9E9E9E]">{entry.actualTimeOut ? formatTime12(entry.actualTimeOut) : '—'}</td>
-                    <td className="px-4 py-3 text-sm text-[#121212] dark:text-white">{minutesToHours(entry.regularMinutes)}</td>
-                    <td className="px-4 py-3 text-sm text-blue-600 dark:text-blue-400">{minutesToHours(entry.overtimeMinutes)}</td>
-                    <td className="px-4 py-3 text-sm text-red-600 dark:text-red-400">{entry.lateMinutes}</td>
-                    <td className="px-4 py-3 text-sm text-orange-600 dark:text-orange-400">{entry.undertimeMinutes}</td>
-                    <td className="px-4 py-3 text-sm">{statusBadge(entry.status)}</td>
-                    <td className="px-4 py-3 text-right">
-                      {entry.status === 'draft' && (
-                        <button
-                          onClick={() => { setShowCorrection(entry); setCorrectionReason(''); setCorrectionReasonError(null); setCorrectionTimeIn(''); setCorrectionTimeOut(''); }}
-                          className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                        >
-                          Request Correction
-                        </button>
-                      )}
-                    </td>
+        {entries.length === 0 ? (
+          <EmptyState
+            title="No DTR entries for this period"
+            description="Click 'Calculate DTR' above to generate and compute your time records."
+          />
+        ) : (
+          <>
+            {/* Mobile Card Layout */}
+            <div className="space-y-3 md:hidden">
+              {entries.map((entry) => (
+                <div key={entry.id} className="bg-card border border-border rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-foreground text-sm">{formatDateFull(entry.date)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {entry.actualTimeIn ? formatTime12(entry.actualTimeIn) : '—'} – {entry.actualTimeOut ? formatTime12(entry.actualTimeOut) : '—'}
+                      </p>
+                    </div>
+                    {statusBadge(entry.status)}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs bg-muted/40 p-2.5 rounded-lg border border-border">
+                    <div>
+                      <span className="text-muted-foreground">Regular:</span>{' '}
+                      <span className="font-semibold text-foreground">{minutesToHours(entry.regularMinutes)} hrs</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">OT:</span>{' '}
+                      <span className="font-semibold text-primary">{minutesToHours(entry.overtimeMinutes)} hrs</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Late:</span>{' '}
+                      <span className="font-semibold text-warning">{Math.round(entry.lateMinutes)} min</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Undertime:</span>{' '}
+                      <span className="font-semibold text-warning">{Math.round(entry.undertimeMinutes)} min</span>
+                    </div>
+                  </div>
+
+                  {entry.status === 'draft' && (
+                    <div className="pt-1 flex justify-end">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => {
+                          setShowCorrection(entry);
+                          setCorrectionReason('');
+                          setCorrectionReasonError(null);
+                          setCorrectionTimeIn('');
+                          setCorrectionTimeOut('');
+                        }}
+                      >
+                        Request Correction
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto rounded-lg border border-border">
+              <table className="w-full text-sm">
+                <thead className="bg-muted">
+                  <tr>
+                    <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Date</th>
+                    <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Time In</th>
+                    <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Time Out</th>
+                    <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Regular (hrs)</th>
+                    <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">OT (hrs)</th>
+                    <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Late (min)</th>
+                    <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Undertime (min)</th>
+                    <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
+                    <th className="h-[44px] px-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wide">Actions</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {entries.map((entry) => (
+                    <tr key={entry.id} className="h-[44px] hover:bg-muted/50 transition-colors">
+                      <td className="px-4 py-3 font-medium text-foreground">{formatDateFull(entry.date)}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{entry.actualTimeIn ? formatTime12(entry.actualTimeIn) : '—'}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{entry.actualTimeOut ? formatTime12(entry.actualTimeOut) : '—'}</td>
+                      <td className="px-4 py-3 font-semibold text-foreground">{minutesToHours(entry.regularMinutes)}</td>
+                      <td className="px-4 py-3 font-semibold text-primary">{minutesToHours(entry.overtimeMinutes)}</td>
+                      <td className="px-4 py-3 text-warning font-medium">{Math.round(entry.lateMinutes)}</td>
+                      <td className="px-4 py-3 text-warning font-medium">{Math.round(entry.undertimeMinutes)}</td>
+                      <td className="px-4 py-3">{statusBadge(entry.status)}</td>
+                      <td className="px-4 py-3 text-right">
+                        {entry.status === 'draft' && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setShowCorrection(entry);
+                              setCorrectionReason('');
+                              setCorrectionReasonError(null);
+                              setCorrectionTimeIn('');
+                              setCorrectionTimeOut('');
+                            }}
+                          >
+                            Request Correction
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
 
+      {/* Correction Modal */}
       {showCorrection && (
-        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="correction-modal-title"
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          onClick={(e) => { if (e.target === e.currentTarget) { setShowCorrection(null); setCorrectionReason(''); setCorrectionReasonError(null); setCorrectionTimeIn(''); setCorrectionTimeOut(''); } }}
+        <Modal
+          open={Boolean(showCorrection)}
+          title={`Request Correction: ${formatDateFull(showCorrection.date)}`}
+          onClose={() => {
+            setShowCorrection(null);
+            setCorrectionReason('');
+            setCorrectionReasonError(null);
+            setCorrectionTimeIn('');
+            setCorrectionTimeOut('');
+          }}
         >
-          {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
-          <div
-            className="bg-white dark:bg-[#1E1E1E] rounded-xl p-6 max-w-md w-full"
-            onKeyDown={(e) => { if (e.key === 'Escape') { setShowCorrection(null); setCorrectionReason(''); setCorrectionReasonError(null); setCorrectionTimeIn(''); setCorrectionTimeOut(''); } }}
-          >
-            <h3 id="correction-modal-title" className="text-lg font-semibold text-[#121212] dark:text-white mb-4">Request Correction for {formatDateFull(showCorrection.date)}</h3>
-            <p className="text-sm text-[#757575] dark:text-[#9E9E9E] mb-4">
-              Current: {showCorrection.actualTimeIn ? formatTime12(showCorrection.actualTimeIn) : '—'} - {showCorrection.actualTimeOut ? formatTime12(showCorrection.actualTimeOut) : '—'}
-            </p>
-            <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="space-y-4">
+            <div className="p-3 bg-muted/40 rounded-lg border border-border text-xs text-muted-foreground">
+              Current Logged Time: <span className="font-semibold text-foreground">{showCorrection.actualTimeIn ? formatTime12(showCorrection.actualTimeIn) : '—'}</span> to <span className="font-semibold text-foreground">{showCorrection.actualTimeOut ? formatTime12(showCorrection.actualTimeOut) : '—'}</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="correction-time-in" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">Corrected Time In</label>
+                <label htmlFor="correction-time-in" className="block text-xs font-medium text-foreground mb-1.5">
+                  Corrected Time In
+                </label>
                 <input
                   id="correction-time-in"
                   type="time"
                   value={correctionTimeIn}
                   onChange={(e) => setCorrectionTimeIn(e.target.value)}
-                  className="w-full px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
+                  className="w-full h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
               <div>
-                <label htmlFor="correction-time-out" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">Corrected Time Out</label>
+                <label htmlFor="correction-time-out" className="block text-xs font-medium text-foreground mb-1.5">
+                  Corrected Time Out
+                </label>
                 <input
                   id="correction-time-out"
                   type="time"
                   value={correctionTimeOut}
                   onChange={(e) => setCorrectionTimeOut(e.target.value)}
-                  className="w-full px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
+                  className="w-full h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
             </div>
-            <FormField id="correction-reason" error={correctionReasonError ?? undefined}>
+
+            <FormField id="correction-reason" label="Reason for Correction" error={correctionReasonError ?? undefined}>
               <FormTextarea
                 id="correction-reason"
                 value={correctionReason}
-                onValueChange={(value) => { setCorrectionReason(value); setCorrectionReasonError(null); }}
-                placeholder="Reason for correction (e.g., forgot to time out, system error, etc.)"
+                onValueChange={(value) => {
+                  setCorrectionReason(value);
+                  setCorrectionReasonError(null);
+                }}
+                placeholder="Explain why this correction is requested (e.g. forgot to scan time out, system issue)..."
                 aria-label="Reason for correction"
                 error={correctionReasonError ?? undefined}
-                className="min-h-[80px] resize-none"
+                className="min-h-[90px] resize-none"
               />
             </FormField>
-            <div className="flex justify-end gap-3 mt-4">
-              <button
-                onClick={() => { setShowCorrection(null); setCorrectionReason(''); setCorrectionReasonError(null); setCorrectionTimeIn(''); setCorrectionTimeOut(''); }}
-                aria-label="Close"
-                className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg"
+
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowCorrection(null);
+                  setCorrectionReason('');
+                  setCorrectionReasonError(null);
+                  setCorrectionTimeIn('');
+                  setCorrectionTimeOut('');
+                }}
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
+                isLoading={submittingCorrection}
                 onClick={() => handleCorrectionSubmit(showCorrection)}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
               >
                 Submit Request
-              </button>
+              </Button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

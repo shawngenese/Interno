@@ -10,7 +10,7 @@ export const DashboardHeader: React.FC = () => {
           Dashboard
         </Title>
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={() => window.location.href="/trainees"}
         >

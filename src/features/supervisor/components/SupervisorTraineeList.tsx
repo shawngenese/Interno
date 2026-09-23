@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/features/auth';
 import { getSupervisorByUserId, getAssignedTrainees, getTraineeAttendanceSummary } from '../services/supervisorService';
+import { Skeleton } from '@/shared/components/Skeleton';
+import { EmptyState } from '@/shared/components/EmptyState';
+import { GraduationCap, CheckCircle } from 'lucide-react';
 import type { Trainee } from '@/features/admin/types';
 
 export function SupervisorTraineeList() {
@@ -21,9 +24,10 @@ export function SupervisorTraineeList() {
         if (sup) {
           const assigned = await getAssignedTrainees(sup.id, sup.companyId);
           setTrainees(assigned);
-          const att = assigned.length > 0
-            ? await getTraineeAttendanceSummary(assigned.map(t => t.id)).catch(() => ({}))
-            : {};
+          const att =
+            assigned.length > 0
+              ? await getTraineeAttendanceSummary(assigned.map((t) => t.id)).catch(() => ({}))
+              : {};
           setAttendance(att);
         }
       } catch (err) {
@@ -39,85 +43,168 @@ export function SupervisorTraineeList() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <svg className="animate-spin h-8 w-8 text-blue-600" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
+      <div className="space-y-4">
+        <Skeleton variant="text" width="30%" height={28} />
+        <div className="bg-card rounded-xl border border-border p-5 space-y-3">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} variant="rectangular" height={56} className="rounded-lg" />
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
-      <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
-        <h2 className="text-lg font-semibold text-[#121212] dark:text-white">Assigned Trainees</h2>
-        <p className="text-sm text-[#757575] dark:text-[#9E9E9E] mt-1">{trainees.length} trainee(s) assigned to you</p>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div>
+          <h2 className="text-xl font-bold text-foreground">Assigned Trainees</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {trainees.length} trainee(s) currently assigned to your supervision
+          </p>
+        </div>
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">
+        <div role="alert" className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm">
           {error}
         </div>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Student ID</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Course</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">School</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">OJT Status</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Today</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
-            {trainees.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">
-                  No trainees assigned
-                </td>
-              </tr>
-            ) : (
-              trainees.map(trainee => {
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
+        {trainees.length === 0 ? (
+          <div className="p-8">
+            <EmptyState
+              title="No trainees assigned"
+              description="No trainees have been assigned to you yet. Contact your coordinator if you are expecting trainees."
+            />
+          </div>
+        ) : (
+          <>
+            {/* Mobile Card Layout (md:hidden) */}
+            <div className="divide-y divide-border md:hidden">
+              {trainees.map((trainee) => {
                 const att = attendance[trainee.id];
                 return (
-                  <tr key={trainee.id} className="hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50">
-                    <td className="px-4 py-4 text-sm font-medium text-[#121212] dark:text-white">
-                      {trainee.name || trainee.profile?.studentId || '-'}
-                    </td>
-                    <td className="px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
-                      {trainee.profile?.course || '-'}
-                    </td>
-                    <td className="px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
-                      {trainee.profile?.school || '-'}
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                        trainee.ojtStatus === 'active'
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                          : trainee.ojtStatus === 'on_leave'
-                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
-                          : 'bg-[#EFEFEF] text-[#555555] dark:bg-[#3A3A3A] dark:text-[#9E9E9E]'
-                      }`}>
-                        {trainee.ojtStatus.replace('_', ' ')}
+                  <div key={trainee.id} className="p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="font-semibold text-foreground text-sm">
+                          {trainee.name || trainee.profile?.studentId || 'Unnamed Trainee'}
+                        </h4>
+                        <p className="text-xs text-muted-foreground">
+                          {trainee.profile?.studentId && `${trainee.profile.studentId} • `}
+                          {trainee.profile?.course || 'No course'}
+                        </p>
+                      </div>
+                      <span
+                        className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full capitalize ${
+                          trainee.ojtStatus === 'active'
+                            ? 'bg-success/15 text-success'
+                            : trainee.ojtStatus === 'on_leave'
+                            ? 'bg-primary/15 text-primary'
+                            : 'bg-muted text-muted-foreground'
+                        }`}
+                      >
+                        {trainee.ojtStatus?.replace('_', ' ') || 'Pending'}
                       </span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${att?.hasTimeIn ? 'bg-green-500' : 'bg-[#BDBDBD] dark:bg-[#555555]'}`} />
-                        <span className="text-xs text-[#757575] dark:text-[#9E9E9E]">
-                          {att?.hasTimeIn ? (att?.hasTimeOut ? 'Completed' : 'In progress') : 'Not started'}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <GraduationCap className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">{trainee.profile?.school || 'School not set'}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle className="w-3.5 h-3.5 shrink-0 text-success" />
+                        <span>
+                          {att?.hasTimeIn ? (att.hasTimeOut ? 'Complete Day' : 'Timed In') : 'No Scan Today'}
                         </span>
                       </div>
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 );
-              })
-            )}
-          </tbody>
-        </table>
+              })}
+            </div>
+
+            {/* Desktop Table Layout (hidden md:block) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/40 border-b border-border">
+                  <tr>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Student / Name
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Course
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      School
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      OJT Status
+                    </th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Today's Attendance
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {trainees.map((trainee) => {
+                    const att = attendance[trainee.id];
+                    return (
+                      <tr key={trainee.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="px-5 py-3.5">
+                          <div className="font-medium text-foreground">
+                            {trainee.name || trainee.profile?.studentId || '-'}
+                          </div>
+                          {trainee.name && trainee.profile?.studentId && (
+                            <div className="text-xs text-muted-foreground">{trainee.profile.studentId}</div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5 text-muted-foreground text-xs">
+                          {trainee.profile?.course || '—'}
+                        </td>
+                        <td className="px-4 py-3.5 text-muted-foreground text-xs">
+                          {trainee.profile?.school || '—'}
+                        </td>
+                        <td className="px-4 py-3.5 text-center">
+                          <span
+                            className={`inline-flex px-2.5 py-0.5 text-xs font-medium rounded-full capitalize ${
+                              trainee.ojtStatus === 'active'
+                                ? 'bg-success/15 text-success'
+                                : trainee.ojtStatus === 'on_leave'
+                                ? 'bg-primary/15 text-primary'
+                                : 'bg-muted text-muted-foreground'
+                            }`}
+                          >
+                            {trainee.ojtStatus?.replace('_', ' ') || 'Pending'}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5 text-right">
+                          <div className="inline-flex items-center gap-1.5 text-xs font-medium">
+                            <span
+                              className={`w-2 h-2 rounded-full ${
+                                att?.hasTimeIn ? 'bg-success' : 'bg-muted-foreground/40'
+                              }`}
+                            />
+                            <span className={att?.hasTimeIn ? 'text-foreground' : 'text-muted-foreground'}>
+                              {att?.hasTimeIn
+                                ? att.hasTimeOut
+                                  ? 'Timed Out'
+                                  : 'Timed In'
+                                : 'Not Started'}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

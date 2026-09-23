@@ -1,29 +1,59 @@
-import React from "react"
+import React from 'react';
 
-const iconMap: Record<string, string> = {
-  User: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2ZM12 20c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8Z",
-  CheckSquare: "M19 9v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9h10m-3 0a2 2 0 0 0-2 2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7",
+type StatColor = 'primary' | 'success' | 'warning' | 'destructive' | 'accent' | 'info';
+
+export interface StatItem {
+  label: string;
+  value: string | number;
+  icon: React.ReactNode;
+  color?: StatColor;
+  trend?: { value: number; label: string };
 }
 
-export const StatsGrid: React.FC<{stats: {label: string; value: string; icon: string}[]}> = ({
-  stats,
-}) => {
+interface StatsGridProps {
+  stats: StatItem[];
+  className?: string;
+}
+
+const colorClasses: Record<StatColor, string> = {
+  primary:     'text-primary bg-primary/10',
+  success:     'text-success bg-success/10',
+  warning:     'text-warning bg-warning/10',
+  destructive: 'text-destructive bg-destructive/10',
+  accent:      'text-accent bg-accent/10',
+  info:        'text-info bg-info/10',
+};
+
+export const StatsGrid = React.memo(function StatsGrid({ stats, className = '' }: StatsGridProps) {
   return (
-    <div className="grid grid-cols-2 gap-6 max-w-4xl mx-auto">
-      {stats.map((stat, index) => (
-        <div
-          key={index}
-          className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow duration-300"
-        >
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6">
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-              <path d={iconMap[stat.icon]} />
-            </svg>
+    <div className={`grid grid-cols-2 md:grid-cols-4 gap-3 ${className}`}>
+      {stats.map((stat, index) => {
+        const colorClass = colorClasses[stat.color ?? 'primary'];
+
+        return (
+          <div
+            key={index}
+            className="bg-card border border-border rounded-xl p-3 flex flex-col gap-2"
+          >
+            <div className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 ${colorClass}`}>
+              {stat.icon}
+            </div>
+            <div>
+              <p className="text-(--text-display-sm) font-bold text-foreground leading-none">
+                {stat.value}
+              </p>
+              <p className="text-(--text-body-sm) text-muted-foreground mt-0.5">
+                {stat.label}
+              </p>
+            </div>
+            {stat.trend && (
+              <p className={`text-xs ${stat.trend.value >= 0 ? 'text-success' : 'text-destructive'}`}>
+                {stat.trend.value >= 0 ? '+' : ''}{stat.trend.value}% {stat.trend.label}
+              </p>
+            )}
           </div>
-          <p className="font-medium text-textPrimary text-3xl tracking-tight">{stat.value}</p>
-          <p className="text-textSecondary mt-1">{stat.label}</p>
-        </div>
-      ))}
+        );
+      })}
     </div>
-  )
-}
+  );
+});

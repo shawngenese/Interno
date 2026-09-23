@@ -125,17 +125,18 @@ export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
 };
 
 export const TASK_STATUS_COLORS: Record<TaskStatus, { bg: string; text: string }> = {
-  pending: { bg: 'bg-[#EFEFEF] dark:bg-[#3A3A3A]', text: 'text-[#3A3A3A] dark:text-[#BDBDBD]' },
-  in_progress: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300' },
-  submitted: { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-300' },
-  approved: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300' },
-  returned: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300' },
-  archived: { bg: 'bg-gray-100 dark:bg-gray-800/30', text: 'text-gray-500 dark:text-gray-400' },
+  pending: { bg: 'bg-muted border border-border', text: 'text-muted-foreground' },
+  in_progress: { bg: 'bg-primary/15 border border-primary/20', text: 'text-primary' },
+  submitted: { bg: 'bg-warning/15 border border-warning/20', text: 'text-warning' },
+  approved: { bg: 'bg-success/15 border border-success/20', text: 'text-success' },
+  returned: { bg: 'bg-destructive/15 border border-destructive/20', text: 'text-destructive' },
+  archived: { bg: 'bg-muted border border-border', text: 'text-muted-foreground' },
 };
 
 export const TASK_PRIORITY_COLORS: Record<TaskPriority, { bg: string; text: string }> = {
-  low: { bg: 'bg-[#EFEFEF] dark:bg-[#3A3A3A]', text: 'text-[#555555] dark:text-[#9E9E9E]' },
-  medium: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-600 dark:text-blue-400' },
-  high: { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-600 dark:text-orange-400' },
-  urgent: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-600 dark:text-red-400' },
+  low: { bg: 'bg-muted border border-border', text: 'text-muted-foreground' },
+  medium: { bg: 'bg-primary/15 border border-primary/20', text: 'text-primary' },
+  high: { bg: 'bg-warning/15 border border-warning/20', text: 'text-warning' },
+  urgent: { bg: 'bg-destructive/15 border border-destructive/20', text: 'text-destructive' },
 };
+

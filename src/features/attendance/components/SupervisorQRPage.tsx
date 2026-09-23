@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { SupervisorQRDisplay } from './SupervisorQRDisplay';
+import { FormField, FormSelect } from '@/shared/components/FormField';
+import { Button } from '@/shared/components/ui/Button';
+import { QrCode, Play, Square, Sparkles } from 'lucide-react';
 
 export function SupervisorQRPage() {
   const [action, setAction] = useState<'time_in' | 'time_out'>('time_in');
@@ -7,67 +10,80 @@ export function SupervisorQRPage() {
   const [isActive, setIsActive] = useState(false);
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
-        <h2 className="text-lg font-semibold text-[#121212] dark:text-white mb-4">Generate Attendance QR</h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+    <div className="space-y-6 max-w-3xl mx-auto">
+      {/* Control Card */}
+      <div className="bg-card rounded-xl border border-border shadow-sm p-5 sm:p-6 space-y-5">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+            <QrCode className="w-5 h-5" />
+          </div>
           <div>
-            <label htmlFor="action-select" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              Action
-            </label>
-            <select
+            <h2 className="text-lg font-bold text-foreground">Attendance QR Generator</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Generate dynamic rotating QR codes for trainee daily time-in and time-out
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField id="action-select" label="Attendance Action">
+            <FormSelect
               id="action-select"
               value={action}
-              onChange={(e) => setAction(e.target.value as 'time_in' | 'time_out')}
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onValueChange={(val) => setAction(val as 'time_in' | 'time_out')}
             >
               <option value="time_in">Time In</option>
               <option value="time_out">Time Out</option>
-            </select>
-          </div>
+            </FormSelect>
+          </FormField>
 
-          <div>
-            <label htmlFor="expiration-select" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              Expiration
-            </label>
-            <select
+          <FormField id="expiration-select" label="QR Rotation Expiration">
+            <FormSelect
               id="expiration-select"
-              value={expiration}
-              onChange={(e) => setExpiration(Number(e.target.value) as 30 | 60 | 120 | 300)}
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={String(expiration)}
+              onValueChange={(val) => setExpiration(Number(val) as 30 | 60 | 120 | 300)}
             >
-              <option value={30}>30 seconds</option>
-              <option value={60}>60 seconds</option>
-              <option value={120}>2 minutes</option>
-              <option value={300}>5 minutes</option>
-            </select>
+              <option value="30">30 seconds (High Security)</option>
+              <option value="60">60 seconds (Standard)</option>
+              <option value="120">2 minutes</option>
+              <option value="300">5 minutes</option>
+            </FormSelect>
+          </FormField>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-border">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Sparkles className="w-4 h-4 text-primary shrink-0" />
+            <span>Auto-refreshes 10s before expiry with anti-replay JWT nonce.</span>
           </div>
-        </div>
 
-        <div className="flex items-center gap-4 mb-4">
-          <button
+          <Button
+            variant={isActive ? 'destructive' : 'primary'}
+            size="md"
             onClick={() => setIsActive(!isActive)}
-            className={`px-6 py-2.5 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-              isActive
-                ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
-                : 'bg-green-600 hover:bg-green-700 focus:ring-green-500'
-            }`}
+            className="gap-2 shrink-0"
           >
-            {isActive ? 'Stop QR' : 'Start QR'}
-          </button>
-          <span className="text-sm text-[#757575] dark:text-[#9E9E9E]">
-            {isActive ? 'QR is active — trainees can scan' : 'QR is stopped — trainees cannot scan'}
-          </span>
+            {isActive ? (
+              <>
+                <Square className="w-4 h-4 fill-current" />
+                Stop QR
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4 fill-current" />
+                Start QR
+              </>
+            )}
+          </Button>
         </div>
-
-        <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">
-          Show this QR code to trainees. It auto-refreshes 10 seconds before expiry.
-          Trainees scan with the mobile app to record their {action === 'time_in' ? 'time in' : 'time out'}.
-        </p>
       </div>
 
-      <SupervisorQRDisplay action={action} expirationSeconds={expiration} isActive={isActive} />
+      {/* QR Display Screen */}
+      <SupervisorQRDisplay
+        action={action}
+        expirationSeconds={expiration}
+        isActive={isActive}
+      />
     </div>
   );
 }

@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../AuthProvider';
 import { useFormValidation } from '@/shared/hooks/useFormValidation';
 import { required, email } from '@/shared/utils/validators';
 import { FormField, FormInput } from '@/shared/components/FormField';
+import { Button } from '@/shared/components/ui/Button';
+import { AlertCircle } from 'lucide-react';
 
 export function LoginPage() {
   const [error, setError] = useState('');
@@ -40,6 +42,8 @@ export function LoginPage() {
         setError('Invalid email address');
       } else if (errorMessage.includes('auth/too-many-requests')) {
         setError('Too many attempts. Please try again later');
+      } else if (errorMessage.includes('auth/invalid-credential') || errorMessage.includes('auth/user-not-found') || errorMessage.includes('auth/wrong-password')) {
+        setError('Email or password is incorrect');
       } else {
         setError(errorMessage);
       }
@@ -49,22 +53,24 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F5F5F5] dark:bg-[#121212] px-4">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8">
       <div className="w-full max-w-md">
-        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-8">
+        <div className="bg-card rounded-2xl shadow-sm border border-border p-6 sm:p-8">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-[#121212] dark:text-white">Interno</h1>
-            <p className="text-[#555555] dark:text-[#9E9E9E] mt-1">Trainee Management System</p>
+            <img src="/interno-logo.jpg" alt="Interno logo" className="w-12 h-12 rounded-2xl bg-white object-contain shadow-sm mx-auto mb-3" />
+            <h1 className="text-2xl font-bold text-foreground">Interno</h1>
+            <p className="text-sm text-muted-foreground mt-1">Mobile-first Trainee Management Platform</p>
           </div>
 
           {error && (
-            <div role="alert" className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
-              {error}
+            <div role="alert" className="mb-6 p-3.5 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <FormField id="email" label="Email" error={touched.email ? errors.email : undefined}>
+            <FormField id="email" label="Email Address" error={touched.email ? errors.email : undefined}>
               <FormInput
                 id="email"
                 type="email"
@@ -72,7 +78,7 @@ export function LoginPage() {
                 onValueChange={handleChange('email')}
                 onBlur={handleBlur('email')}
                 error={touched.email ? errors.email : undefined}
-                placeholder="Enter your email"
+                placeholder="name@example.com"
                 autoComplete="email"
                 disabled={loading}
               />
@@ -86,34 +92,37 @@ export function LoginPage() {
                 onValueChange={handleChange('password')}
                 onBlur={handleBlur('password')}
                 error={touched.password ? errors.password : undefined}
-                placeholder="Enter your password"
+                placeholder="••••••••"
                 autoComplete="current-password"
                 disabled={loading}
               />
             </FormField>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Signing in...
-                </span>
-              ) : (
-                'Sign In'
-              )}
-            </button>
+            <div className="pt-2">
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                className="w-full"
+                isLoading={loading}
+              >
+                Sign In
+              </Button>
+            </div>
           </form>
 
-          <div className="mt-6 text-center text-sm text-[#555555] dark:text-[#9E9E9E]">
-            <p>Mobile-first OJT Management Platform</p>
+          <div className="mt-6 text-center text-xs text-muted-foreground border-t border-border pt-4">
+            <p>Role-based access & QR attendance tracking</p>
           </div>
+        </div>
+
+        <div className="mt-4 text-center">
+          <Link
+            to="/"
+            className="text-xs font-medium text-muted-foreground hover:text-primary transition-colors"
+          >
+            ← Back to Home
+          </Link>
         </div>
       </div>
     </div>

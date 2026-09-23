@@ -1,4 +1,5 @@
 import { useState, useCallback, createContext, useContext, useEffect } from 'react';
+import { CheckCircle2, XCircle, Info, AlertTriangle, X } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -44,7 +45,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
 function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: string) => void }) {
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm" role="status" aria-live="polite">
+    <div
+      className="fixed bottom-20 right-4 z-50 flex flex-col gap-2 max-w-sm w-full px-4 md:px-0"
+      role="status"
+      aria-live="polite"
+      aria-atomic="false"
+    >
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onRemove={onRemove} />
       ))}
@@ -52,61 +58,53 @@ function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: 
   );
 }
 
+const toastConfig: Record<ToastType, { icon: React.ReactNode; containerClass: string; iconClass: string }> = {
+  success: {
+    icon: <CheckCircle2 size={18} aria-hidden="true" />,
+    containerClass: 'bg-card border border-success/30',
+    iconClass: 'text-success',
+  },
+  error: {
+    icon: <XCircle size={18} aria-hidden="true" />,
+    containerClass: 'bg-card border border-destructive/30',
+    iconClass: 'text-destructive',
+  },
+  info: {
+    icon: <Info size={18} aria-hidden="true" />,
+    containerClass: 'bg-card border border-info/30',
+    iconClass: 'text-info',
+  },
+  warning: {
+    icon: <AlertTriangle size={18} aria-hidden="true" />,
+    containerClass: 'bg-card border border-warning/30',
+    iconClass: 'text-warning',
+  },
+};
+
 function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) => void }) {
   useEffect(() => {
     const timer = setTimeout(() => onRemove(toast.id), 4000);
     return () => clearTimeout(timer);
   }, [toast.id, onRemove]);
 
-  const bgColor = {
-    success: 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800',
-    error: 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800',
-    info: 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800',
-    warning: 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800',
-  }[toast.type];
-
-  const textColor = {
-    success: 'text-green-700 dark:text-green-300',
-    error: 'text-red-700 dark:text-red-300',
-    info: 'text-blue-700 dark:text-blue-300',
-    warning: 'text-yellow-700 dark:text-yellow-300',
-  }[toast.type];
-
-  const icon = {
-    success: (
-      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-      </svg>
-    ),
-    error: (
-      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-      </svg>
-    ),
-    info: (
-      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    warning: (
-      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
-      </svg>
-    ),
-  }[toast.type];
+  const { icon, containerClass, iconClass } = toastConfig[toast.type];
 
   return (
-    <div className={`flex items-start gap-3 p-4 rounded-lg border shadow-lg ${bgColor}`} role={toast.type === 'error' ? 'alert' : 'status'}>
-      <span className={`flex-shrink-0 ${textColor}`}>{icon}</span>
-      <p className={`text-sm flex-1 ${textColor}`}>{toast.message}</p>
+    <div
+      className={[
+        'flex items-start gap-3 p-3 rounded-lg shadow-md',
+        containerClass,
+      ].join(' ')}
+      role={toast.type === 'error' ? 'alert' : 'status'}
+    >
+      <span className={`shrink-0 mt-0.5 ${iconClass}`}>{icon}</span>
+      <p className="text-sm text-foreground flex-1">{toast.message}</p>
       <button
         onClick={() => onRemove(toast.id)}
-        className={`flex-shrink-0 ${textColor} hover:opacity-70`}
-        aria-label="Dismiss notification"
+        className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+        aria-label="Dismiss"
       >
-        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
+        <X size={16} aria-hidden="true" />
       </button>
     </div>
   );

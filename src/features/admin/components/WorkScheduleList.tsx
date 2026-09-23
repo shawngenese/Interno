@@ -3,6 +3,10 @@ import { adminService } from '../services/adminService';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
 import { ActionsMenu } from '@/shared/components/ActionsMenu';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
+import { EmptyState, CalendarIcon } from '@/shared/components/EmptyState';
+import { Skeleton } from '@/shared/components/Skeleton';
+import { Button } from '@/shared/components/ui/Button';
+import { Search } from 'lucide-react';
 import type { WorkSchedule, ListWorkSchedulesParams } from '../types';
 
 interface WorkScheduleListProps {
@@ -25,7 +29,6 @@ export function WorkScheduleList({ onEdit, onView, onDelete }: WorkScheduleListP
   const [searchValue, setSearchValue] = useState('');
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Cleanup debounce timer
   useEffect(() => {
     return () => {
       if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
@@ -61,12 +64,12 @@ export function WorkScheduleList({ onEdit, onView, onDelete }: WorkScheduleListP
     setSearchValue(search);
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => {
-      setFilters(p => ({ ...p, search, page: 1 }));
-    }, 400);
+      setFilters((p) => ({ ...p, search, page: 1 }));
+    }, 350);
   };
 
   const handlePageChange = (page: number) => {
-    setFilters(p => ({ ...p, page }));
+    setFilters((p) => ({ ...p, page }));
   };
 
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -79,7 +82,7 @@ export function WorkScheduleList({ onEdit, onView, onDelete }: WorkScheduleListP
   const handleDelete = (schedule: WorkSchedule) => {
     setConfirmDialog({
       title: 'Delete Work Schedule',
-      message: 'Delete this work schedule?',
+      message: `Are you sure you want to delete schedule "${schedule.name}"?`,
       danger: true,
       onConfirm: async () => {
         onDelete?.(schedule);
@@ -90,7 +93,7 @@ export function WorkScheduleList({ onEdit, onView, onDelete }: WorkScheduleListP
   const formatWorkDays = (days: number[] | undefined) => {
     if (!Array.isArray(days) || days.length === 0) return '—';
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    return days.map(d => dayNames[d] ?? d).join(', ');
+    return days.map((d) => dayNames[d] ?? d).join(', ');
   };
 
   const to12Hour = (time24: string | undefined) => {
@@ -102,105 +105,69 @@ export function WorkScheduleList({ onEdit, onView, onDelete }: WorkScheduleListP
     return `${hour12}:${m.toString().padStart(2, '0')} ${period}`;
   };
 
-  if (loading && schedules.length === 0) {
-    return (
-      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
-        <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <h2 className="text-lg font-semibold text-[#121212] dark:text-white">Work Schedules</h2>
-            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-              <input
-                type="text"
-                placeholder="Search schedules..."
-                value={searchValue}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="w-full sm:w-64 px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center justify-center h-64">
-          <svg className="animate-spin h-8 w-8 text-blue-600" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <>
-    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
-      <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h2 className="text-lg font-semibold text-[#121212] dark:text-white">Work Schedules</h2>
-          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+      <div className="space-y-4">
+        {/* Search & Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-card border border-border rounded-lg p-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
               placeholder="Search schedules..."
               value={searchValue}
               onChange={(e) => handleSearch(e.target.value)}
-              className="w-full sm:w-64 px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-9 pr-3 py-2 text-sm bg-background border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
+          <span className="text-xs text-muted-foreground self-center sm:self-auto">
+            {total} {total === 1 ? 'schedule' : 'schedules'} configured
+          </span>
         </div>
-      </div>
 
-      {error && (
-        <div role="alert" className="p-4 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">
-          {error}
-        </div>
-      )}
+        {error && (
+          <div role="alert" className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
+            {error}
+          </div>
+        )}
 
-      {loading && schedules.length > 0 && (
-        <div className="h-0.5 w-full overflow-hidden bg-[#EFEFEF] dark:bg-[#3A3A3A]">
-          <div className="h-full bg-blue-600 animate-pulse" style={{ width: '40%' }} />
-        </div>
-      )}
-
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Name</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Company</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Time In</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Time Out</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Break (min)</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Work Days</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
-            {schedules.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">
-                  No work schedules found
-                </td>
-              </tr>
-            ) : (
-              schedules.map(schedule => (
-                <tr key={schedule.id} className="hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50">
-                  <td className="px-4 py-4 text-sm text-[#121212] dark:text-white font-medium">
-                    {schedule.name}
-                  </td>
-                  <td className="px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
-                    {schedule.companyName || '—'}
-                  </td>
-                  <td className="px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
-                    {to12Hour(schedule.timeIn)}
-                  </td>
-                  <td className="px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
-                    {to12Hour(schedule.timeOut)}
-                  </td>
-                  <td className="px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
-                    {schedule.breakDurationMinutes ?? '—'}
-                  </td>
-                  <td className="px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
-                    {formatWorkDays(schedule.workDays)}
-                  </td>
-                  <td className="px-4 py-4 text-right">
+        {/* Loading State */}
+        {loading ? (
+          <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
+                <div className="space-y-1.5 flex-1">
+                  <Skeleton variant="text" width="35%" height={16} />
+                  <Skeleton variant="text" width="20%" height={12} />
+                </div>
+                <Skeleton variant="text" width={70} height={24} />
+              </div>
+            ))}
+          </div>
+        ) : schedules.length === 0 ? (
+          <div className="bg-card border border-border rounded-lg">
+            <EmptyState
+              icon={CalendarIcon}
+              title="No work schedules found"
+              description={searchValue ? 'No work schedules matched your search criteria.' : 'Create regular shift and work schedules.'}
+            />
+          </div>
+        ) : (
+          <>
+            {/* Mobile Card Layout (< md) */}
+            <div className="space-y-3 md:hidden">
+              {schedules.map((schedule) => (
+                <div key={schedule.id} className="bg-card border border-border rounded-lg p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <button
+                        onClick={() => onView?.(schedule)}
+                        className="font-semibold text-sm text-foreground hover:text-primary transition-colors truncate block text-left"
+                      >
+                        {schedule.name}
+                      </button>
+                      <p className="text-xs text-muted-foreground truncate">{schedule.companyName || 'No company assigned'}</p>
+                    </div>
                     <ActionsMenu
                       items={[
                         ...(onView ? [{ label: 'View', onClick: () => onView(schedule) }] : []),
@@ -208,47 +175,131 @@ export function WorkScheduleList({ onEdit, onView, onDelete }: WorkScheduleListP
                         ...(onDelete ? [{ label: 'Delete', onClick: () => handleDelete(schedule), danger: true }] : []),
                       ]}
                     />
-                  </td>
-                </tr>
-              ))
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/60 text-xs">
+                    <div>
+                      <span className="text-muted-foreground block">Hours</span>
+                      <span className="text-foreground font-medium">
+                        {to12Hour(schedule.timeIn)} – {to12Hour(schedule.timeOut)}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-muted-foreground block">Break</span>
+                      <span className="text-foreground">{schedule.breakDurationMinutes ? `${schedule.breakDurationMinutes} mins` : '—'}</span>
+                    </div>
+
+                    <div className="col-span-2">
+                      <span className="text-muted-foreground block">Work Days</span>
+                      <span className="text-foreground">{formatWorkDays(schedule.workDays)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table Layout (>= md) */}
+            <div className="hidden md:block bg-card border border-border rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-muted">
+                  <tr>
+                    <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      Schedule Name
+                    </th>
+                    <th className="h-[44px] px-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      Company
+                    </th>
+                    <th className="h-[44px] px-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      Shift Hours
+                    </th>
+                    <th className="h-[44px] px-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      Break (min)
+                    </th>
+                    <th className="h-[44px] px-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      Work Days
+                    </th>
+                    <th className="h-[44px] px-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {schedules.map((schedule) => (
+                    <tr key={schedule.id} className="h-[44px] hover:bg-muted/50 transition-colors">
+                      <td className="px-4 py-2.5">
+                        <button
+                          onClick={() => onView?.(schedule)}
+                          className="font-medium text-foreground hover:text-primary transition-colors text-left"
+                        >
+                          {schedule.name}
+                        </button>
+                      </td>
+                      <td className="px-3 py-2.5 text-xs text-muted-foreground">
+                        {schedule.companyName || '—'}
+                      </td>
+                      <td className="px-3 py-2.5 text-xs font-mono text-foreground">
+                        {to12Hour(schedule.timeIn)} – {to12Hour(schedule.timeOut)}
+                      </td>
+                      <td className="px-3 py-2.5 text-xs text-muted-foreground">
+                        {schedule.breakDurationMinutes ?? '—'}
+                      </td>
+                      <td className="px-3 py-2.5 text-xs text-muted-foreground">
+                        {formatWorkDays(schedule.workDays)}
+                      </td>
+                      <td className="px-4 py-2.5 text-right">
+                        <ActionsMenu
+                          items={[
+                            ...(onView ? [{ label: 'View', onClick: () => onView(schedule) }] : []),
+                            ...(onEdit ? [{ label: 'Edit', onClick: () => onEdit(schedule) }] : []),
+                            ...(onDelete ? [{ label: 'Delete', onClick: () => handleDelete(schedule), danger: true }] : []),
+                          ]}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="p-4 bg-card border border-border rounded-lg flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Page {filters.page || 1} of {totalPages} ({total} total)
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handlePageChange((filters.page || 1) - 1)}
+                    disabled={(filters.page || 1) <= 1}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handlePageChange((filters.page || 1) + 1)}
+                    disabled={(filters.page || 1) >= totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
             )}
-          </tbody>
-        </table>
+          </>
+        )}
       </div>
 
-      {totalPages > 1 && (
-        <div className="px-4 py-3 border-t border-[#D5D5D5] dark:border-[#3A3A3A] flex items-center justify-between">
-          <div className="text-sm text-[#757575] dark:text-[#9E9E9E]">
-            Page {filters.page} of {totalPages} ({total} total)
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => handlePageChange((filters.page || 1) - 1)}
-              disabled={(filters.page || 1) <= 1}
-              className="px-3 py-2 text-sm text-[#121212] dark:text-white border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-            <button
-              onClick={() => handlePageChange((filters.page || 1) + 1)}
-              disabled={(filters.page || 1) >= totalPages}
-              className="px-3 py-2 text-sm text-[#121212] dark:text-white border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-
-    <ConfirmDialog
-      open={confirmDialog !== null}
-      title={confirmDialog?.title || ''}
-      message={confirmDialog?.message || ''}
-      danger={confirmDialog?.danger}
-      onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
-      onCancel={() => setConfirmDialog(null)}
-    />
+      <ConfirmDialog
+        open={confirmDialog !== null}
+        title={confirmDialog?.title || ''}
+        message={confirmDialog?.message || ''}
+        danger={confirmDialog?.danger}
+        onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </>
   );
 }

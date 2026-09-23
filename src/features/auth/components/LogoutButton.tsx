@@ -1,6 +1,7 @@
+import { LogOut } from 'lucide-react';
 import { useAuth } from '../AuthProvider';
 
-export function LogoutButton({ className = '' }: { className?: string }) {
+export function LogoutButton({ className = '', iconOnly = false }: { className?: string; iconOnly?: boolean }) {
   const { logout, user, loading } = useAuth();
 
   const handleLogout = async () => {
@@ -13,16 +14,23 @@ export function LogoutButton({ className = '' }: { className?: string }) {
     <button
       onClick={handleLogout}
       disabled={loading}
+      aria-label={iconOnly ? 'Sign Out' : undefined}
+      title={iconOnly ? 'Sign Out' : undefined}
       className={`
-        px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD]
-        bg-white dark:bg-[#1E1E1E] border border-[#BDBDBD] dark:border-[#555555]
-        rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]
-        focus:outline-none focus:ring-2 focus:ring-blue-500
+        ${iconOnly ? 'w-11 h-11 p-0 justify-center' : 'px-4 py-2 min-h-[44px]'}
+        text-sm font-medium text-foreground
+        bg-card border border-input
+        rounded-lg hover:bg-muted
+        focus:outline-none focus:ring-2 focus:ring-ring
         disabled:opacity-50 disabled:cursor-not-allowed
-        transition-colors ${className}
+        transition-colors inline-flex items-center ${className}
       `}
     >
-      {loading ? 'Signing out...' : 'Sign Out'}
+      {iconOnly ? (
+        <LogOut className="w-5 h-5" aria-hidden="true" />
+      ) : (
+        loading ? 'Signing out...' : 'Sign Out'
+      )}
     </button>
   );
 }

@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 
 function getInitialTheme(): 'light' | 'dark' {
   if (typeof window === 'undefined') return 'light';
+  // Default is always light; only an explicit toggle choice overrides it.
   const stored = localStorage.getItem('theme') as 'light' | 'dark' | null;
-  if (stored) return stored;
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  return stored === 'dark' ? 'dark' : 'light';
 }
 
 function applyTheme(theme: 'light' | 'dark') {
@@ -24,23 +24,12 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
     applyTheme(theme);
   }, [theme]);
 
-  useEffect(() => {
-    const media = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = (e: MediaQueryListEvent) => {
-      if (!localStorage.getItem('theme')) {
-        setTheme(e.matches ? 'dark' : 'light');
-      }
-    };
-    media.addEventListener('change', handler);
-    return () => media.removeEventListener('change', handler);
-  }, []);
-
   const toggle = () => setTheme(t => (t === 'dark' ? 'light' : 'dark'));
 
   return (
     <button
       onClick={toggle}
-      className={`p-2.5 rounded-lg text-[#757575] hover:text-[#3A3A3A] dark:text-[#9E9E9E] dark:hover:text-[#D5D5D5] hover:bg-[#EFEFEF] dark:hover:bg-[#3A3A3A] transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
+      className={`min-w-11 min-h-11 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors focus:outline-none focus:ring-2 focus:ring-ring ${className}`}
       aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
     >
       {theme === 'dark' ? (

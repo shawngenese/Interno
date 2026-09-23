@@ -1,81 +1,52 @@
-import { useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Info, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
+import { Modal } from './Modal';
+import { Button } from './ui/Button';
+
+type AlertType = 'info' | 'success' | 'warning' | 'error';
 
 interface AlertModalProps {
   open: boolean;
   title: string;
   message: string;
+  type?: AlertType;
   buttonLabel?: string;
   onClose: () => void;
 }
+
+const typeConfig: Record<AlertType, { icon: React.ReactNode; colorClass: string }> = {
+  info:    { icon: <Info    size={20} aria-hidden="true" />, colorClass: 'text-info' },
+  success: { icon: <CheckCircle2 size={20} aria-hidden="true" />, colorClass: 'text-success' },
+  warning: { icon: <AlertTriangle size={20} aria-hidden="true" />, colorClass: 'text-warning' },
+  error:   { icon: <XCircle size={20} aria-hidden="true" />, colorClass: 'text-destructive' },
+};
 
 export function AlertModal({
   open,
   title,
   message,
+  type = 'info',
   buttonLabel = 'OK',
   onClose,
 }: AlertModalProps) {
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    },
-    [onClose],
-  );
-
-  useEffect(() => {
-    if (open) {
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [open, handleKeyDown]);
+  const { icon, colorClass } = typeConfig[type];
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          role="alertdialog"
-          aria-modal="true"
-          aria-labelledby="alert-dialog-title"
-        >
-          <div
-            className="absolute inset-0 bg-black/50"
+    <Modal open={open} title={title} onClose={onClose} size="sm">
+      <div className="p-5 space-y-4">
+        <div className={`flex items-start gap-3 ${colorClass}`}>
+          <span className="shrink-0 mt-0.5">{icon}</span>
+          <p className="text-sm text-muted-foreground">{message}</p>
+        </div>
+        <div className="flex justify-end pt-2">
+          <Button
+            type="button"
+            variant={type === 'error' ? 'destructive' : type === 'warning' ? 'accent' : 'primary'}
             onClick={onClose}
-            onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
-            role="button"
-            tabIndex={-1}
-            aria-label="Close dialog"
-          />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.15 }}
-            className="relative bg-white dark:bg-[#1E1E1E] rounded-xl shadow-xl max-w-sm w-full p-6 border border-[#D5D5D5] dark:border-[#3A3A3A]"
           >
-            <h3 id="alert-dialog-title" className="text-lg font-semibold text-[#121212] dark:text-white mb-2">
-              {title}
-            </h3>
-            <p className="text-sm text-[#555555] dark:text-[#9E9E9E] mb-6">
-              {message}
-            </p>
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-              >
-                {buttonLabel}
-              </button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+            {buttonLabel}
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }

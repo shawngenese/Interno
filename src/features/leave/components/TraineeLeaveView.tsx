@@ -2,8 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { getTraineeLeaveRequests, cancelLeaveRequest } from '../services/leaveService';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { getFirestoreInstancePublic } from '@/config/firebase';
-import { SkeletonCard } from '@/shared/components/Skeleton';
+import { Skeleton } from '@/shared/components/Skeleton';
+import { EmptyState } from '@/shared/components/EmptyState';
+import { Button } from '@/shared/components/ui/Button';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
+import { Modal } from '@/shared/components/Modal';
+import { Plus, Calendar } from 'lucide-react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { LeaveForm } from './LeaveForm';
 import type { LeaveRequest, LeaveStatus, LeaveType } from '../types';
@@ -16,10 +20,10 @@ const STATUS_LABELS: Record<LeaveStatus, string> = {
 };
 
 const STATUS_STYLES: Record<LeaveStatus, string> = {
-  pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-  approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-  rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-  cancelled: 'bg-[#EFEFEF] text-[#555555] dark:bg-[#3A3A3A] dark:text-[#9E9E9E]',
+  pending: 'bg-warning/10 text-warning border-warning/20',
+  approved: 'bg-success/10 text-success border-success/20',
+  rejected: 'bg-destructive/10 text-destructive border-destructive/20',
+  cancelled: 'bg-muted text-muted-foreground border-border',
 };
 
 const TYPE_LABELS: Record<LeaveType, string> = {
@@ -101,102 +105,112 @@ export function TraineeLeaveView() {
   const approvedCount = leaves.filter((l) => l.status === 'approved').length;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-[#121212] dark:text-white">My Leave Requests</h2>
-        <button
-          onClick={() => setShowForm(true)}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          + New Request
-        </button>
-      </div>
+    <div className="space-y-6">
+      <div className="bg-card rounded-xl shadow-sm border border-border p-4 md:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">My Leave Requests</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Apply for time off and check your request statuses</p>
+          </div>
+          <Button
+            onClick={() => setShowForm(true)}
+            variant="primary"
+            size="md"
+          >
+            <Plus className="w-4 h-4 mr-1.5" />
+            New Request
+          </Button>
+        </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-3 text-center">
-          <p className="text-2xl font-bold text-yellow-600">{pendingCount}</p>
-          <p className="text-xs text-[#757575] dark:text-[#9E9E9E]">Pending</p>
+        {/* Summary */}
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="rounded-xl border border-border bg-muted/30 p-4 text-center">
+            <p className="text-2xl font-bold text-warning">{pendingCount}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Pending</p>
+          </div>
+          <div className="rounded-xl border border-border bg-muted/30 p-4 text-center">
+            <p className="text-2xl font-bold text-success">{approvedCount}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Approved</p>
+          </div>
+          <div className="rounded-xl border border-border bg-muted/30 p-4 text-center">
+            <p className="text-2xl font-bold text-foreground">{leaves.length}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Total Requests</p>
+          </div>
         </div>
-        <div className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-3 text-center">
-          <p className="text-2xl font-bold text-green-600">{approvedCount}</p>
-          <p className="text-xs text-[#757575] dark:text-[#9E9E9E]">Approved</p>
-        </div>
-        <div className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-3 text-center">
-          <p className="text-2xl font-bold text-[#555555]">{leaves.length}</p>
-          <p className="text-xs text-[#757575] dark:text-[#9E9E9E]">Total</p>
-        </div>
-      </div>
 
-      {/* List */}
-      {loading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
-        </div>
-      ) : leaves.length === 0 ? (
-        <div className="text-center py-8 text-[#757575] dark:text-[#9E9E9E]">No leave requests yet</div>
-      ) : (
-        <div className="space-y-3">
-          {leaves.map((leave) => (
-            <div key={leave.id} className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-[#121212] dark:text-white">
-                      {TYPE_LABELS[leave.type]}
-                    </span>
-                    <span className={`px-2 py-0.5 text-xs font-medium rounded ${STATUS_STYLES[leave.status]}`}>
-                      {STATUS_LABELS[leave.status]}
-                    </span>
+        {/* List */}
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} variant="rectangular" height={80} className="rounded-xl" />
+            ))}
+          </div>
+        ) : leaves.length === 0 ? (
+          <EmptyState
+            title="No leave requests yet"
+            description="You have not submitted any leave or absence requests."
+          />
+        ) : (
+          <div className="space-y-3">
+            {leaves.map((leave) => (
+              <div key={leave.id} className="rounded-xl border border-border bg-card p-4 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                  <div className="space-y-1.5 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-foreground text-sm">
+                        {TYPE_LABELS[leave.type]}
+                      </span>
+                      <span className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full border capitalize ${STATUS_STYLES[leave.status]}`}>
+                        {STATUS_LABELS[leave.status]}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>
+                        {formatDate(leave.startDate)} – {formatDate(leave.endDate)}
+                      </span>
+                      <span className="font-semibold text-foreground">({daysBetween(leave.startDate, leave.endDate)} {daysBetween(leave.startDate, leave.endDate) === 1 ? 'day' : 'days'})</span>
+                    </div>
+                    <p className="text-xs text-foreground bg-muted/30 p-2.5 rounded-lg border border-border">{leave.reason}</p>
+                    {leave.approvalNotes && (
+                      <p className="text-xs text-muted-foreground italic">
+                        Supervisor note: {leave.approvalNotes}
+                      </p>
+                    )}
                   </div>
-                  <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">
-                    {formatDate(leave.startDate)} - {formatDate(leave.endDate)}
-                    <span className="ml-2 text-[#9E9E9E]">({daysBetween(leave.startDate, leave.endDate)}d)</span>
-                  </p>
-                  <p className="text-sm text-[#555555] dark:text-[#BDBDBD]">{leave.reason}</p>
-                  {leave.approvalNotes && (
-                    <p className="text-xs text-[#757575] dark:text-[#9E9E9E] italic">
-                      Supervisor note: {leave.approvalNotes}
-                    </p>
+                  {leave.status === 'pending' && (
+                    <div className="self-end sm:self-start">
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        isLoading={cancelling === leave.id}
+                        onClick={() => handleCancel(leave.id)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
                   )}
                 </div>
-                {leave.status === 'pending' && (
-                  <button
-                    onClick={() => handleCancel(leave.id)}
-                    disabled={cancelling === leave.id}
-                    className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
-                  >
-                    {cancelling === leave.id ? 'Cancelling...' : 'Cancel'}
-                  </button>
-                )}
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Form Modal */}
       {showForm && (
-        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="leave-form-modal-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-          onClick={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}
+        <Modal
+          open={showForm}
+          title="New Leave Request"
+          onClose={() => setShowForm(false)}
         >
-          {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
-          <div
-            className="w-full max-w-md rounded-lg bg-white dark:bg-[#1E1E1E] p-6"
-            onKeyDown={(e) => { if (e.key === 'Escape') setShowForm(false); }}
-          >
-            <h3 id="leave-form-modal-title" className="text-lg font-semibold text-[#121212] dark:text-white mb-4">New Leave Request</h3>
+          <div>
             <LeaveForm
               onSaved={() => { setShowForm(false); fetchLeaves(); }}
               onCancel={() => setShowForm(false)}
             />
           </div>
-        </div>
+        </Modal>
       )}
 
       <ConfirmDialog

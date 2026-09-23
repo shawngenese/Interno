@@ -135,9 +135,9 @@ Flat design — minimal shadows. Use borders instead.
 
 | Token | Value | Usage |
 |-------|-------|-------|
-| `--shadow-sm` | `0 1px 2px rgba(0,0,0,0.05)` | Subtle lift (cards) |
-| `--shadow-md` | `0 4px 6px rgba(0,0,0,0.07)` | Dropdown menus |
-| `--shadow-lg` | `0 10px 15px rgba(0,0,0,0.1)` | Modals, popovers |
+| `--shadow-sm` | `0 1px 2px oklch(0 0 0 / 0.05)` | Subtle lift (cards) |
+| `--shadow-md` | `0 4px 6px oklch(0 0 0 / 0.07)` | Dropdown menus |
+| `--shadow-lg` | `0 10px 15px oklch(0 0 0 / 0.1)` | Modals, popovers |
 
 ---
 
@@ -225,6 +225,62 @@ Flat design — minimal shadows. Use borders instead.
 - Tablet: 2 columns
 - Desktop: 3-4 columns
 - Gap: `var(--space-4)` to `var(--space-6)`
+
+---
+
+## Component Specs
+
+Exact dimensions enforced by `--btn-height`, `--input-height`, and `--table-row-height` tokens. Mobile column uses `pointer: coarse` breakpoint (44px minimum touch target).
+
+| Component | Height | Padding | Border | Radius | Font |
+|-----------|--------|---------|--------|--------|------|
+| Button | 40px / 44px mobile | `0 16px` | none | 8px | 14px / 500 |
+| Input | 40px / 44px mobile | `0 12px` | `1px solid --color-input` | 8px | 16px |
+| Card | auto | `16px – 24px` | `1px solid --color-border` | 12px | — |
+| Table row | 44px min | `0 12px` | `1px solid --color-border` (bottom) | 0 | 14px |
+| Modal | max 85vh | 0 | none | 16px | — |
+
+---
+
+## States
+
+Token names map directly to Tailwind utilities (`bg-primary`, `border-destructive`, etc.).
+
+| State | Button | Input | Card |
+|-------|--------|-------|------|
+| Default | `bg-primary` | `border-input` | `border-border` |
+| Hover | `bg-primary-hover` | — | `border-primary` |
+| Active | `scale(0.97)` | — | — |
+| Focus | `ring-2 ring-ring` | `ring-2 ring-ring` | — |
+| Disabled | `opacity-50` cursor-not-allowed | `opacity-50` | — |
+| Loading | spinner overlay | — | skeleton pulse |
+| Error | — | `border-destructive` | — |
+| Success | — | `border-success` | — |
+
+Rules:
+- Hover states gated behind `@media (hover: hover) and (pointer: fine)` — never sticky on touch
+- Active / press feedback on `pointerdown`, not `mouseup`
+- Disabled elements keep `transform: none` (no press scale)
+
+---
+
+## Responsive
+
+Breakpoints: `md` = 768px, `lg` = 1024px. Default styles are always mobile.
+
+| Element | Mobile (`< 768px`) | Tablet (`768px+`) | Desktop (`1024px+`) |
+|---------|-------------------|-------------------|---------------------|
+| Navigation | Bottom nav bar | Sidebar collapsed | Sidebar expanded |
+| Stat cards | 2 columns | 4 columns | 4 columns |
+| Tables | Card layout (stacked) | Full table | Full table |
+| Forms | Full-width | Max 512px centered | Max 512px centered |
+| Grid | 1 column | 2 columns | 3 – 4 columns |
+
+Rules:
+- Write default (mobile) styles first, add `md:` / `lg:` overrides
+- Tables collapse to card layout on mobile — no horizontal scroll for data tables
+- Bottom nav uses `safe-area-inset-bottom` padding
+- Sidebar toggle state persisted in `localStorage`
 
 ---
 

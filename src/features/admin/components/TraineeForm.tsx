@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
+import { Check } from 'lucide-react';
 import { adminService } from '../services/adminService';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
 import { useFormValidation } from '@/shared/hooks/useFormValidation';
 import { required } from '@/shared/utils/validators';
-import { FormField, FormInput, FormSelect } from '@/shared/components/FormField';
+import { FormField, FormInput, FormSelect, FormTextarea } from '@/shared/components/FormField';
+import { Button } from '@/shared/components/ui/Button';
+import { Skeleton } from '@/shared/components/Skeleton';
 import type { TraineeFormData, Company, Department, Supervisor, Trainee, User, WorkSchedule } from '../types';
 
 interface TraineeFormProps {
@@ -13,8 +16,15 @@ interface TraineeFormProps {
   onSaved?: () => void;
 }
 
+const STEPS = [
+  { id: 1, title: 'Personal Info', description: 'Account & Education' },
+  { id: 2, title: 'OJT Details', description: 'Placement & Schedule' },
+  { id: 3, title: 'Contact & Notes', description: 'Emergency & Remarks' },
+];
+
 export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeFormProps) {
   const isEditing = !!editingId;
+  const [currentStep, setCurrentStep] = useState(1);
 
   const {
     formData,
@@ -77,7 +87,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
   const handleChange = (field: string) => (value: string) => {
     if (field.startsWith('profile.')) {
       const profileField = field.slice(8) as keyof TraineeFormData['profile'];
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         profile: {
           ...prev.profile,
@@ -86,7 +96,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
       }));
     } else if (field.startsWith('emergencyContact.')) {
       const ecField = field.slice(17) as 'name' | 'relationship' | 'phone';
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         profile: {
           ...prev.profile,
@@ -99,9 +109,9 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
         },
       }));
     } else if (field === 'companyId') {
-      const selectedCompany = companies.find(c => c.id === value);
+      const selectedCompany = companies.find((c) => c.id === value);
       const isExternal = selectedCompany?.type === 'external';
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         companyId: value,
         placementType: isExternal ? 'external' : 'internal',
@@ -226,6 +236,56 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
     }
   }, [useExistingUser, formData.companyId]);
 
+  const validateStep = (step: number): boolean => {
+    setError(null);
+    if (step === 1 && !isEditing) {
+      if (useExistingUser) {
+        if (!formData.userId) {
+          setError('Please select an existing user');
+          return false;
+        }
+      } else {
+        if (!newUserEmail || !newUserDisplayName || !newUserPassword) {
+          setNewUserEmailTouched(true);
+          setNewUserDisplayNameTouched(true);
+          setNewUserPasswordTouched(true);
+          setError('Email, display name, and password are required');
+          return false;
+        }
+        if (newUserPassword.length < 6) {
+          setNewUserPasswordTouched(true);
+          setError('Password must be at least 6 characters');
+          return false;
+        }
+      }
+    } else if (step === 2) {
+      if (!formData.companyId) {
+        setError('Company is required');
+        return false;
+      }
+      if (!formData.departmentId) {
+        setError('Department is required');
+        return false;
+      }
+      if (!formData.scheduleId) {
+        setError('Work schedule is required');
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep((prev) => Math.min(prev + 1, 3));
+    }
+  };
+
+  const handleBack = () => {
+    setError(null);
+    setCurrentStep((prev) => Math.max(prev - 1, 1));
+  };
+
   const onSubmit = async (data: TraineeFormData) => {
     setError(null);
     setSaving(true);
@@ -239,6 +299,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
           scheduleId: data.scheduleId,
           status: data.status,
           ojtStatus: data.ojtStatus,
+          placementNotes: data.placementNotes,
           profile: data.profile,
         } as Partial<Trainee>);
       } else {
@@ -284,377 +345,462 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
     }
   };
 
-  const handleCancel = () => {
-    onCancel?.();
-  };
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <svg className="animate-spin h-8 w-8 text-blue-600" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
+      <div className="p-6 space-y-4">
+        <Skeleton variant="text" width="50%" height={24} />
+        <div className="grid grid-cols-3 gap-2 py-2">
+          <Skeleton variant="rectangular" height={36} />
+          <Skeleton variant="rectangular" height={36} />
+          <Skeleton variant="rectangular" height={36} />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          <Skeleton variant="rectangular" height={40} className="sm:col-span-2" />
+          <Skeleton variant="rectangular" height={40} />
+          <Skeleton variant="rectangular" height={40} />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6 max-w-2xl mx-auto">
-      <h2 className="text-xl font-semibold text-[#121212] dark:text-white mb-6">
-        {viewOnly ? 'View Trainee Profile' : isEditing ? 'Edit Trainee Profile' : 'Add Trainee'}
-      </h2>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* Wizard Step Indicator */}
+      <div className="flex items-center justify-between gap-2 px-2 py-3 bg-muted/30 rounded-xl border border-border">
+        {STEPS.map((step, idx) => {
+          const isCompleted = currentStep > step.id;
+          const isActive = currentStep === step.id;
+          return (
+            <div key={step.id} className="flex items-center gap-2 flex-1">
+              <div className="flex items-center gap-2">
+                <div
+                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
+                    isCompleted
+                      ? 'bg-success text-success-foreground'
+                      : isActive
+                      ? 'bg-primary text-primary-foreground ring-2 ring-primary/30'
+                      : 'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  {isCompleted ? <Check className="w-3.5 h-3.5" /> : step.id}
+                </div>
+                <div className="hidden sm:block text-left">
+                  <p className={`text-xs font-medium leading-none ${isActive ? 'text-foreground font-semibold' : 'text-muted-foreground'}`}>
+                    {step.title}
+                  </p>
+                </div>
+              </div>
+              {idx < STEPS.length - 1 && (
+                <div
+                  className={`flex-1 h-0.5 mx-1 transition-colors ${
+                    currentStep > step.id ? 'bg-success' : 'bg-border'
+                  }`}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
 
       {error && (
-        <div role="alert" className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
+        <div role="alert" className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
           {error}
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {!isEditing && (
-          <div className="flex items-center gap-3 mb-4">
-            <label className="flex items-center gap-2 text-sm text-[#3A3A3A] dark:text-[#BDBDBD]">
+      {/* Step 1: Personal & Student Info */}
+      {currentStep === 1 && (
+        <div className="space-y-4">
+          {!isEditing && (
+            <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg border border-border">
               <input
                 type="checkbox"
+                id="useExistingUserTrainee"
                 checked={useExistingUser}
                 onChange={(e) => setUseExistingUser(e.target.checked)}
                 disabled={viewOnly}
-                className="rounded border-[#BDBDBD] dark:border-[#555555]"
+                className="h-4 w-4 text-primary focus:ring-ring border-input rounded"
               />
-              Link to existing user account
-            </label>
-          </div>
-        )}
-
-        {!isEditing && (useExistingUser ? (
-          <FormField
-            id="userId"
-            label="User"
-            required
-            error={touched.userId ? errors.userId : undefined}
-          >
-            <FormSelect
-              id="userId"
-              value={formData.userId}
-              onValueChange={handleChange('userId')}
-              onBlur={handleBlur('userId')}
-              error={touched.userId ? errors.userId : undefined}
-              disabled={viewOnly}
-            >
-              <option value="">Select User</option>
-              {existingUsers.map(user => (
-                <option key={user.id} value={user.id}>{user.displayName} ({user.email})</option>
-              ))}
-            </FormSelect>
-          </FormField>
-        ) : (
-          <>
-            <FormField
-              id="newEmail"
-              label="Email"
-              required
-              error={newUserEmailTouched && !newUserEmail ? 'Email is required' : undefined}
-            >
-              <FormInput
-                type="email"
-                id="newEmail"
-                value={newUserEmail}
-                onValueChange={setNewUserEmail}
-                onBlur={() => setNewUserEmailTouched(true)}
-                error={newUserEmailTouched && !newUserEmail ? 'Email is required' : undefined}
-                disabled={viewOnly}
-                placeholder="trainee@example.com"
-              />
-            </FormField>
-            <FormField
-              id="newDisplayName"
-              label="Display Name"
-              required
-              error={newUserDisplayNameTouched && !newUserDisplayName ? 'Display name is required' : undefined}
-            >
-              <FormInput
-                type="text"
-                id="newDisplayName"
-                value={newUserDisplayName}
-                onValueChange={setNewUserDisplayName}
-                onBlur={() => setNewUserDisplayNameTouched(true)}
-                error={newUserDisplayNameTouched && !newUserDisplayName ? 'Display name is required' : undefined}
-                disabled={viewOnly}
-                placeholder="Juan Dela Cruz"
-              />
-            </FormField>
-            <FormField
-              id="newPassword"
-              label="Password"
-              required
-              error={newUserPasswordTouched && !newUserPassword ? 'Password is required' : newUserPasswordTouched && newUserPassword.length < 6 ? 'Password must be at least 6 characters' : undefined}
-            >
-              <FormInput
-                type="password"
-                id="newPassword"
-                value={newUserPassword}
-                onValueChange={setNewUserPassword}
-                onBlur={() => setNewUserPasswordTouched(true)}
-                error={newUserPasswordTouched && !newUserPassword ? 'Password is required' : newUserPasswordTouched && newUserPassword.length < 6 ? 'Password must be at least 6 characters' : undefined}
-                disabled={viewOnly}
-                placeholder="At least 6 characters"
-              />
-            </FormField>
-          </>
-        ))}
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FormField
-            id="companyId"
-            label="Company"
-            required
-            error={touched.companyId ? errors.companyId : undefined}
-          >
-            <FormSelect
-              id="companyId"
-              value={formData.companyId}
-              onValueChange={handleChange('companyId')}
-              onBlur={handleBlur('companyId')}
-              error={touched.companyId ? errors.companyId : undefined}
-              disabled={viewOnly}
-            >
-              <option value="">Select Company</option>
-              {companies.map(company => (
-                <option key={company.id} value={company.id}>
-                  {company.name} ({company.type === 'external' ? 'External' : 'Internal'})
-                </option>
-              ))}
-            </FormSelect>
-          </FormField>
-
-          <FormField id="placementType" label="Placement Type">
-            <div className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-[#F5F5F5] dark:bg-[#2A2A2A] text-[#121212] dark:text-white">
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full ${
-                formData.placementType === 'external'
-                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
-                  : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-              }`}>
-                {formData.placementType === 'external' ? 'External' : 'Internal'}
-              </span>
-              {!formData.companyId && (
-                <span className="text-xs text-[#9E9E9E] ml-2">Select a company first</span>
-              )}
+              <label htmlFor="useExistingUserTrainee" className="text-sm font-medium text-foreground cursor-pointer">
+                Link to existing user account
+              </label>
             </div>
-          </FormField>
-
-          {formData.placementType === 'external' && (
-            <FormField id="externalSupervisorId" label="External Supervisor ID">
-              <FormInput
-                type="text"
-                id="externalSupervisorId"
-                value={formData.externalSupervisorId}
-                onValueChange={handleChange('externalSupervisorId')}
-                disabled={viewOnly}
-                placeholder="External supervisor email or ID"
-              />
-            </FormField>
           )}
 
-          <FormField
-            id="departmentId"
-            label="Department"
-            required
-            error={touched.departmentId ? errors.departmentId : undefined}
-          >
-            <FormSelect
-              id="departmentId"
-              value={formData.departmentId}
-              onValueChange={handleChange('departmentId')}
-              onBlur={handleBlur('departmentId')}
-              error={touched.departmentId ? errors.departmentId : undefined}
-              disabled={viewOnly}
-            >
-              <option value="">Select Department</option>
-              {departments.map(dept => (
-                <option key={dept.id} value={dept.id}>{dept.name}</option>
-              ))}
-            </FormSelect>
-          </FormField>
+          {!isEditing && useExistingUser ? (
+            <FormField id="userId" label="User Account" required error={touched.userId ? errors.userId : undefined}>
+              <FormSelect
+                id="userId"
+                value={formData.userId}
+                onValueChange={handleChange('userId')}
+                onBlur={handleBlur('userId')}
+                error={touched.userId ? errors.userId : undefined}
+                disabled={viewOnly}
+              >
+                <option value="">Select User</option>
+                {existingUsers.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.displayName} ({user.email})
+                  </option>
+                ))}
+              </FormSelect>
+            </FormField>
+          ) : !isEditing && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField
+                id="newEmail"
+                label="Email"
+                required
+                error={newUserEmailTouched && !newUserEmail ? 'Email is required' : undefined}
+                className="sm:col-span-2"
+              >
+                <FormInput
+                  type="email"
+                  id="newEmail"
+                  value={newUserEmail}
+                  onValueChange={setNewUserEmail}
+                  onBlur={() => setNewUserEmailTouched(true)}
+                  error={newUserEmailTouched && !newUserEmail ? 'Email is required' : undefined}
+                  disabled={viewOnly}
+                  placeholder="trainee@example.com"
+                />
+              </FormField>
 
-          <FormField id="supervisorId" label="Supervisor">
-            <FormSelect
-              id="supervisorId"
-              value={formData.supervisorId}
-              onValueChange={handleChange('supervisorId')}
-              onBlur={handleBlur('supervisorId')}
-              disabled={viewOnly}
-            >
-              <option value="">Select Supervisor</option>
-              {supervisors.map(sup => (
-                <option key={sup.id} value={sup.id}>{sup.userName || sup.userEmail || sup.userId}</option>
-              ))}
-            </FormSelect>
-          </FormField>
+              <FormField
+                id="newDisplayName"
+                label="Full Name"
+                required
+                error={newUserDisplayNameTouched && !newUserDisplayName ? 'Display name is required' : undefined}
+              >
+                <FormInput
+                  type="text"
+                  id="newDisplayName"
+                  value={newUserDisplayName}
+                  onValueChange={setNewUserDisplayName}
+                  onBlur={() => setNewUserDisplayNameTouched(true)}
+                  error={newUserDisplayNameTouched && !newUserDisplayName ? 'Display name is required' : undefined}
+                  disabled={viewOnly}
+                  placeholder="Juan Dela Cruz"
+                />
+              </FormField>
 
-          <FormField
-            id="scheduleId"
-            label="Work Schedule"
-            required
-            error={touched.scheduleId ? errors.scheduleId : undefined}
-          >
-            <FormSelect
-              id="scheduleId"
-              value={formData.scheduleId}
-              onValueChange={handleChange('scheduleId')}
-              onBlur={handleBlur('scheduleId')}
-              error={touched.scheduleId ? errors.scheduleId : undefined}
-              disabled={viewOnly || !formData.companyId}
-            >
-              <option value="">Select Work Schedule</option>
-              {workSchedules.map(ws => (
-                <option key={ws.id} value={ws.id}>{ws.name} ({ws.timeIn} - {ws.timeOut})</option>
-              ))}
-            </FormSelect>
-            {!formData.companyId && (
-              <p className="text-xs text-[#9E9E9E] mt-1">Select a company first</p>
-            )}
-          </FormField>
+              <FormField
+                id="newPassword"
+                label="Password"
+                required
+                error={
+                  newUserPasswordTouched && !newUserPassword
+                    ? 'Password is required'
+                    : newUserPasswordTouched && newUserPassword.length < 6
+                    ? 'Password must be 6+ characters'
+                    : undefined
+                }
+              >
+                <FormInput
+                  type="password"
+                  id="newPassword"
+                  value={newUserPassword}
+                  onValueChange={setNewUserPassword}
+                  onBlur={() => setNewUserPasswordTouched(true)}
+                  error={
+                    newUserPasswordTouched && !newUserPassword
+                      ? 'Password is required'
+                      : newUserPasswordTouched && newUserPassword.length < 6
+                      ? 'Password must be 6+ characters'
+                      : undefined
+                  }
+                  disabled={viewOnly}
+                  placeholder="Minimum 6 characters"
+                />
+              </FormField>
+            </div>
+          )}
 
-          <FormField id="status" label="Account Status">
-            <FormSelect
-              id="status"
-              value={formData.status}
-              onValueChange={handleChange('status')}
-              onBlur={handleBlur('status')}
-              disabled={viewOnly}
-            >
-              <option value="pending">Pending</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="archived">Archived</option>
-            </FormSelect>
-          </FormField>
+          <div className="pt-2 border-t border-border">
+            <h4 className="text-sm font-semibold text-foreground mb-3">Academic Information</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField id="studentId" label="Student ID">
+                <FormInput
+                  type="text"
+                  id="studentId"
+                  value={formData.profile?.studentId || ''}
+                  onValueChange={handleChange('profile.studentId')}
+                  disabled={viewOnly}
+                  placeholder="e.g. 2024-00123"
+                />
+              </FormField>
 
-          <FormField id="ojtStatus" label="OJT Status">
-            <FormSelect
-              id="ojtStatus"
-              value={formData.ojtStatus}
-              onValueChange={handleChange('ojtStatus')}
-              onBlur={handleBlur('ojtStatus')}
-              disabled={viewOnly}
-            >
-              <option value="pending">Pending</option>
-              <option value="active">Active</option>
-              <option value="on_leave">On Leave</option>
-              <option value="completed">Completed</option>
-              <option value="terminated">Terminated</option>
-              <option value="archived">Archived</option>
-            </FormSelect>
-          </FormField>
+              <FormField id="yearLevel" label="Year Level">
+                <FormInput
+                  type="text"
+                  id="yearLevel"
+                  value={formData.profile?.yearLevel || ''}
+                  onValueChange={handleChange('profile.yearLevel')}
+                  disabled={viewOnly}
+                  placeholder="e.g. 3rd Year, 4th Year"
+                />
+              </FormField>
+
+              <FormField id="school" label="School / University">
+                <FormInput
+                  type="text"
+                  id="school"
+                  value={formData.profile?.school || ''}
+                  onValueChange={handleChange('profile.school')}
+                  disabled={viewOnly}
+                  placeholder="e.g. Polytechnic University of the Philippines"
+                />
+              </FormField>
+
+              <FormField id="course" label="Degree / Program">
+                <FormInput
+                  type="text"
+                  id="course"
+                  value={formData.profile?.course || ''}
+                  onValueChange={handleChange('profile.course')}
+                  disabled={viewOnly}
+                  placeholder="e.g. BS Information Technology"
+                />
+              </FormField>
+            </div>
+          </div>
         </div>
+      )}
 
-        <div className="border-t border-[#D5D5D5] dark:border-[#3A3A3A] pt-6">
-          <h3 className="text-lg font-medium text-[#121212] dark:text-white mb-4">Student Information</h3>
+      {/* Step 2: OJT Placement & Schedule */}
+      {currentStep === 2 && (
+        <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormField id="studentId" label="Student ID">
-              <FormInput
-                type="text"
-                id="studentId"
-                value={formData.profile?.studentId || ''}
-                onValueChange={handleChange('profile.studentId')}
+            <FormField id="companyId" label="Company" required error={touched.companyId ? errors.companyId : undefined}>
+              <FormSelect
+                id="companyId"
+                value={formData.companyId}
+                onValueChange={handleChange('companyId')}
+                onBlur={handleBlur('companyId')}
+                error={touched.companyId ? errors.companyId : undefined}
                 disabled={viewOnly}
-                placeholder="e.g., 2024-00123"
-              />
+              >
+                <option value="">Select Company</option>
+                {companies.map((company) => (
+                  <option key={company.id} value={company.id}>
+                    {company.name} ({company.type === 'external' ? 'External' : 'Internal'})
+                  </option>
+                ))}
+              </FormSelect>
             </FormField>
 
-            <FormField id="course" label="Course">
-              <FormInput
-                type="text"
-                id="course"
-                value={formData.profile?.course || ''}
-                onValueChange={handleChange('profile.course')}
-                disabled={viewOnly}
-                placeholder="e.g., BS Computer Science"
-              />
+            <FormField id="placementType" label="Placement Type">
+              <div className="min-h-10 px-3 border border-border rounded-lg bg-muted/40 flex items-center">
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full ${
+                    formData.placementType === 'external'
+                      ? 'bg-accent/15 text-accent'
+                      : 'bg-primary/10 text-primary'
+                  }`}
+                >
+                  {formData.placementType === 'external' ? 'External Placement' : 'Internal Placement'}
+                </span>
+              </div>
             </FormField>
 
-            <FormField id="school" label="School">
-              <FormInput
-                type="text"
-                id="school"
-                value={formData.profile?.school || ''}
-                onValueChange={handleChange('profile.school')}
-                disabled={viewOnly}
-                placeholder="e.g., University of the Philippines"
-              />
-            </FormField>
+            {formData.placementType === 'external' && (
+              <FormField id="externalSupervisorId" label="External Supervisor Contact" className="sm:col-span-2">
+                <FormInput
+                  type="text"
+                  id="externalSupervisorId"
+                  value={formData.externalSupervisorId}
+                  onValueChange={handleChange('externalSupervisorId')}
+                  disabled={viewOnly}
+                  placeholder="Supervisor name, email, or contact number"
+                />
+              </FormField>
+            )}
 
-            <FormField id="yearLevel" label="Year Level">
-              <FormInput
-                type="text"
-                id="yearLevel"
-                value={formData.profile?.yearLevel || ''}
-                onValueChange={handleChange('profile.yearLevel')}
-                disabled={viewOnly}
-                placeholder="e.g., 3rd Year"
-              />
-            </FormField>
-          </div>
-        </div>
-
-        <div className="border-t border-[#D5D5D5] dark:border-[#3A3A3A] pt-6">
-          <h3 className="text-lg font-medium text-[#121212] dark:text-white mb-4">Emergency Contact</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <FormField id="ecName" label="Name">
-              <FormInput
-                type="text"
-                id="ecName"
-                value={formData.profile?.emergencyContact?.name || ''}
-                onValueChange={handleChange('emergencyContact.name')}
-                disabled={viewOnly}
-                placeholder="Contact name"
-              />
-            </FormField>
-
-            <FormField id="ecRelationship" label="Relationship">
-              <FormInput
-                type="text"
-                id="ecRelationship"
-                value={formData.profile?.emergencyContact?.relationship || ''}
-                onValueChange={handleChange('emergencyContact.relationship')}
-                disabled={viewOnly}
-                placeholder="e.g., Parent"
-              />
-            </FormField>
-
-            <FormField id="ecPhone" label="Phone">
-              <FormInput
-                type="tel"
-                id="ecPhone"
-                value={formData.profile?.emergencyContact?.phone || ''}
-                onValueChange={handleChange('emergencyContact.phone')}
-                disabled={viewOnly}
-                placeholder="+63 9XX XXX XXXX"
-              />
-            </FormField>
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-3 pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#555555] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-          >
-            {viewOnly ? 'Close' : 'Cancel'}
-          </button>
-          {!viewOnly && (
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            <FormField
+              id="departmentId"
+              label="Department"
+              required
+              error={touched.departmentId ? errors.departmentId : undefined}
             >
-              {saving ? 'Saving...' : (isEditing ? 'Update' : 'Create Trainee')}
-            </button>
+              <FormSelect
+                id="departmentId"
+                value={formData.departmentId}
+                onValueChange={handleChange('departmentId')}
+                onBlur={handleBlur('departmentId')}
+                error={touched.departmentId ? errors.departmentId : undefined}
+                disabled={viewOnly || !formData.companyId}
+              >
+                <option value="">Select Department</option>
+                {departments.map((dept) => (
+                  <option key={dept.id} value={dept.id}>
+                    {dept.name}
+                  </option>
+                ))}
+              </FormSelect>
+            </FormField>
+
+            <FormField id="supervisorId" label="Assigned Supervisor">
+              <FormSelect
+                id="supervisorId"
+                value={formData.supervisorId}
+                onValueChange={handleChange('supervisorId')}
+                onBlur={handleBlur('supervisorId')}
+                disabled={viewOnly || !formData.companyId}
+              >
+                <option value="">Select Supervisor (Optional)</option>
+                {supervisors.map((sup) => (
+                  <option key={sup.id} value={sup.id}>
+                    {sup.userName || sup.userEmail || sup.userId}
+                  </option>
+                ))}
+              </FormSelect>
+            </FormField>
+
+            <FormField
+              id="scheduleId"
+              label="Work Schedule"
+              required
+              error={touched.scheduleId ? errors.scheduleId : undefined}
+              className="sm:col-span-2"
+            >
+              <FormSelect
+                id="scheduleId"
+                value={formData.scheduleId}
+                onValueChange={handleChange('scheduleId')}
+                onBlur={handleBlur('scheduleId')}
+                error={touched.scheduleId ? errors.scheduleId : undefined}
+                disabled={viewOnly || !formData.companyId}
+              >
+                <option value="">Select Work Schedule</option>
+                {workSchedules.map((ws) => (
+                  <option key={ws.id} value={ws.id}>
+                    {ws.name} ({ws.timeIn} - {ws.timeOut})
+                  </option>
+                ))}
+              </FormSelect>
+            </FormField>
+
+            <FormField id="status" label="Account Status">
+              <FormSelect
+                id="status"
+                value={formData.status}
+                onValueChange={handleChange('status')}
+                onBlur={handleBlur('status')}
+                disabled={viewOnly}
+              >
+                <option value="pending">Pending</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="archived">Archived</option>
+              </FormSelect>
+            </FormField>
+
+            <FormField id="ojtStatus" label="OJT Status">
+              <FormSelect
+                id="ojtStatus"
+                value={formData.ojtStatus}
+                onValueChange={handleChange('ojtStatus')}
+                onBlur={handleBlur('ojtStatus')}
+                disabled={viewOnly}
+              >
+                <option value="pending">Pending</option>
+                <option value="active">Active</option>
+                <option value="on_leave">On Leave</option>
+                <option value="completed">Completed</option>
+                <option value="terminated">Terminated</option>
+                <option value="archived">Archived</option>
+              </FormSelect>
+            </FormField>
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: Emergency Contact & Placement Notes */}
+      {currentStep === 3 && (
+        <div className="space-y-4">
+          <div>
+            <h4 className="text-sm font-semibold text-foreground mb-3">Emergency Contact</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <FormField id="ecName" label="Contact Name">
+                <FormInput
+                  type="text"
+                  id="ecName"
+                  value={formData.profile?.emergencyContact?.name || ''}
+                  onValueChange={handleChange('emergencyContact.name')}
+                  disabled={viewOnly}
+                  placeholder="Full Name"
+                />
+              </FormField>
+
+              <FormField id="ecRelationship" label="Relationship">
+                <FormInput
+                  type="text"
+                  id="ecRelationship"
+                  value={formData.profile?.emergencyContact?.relationship || ''}
+                  onValueChange={handleChange('emergencyContact.relationship')}
+                  disabled={viewOnly}
+                  placeholder="e.g. Parent, Guardian"
+                />
+              </FormField>
+
+              <FormField id="ecPhone" label="Contact Phone">
+                <FormInput
+                  type="tel"
+                  id="ecPhone"
+                  value={formData.profile?.emergencyContact?.phone || ''}
+                  onValueChange={handleChange('emergencyContact.phone')}
+                  disabled={viewOnly}
+                  placeholder="+63 9XX XXX XXXX"
+                />
+              </FormField>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-border">
+            <FormField id="placementNotes" label="Placement Notes / Remarks">
+              <FormTextarea
+                id="placementNotes"
+                value={formData.placementNotes || ''}
+                onValueChange={handleChange('placementNotes')}
+                disabled={viewOnly}
+                rows={3}
+                placeholder="Special notes regarding this trainee's placement or requirements"
+              />
+            </FormField>
+          </div>
+        </div>
+      )}
+
+      {/* Form Action Controls */}
+      <div className="flex items-center justify-between pt-4 border-t border-border">
+        <div>
+          {currentStep > 1 ? (
+            <Button variant="secondary" type="button" onClick={handleBack}>
+              Back
+            </Button>
+          ) : (
+            <Button variant="secondary" type="button" onClick={onCancel}>
+              {viewOnly ? 'Close' : 'Cancel'}
+            </Button>
           )}
         </div>
-      </form>
-    </div>
+
+        <div className="flex items-center gap-3">
+          {currentStep < 3 ? (
+            <Button variant="primary" type="button" onClick={handleNext}>
+              Next
+            </Button>
+          ) : !viewOnly ? (
+            <Button variant="primary" type="submit" isLoading={saving}>
+              Save
+            </Button>
+          ) : (
+            <Button variant="primary" type="button" onClick={onCancel}>
+              Done
+            </Button>
+          )}
+        </div>
+      </div>
+    </form>
   );
 }

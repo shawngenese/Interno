@@ -240,7 +240,7 @@ export function DocumentReview() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-[#121212] dark:text-white">Document Review</h2>
+        <h2 className="text-2xl font-bold text-foreground">Document Review</h2>
       </div>
 
       {error && (
@@ -255,7 +255,7 @@ export function DocumentReview() {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
             >
               <option value="">All Statuses</option>
               <option value="pending">Pending</option>
@@ -265,7 +265,7 @@ export function DocumentReview() {
             <select
               value={filterTrainee}
               onChange={(e) => setFilterTrainee(e.target.value)}
-              className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
             >
               <option value="">All Trainees</option>
               {trainees.map((t) => (
@@ -279,20 +279,20 @@ export function DocumentReview() {
           <table className="w-full">
             <thead className="bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Trainee</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Document Type</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">File</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Uploaded</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Trainee</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Document Type</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">File</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Uploaded</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">
+                  <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
                     <div className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin h-5 w-5 text-blue-600" viewBox="0 0 24 24">
+                      <svg className="animate-spin h-5 w-5 text-primary" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                       </svg>
@@ -302,7 +302,7 @@ export function DocumentReview() {
                 </tr>
               ) : documents.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">
+                  <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
                     No documents found
                   </td>
                 </tr>
@@ -310,18 +310,18 @@ export function DocumentReview() {
                 documents.map((doc) => (
                   <tr key={doc.id} className="hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50">
                     <td className="px-4 py-4">
-                      <div className="font-medium text-[#121212] dark:text-white">{doc.traineeName || 'Unknown'}</div>
+                      <div className="font-medium text-foreground">{doc.traineeName || 'Unknown'}</div>
                     </td>
-                    <td className="px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
+                    <td className="px-4 py-4 text-sm text-muted-foreground">
                       {getDocumentTypeLabel(doc.type)}
                     </td>
                     <td className="px-4 py-4">
-                      <div className="text-sm text-[#121212] dark:text-white">{doc.fileName}</div>
-                      <div className="text-xs text-[#757575] dark:text-[#9E9E9E]">
+                      <div className="text-sm text-foreground">{doc.fileName}</div>
+                      <div className="text-xs text-muted-foreground">
                         {(doc.fileSize / 1024).toFixed(1)} KB
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
+                    <td className="px-4 py-4 text-sm text-muted-foreground">
                       {doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : '-'}
                     </td>
                     <td className="px-4 py-4">
@@ -332,7 +332,7 @@ export function DocumentReview() {
                     <td className="px-4 py-4 text-right">
                       <button
                         onClick={() => setSelectedDoc(doc)}
-                        className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                        className="px-3 py-1.5 min-h-[44px] inline-flex items-center text-xs font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors"
                       >
                         Review
                       </button>
@@ -347,34 +347,34 @@ export function DocumentReview() {
 
       {selectedDoc && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-xl max-w-lg w-full">
-            <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
-              <h4 className="text-lg font-semibold text-[#121212] dark:text-white">
+          <div className="bg-card rounded-xl shadow-xl max-w-lg w-full">
+            <div className="p-4 border-b border-border">
+              <h4 className="text-lg font-semibold text-foreground">
                 Review Document
               </h4>
             </div>
             <div className="p-4 space-y-4">
               <div>
-                <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Trainee</p>
-                <p className="font-medium text-[#121212] dark:text-white">{selectedDoc.traineeName}</p>
+                <p className="text-sm text-muted-foreground">Trainee</p>
+                <p className="font-medium text-foreground">{selectedDoc.traineeName}</p>
               </div>
               <div>
-                <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Document Type</p>
-                <p className="font-medium text-[#121212] dark:text-white">{getDocumentTypeLabel(selectedDoc.type)}</p>
+                <p className="text-sm text-muted-foreground">Document Type</p>
+                <p className="font-medium text-foreground">{getDocumentTypeLabel(selectedDoc.type)}</p>
               </div>
               <div>
-                <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">File</p>
+                <p className="text-sm text-muted-foreground">File</p>
                 <a
                   href={selectedDoc.fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 dark:text-blue-400 hover:underline"
+                  className="text-primary hover:underline"
                 >
                   {selectedDoc.fileName}
                 </a>
               </div>
               <div>
-                <label htmlFor="review-notes" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+                <label htmlFor="review-notes" className="block text-sm font-medium text-foreground mb-1">
                   Review Notes (optional)
                 </label>
                 <textarea
@@ -382,18 +382,18 @@ export function DocumentReview() {
                   value={reviewNotes}
                   onChange={(e) => setReviewNotes(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-input rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
                   placeholder="Add notes about your decision..."
                 />
               </div>
             </div>
-            <div className="p-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A] flex justify-end gap-3">
+            <div className="p-4 border-t border-border flex justify-end gap-3">
               <button
                 onClick={() => {
                   setSelectedDoc(null);
                   setReviewNotes('');
                 }}
-                className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#555555] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                className="px-4 py-2 min-h-[44px] text-sm font-medium text-foreground bg-card border border-input rounded-lg hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
               >
                 Cancel
               </button>
@@ -402,14 +402,14 @@ export function DocumentReview() {
                   <button
                     onClick={() => handleReject(selectedDoc.id)}
                     disabled={processing}
-                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="px-4 py-2 min-h-[44px] text-sm font-medium text-on-destructive bg-destructive rounded-lg hover:bg-destructive-hover focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Reject
                   </button>
                   <button
                     onClick={() => handleApprove(selectedDoc.id)}
                     disabled={processing}
-                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="px-4 py-2 min-h-[44px] text-sm font-medium text-on-primary bg-primary rounded-lg hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Approve
                   </button>

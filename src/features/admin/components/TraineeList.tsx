@@ -4,6 +4,10 @@ import { resolveDocName } from '@/shared/utils/resolveDocName';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { ActionsMenu } from '@/shared/components/ActionsMenu';
+import { EmptyState, InboxIcon } from '@/shared/components/EmptyState';
+import { Skeleton } from '@/shared/components/Skeleton';
+import { Button } from '@/shared/components/ui/Button';
+import { Search } from 'lucide-react';
 import type { Trainee, ListTraineesParams } from '../types';
 
 interface TraineeListProps {
@@ -18,7 +22,18 @@ interface ResolvedTrainee extends Trainee {
   companyName?: string;
   departmentName?: string;
   supervisorName?: string;
+  requiredHours?: number;
+  completedHours?: number;
 }
+
+const ojtStatusBadgeClasses: Record<string, string> = {
+  active: 'bg-success/15 text-success',
+  pending: 'bg-warning/15 text-warning',
+  on_leave: 'bg-primary/15 text-primary',
+  completed: 'bg-accent/15 text-accent',
+  terminated: 'bg-destructive/15 text-destructive',
+  archived: 'bg-muted text-muted-foreground',
+};
 
 export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }: TraineeListProps) {
   const [trainees, setTrainees] = useState<ResolvedTrainee[]>([]);
@@ -32,19 +47,16 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
   const [searchValue, setSearchValue] = useState('');
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Keep ref in sync with state
   useEffect(() => {
     traineesRef.current = trainees;
   }, [trainees]);
 
-  // Cleanup debounce timer
   useEffect(() => {
     return () => {
       if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     };
   }, []);
 
-  // Close status dropdown on outside click
   useEffect(() => {
     if (!statusDropdownId) return;
     const handleClickOutside = () => setStatusDropdownId(null);
@@ -71,8 +83,8 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
       }
 
       const supervisorIds = result.data
-        .filter(t => t.supervisorId)
-        .map(t => t.supervisorId!);
+        .filter((t) => t.supervisorId)
+        .map((t) => t.supervisorId!);
 
       const supDocs = await Promise.all(
         supervisorIds.map(async (supId) => {
@@ -119,18 +131,23 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
         ),
       ]);
 
-      const userNameMap = new Map(userNames.map(u => [u.id, u.name]));
-      const companyNameMap = new Map(companyNames.map(c => [c.id, c.name]));
-      const departmentNameMap = new Map(departmentNames.map(d => [d.id, d.name]));
-      const supervisorNameMap = new Map(supervisorNames.map(s => [s.supId, s.name]));
+      const userNameMap = new Map(userNames.map((u) => [u.id, u.name]));
+      const companyNameMap = new Map(companyNames.map((c) => [c.id, c.name]));
+      const departmentNameMap = new Map(departmentNames.map((d) => [d.id, d.name]));
+      const supervisorNameMap = new Map(supervisorNames.map((s) => [s.supId, s.name]));
 
-      const resolved = result.data.map((t) => ({
-        ...t,
-        userName: userNameMap.get(t.userId) || '',
-        companyName: companyNameMap.get(t.companyId) || '',
-        departmentName: departmentNameMap.get(t.departmentId) || '',
-        supervisorName: t.supervisorId ? (supervisorNameMap.get(t.supervisorId) || '-') : '-',
-      }));
+      const resolved = result.data.map((t) => {
+        const raw = t as unknown as Record<string, unknown>;
+        return {
+          ...t,
+          userName: userNameMap.get(t.userId) || '',
+          companyName: companyNameMap.get(t.companyId) || '',
+          departmentName: departmentNameMap.get(t.departmentId) || '',
+          supervisorName: t.supervisorId ? supervisorNameMap.get(t.supervisorId) || '—' : '—',
+          requiredHours: Number(raw.requiredHours || raw.totalHours || 300),
+          completedHours: Number(raw.completedHours || raw.hoursRendered || 0),
+        };
+      });
 
       setTrainees(resolved);
       setTotal(result.total);
@@ -150,36 +167,36 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
     setSearchValue(search);
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => {
-      setFilters(p => ({ ...p, search, page: 1 }));
-    }, 400);
+      setFilters((p) => ({ ...p, search, page: 1 }));
+    }, 350);
   };
 
   const handlePageChange = (page: number) => {
-    setFilters(p => ({ ...p, page }));
+    setFilters((p) => ({ ...p, page }));
   };
 
   const handleStatusChange = (status: Trainee['status'] | undefined) => {
-    setFilters(p => ({ ...p, status, page: 1 }));
+    setFilters((p) => ({ ...p, status, page: 1 }));
   };
 
   const handleOJTStatusChange = (ojtStatus: Trainee['ojtStatus'] | undefined) => {
-    setFilters(p => ({ ...p, ojtStatus, page: 1 }));
+    setFilters((p) => ({ ...p, ojtStatus, page: 1 }));
   };
 
   const handlePlacementTypeChange = (placementType: Trainee['placementType'] | undefined) => {
-    setFilters(p => ({ ...p, placementType, page: 1 }));
+    setFilters((p) => ({ ...p, placementType, page: 1 }));
   };
 
   const handleOJTStatusUpdate = async (traineeId: string, newStatus: Trainee['ojtStatus']) => {
     setUpdatingStatus(traineeId);
     try {
       await adminService.updateTraineeOJTStatus(traineeId, newStatus);
-      setTrainees(prev => prev.map(t => 
-        t.id === traineeId ? { ...t, ojtStatus: newStatus } : t
-      ));
+      setTrainees((prev) =>
+        prev.map((t) => (t.id === traineeId ? { ...t, ojtStatus: newStatus } : t)),
+      );
       setStatusDropdownId(null);
       if (onStatusChange) {
-        const updated = traineesRef.current.find(t => t.id === traineeId);
+        const updated = traineesRef.current.find((t) => t.id === traineeId);
         if (updated) onStatusChange({ ...updated, ojtStatus: newStatus });
       }
     } catch (err) {
@@ -192,77 +209,33 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
 
   const totalPages = Math.ceil(total / (filters.limit || 10));
 
-  const getStatusColor = (status: Trainee['status']) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
-      case 'inactive': return 'bg-[#EFEFEF] text-[#1E1E1E] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]';
-      case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
-      case 'archived': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
-      default: return 'bg-[#EFEFEF] text-[#1E1E1E] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]';
-    }
-  };
-
-  const getOJTStatusColor = (ojtStatus: Trainee['ojtStatus']) => {
-    switch (ojtStatus) {
-      case 'active': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
-      case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
-      case 'on_leave': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
-      case 'completed': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
-      case 'terminated': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
-      case 'archived': return 'bg-[#EFEFEF] text-[#1E1E1E] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]';
-      default: return 'bg-[#EFEFEF] text-[#1E1E1E] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]';
-    }
-  };
-
-  if (loading && trainees.length === 0) {
-    return (
-      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
-        <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <h2 className="text-lg font-semibold text-[#121212] dark:text-white">Trainees</h2>
-            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-              <input
-                type="text"
-                placeholder="Search trainees..."
-                value={searchValue}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="w-full sm:w-64 px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center justify-center h-64">
-          <svg className="animate-spin h-8 w-8 text-blue-600" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
-      <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h2 className="text-lg font-semibold text-[#121212] dark:text-white">Trainees</h2>
-          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+    <div className="space-y-4">
+      {/* Search & Filter Header */}
+      <div className="bg-card border border-border rounded-lg p-3 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
               placeholder="Search trainees..."
               value={searchValue}
               onChange={(e) => handleSearch(e.target.value)}
-              className="w-full sm:w-64 px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-9 pr-3 py-2 text-sm bg-background border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
+          <span className="text-xs text-muted-foreground self-center sm:self-auto">
+            {total} {total === 1 ? 'trainee' : 'trainees'} enrolled
+          </span>
         </div>
-        
-        <div className="mt-4 flex flex-wrap gap-3">
+
+        {/* Filter dropdowns */}
+        <div className="flex flex-wrap gap-2 pt-2 border-t border-border/50 text-xs">
           <select
             value={filters.status || ''}
             onChange={(e) => handleStatusChange((e.target.value as Trainee['status']) || undefined)}
             aria-label="Filter by status"
-            className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-2.5 py-1.5 bg-background border border-border rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="">All Statuses</option>
             <option value="active">Active</option>
@@ -270,12 +243,12 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
             <option value="pending">Pending</option>
             <option value="archived">Archived</option>
           </select>
-          
+
           <select
             value={filters.ojtStatus || ''}
             onChange={(e) => handleOJTStatusChange((e.target.value as Trainee['ojtStatus']) || undefined)}
             aria-label="Filter by OJT status"
-            className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-2.5 py-1.5 bg-background border border-border rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="">All OJT Statuses</option>
             <option value="pending">Pending</option>
@@ -290,7 +263,7 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
             value={filters.placementType || ''}
             onChange={(e) => handlePlacementTypeChange((e.target.value as Trainee['placementType']) || undefined)}
             aria-label="Filter by placement type"
-            className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-2.5 py-1.5 bg-background border border-border rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="">All Placement Types</option>
             <option value="internal">Internal</option>
@@ -300,143 +273,268 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
       </div>
 
       {error && (
-        <div role="alert" className="p-4 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">
+        <div role="alert" className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
           {error}
         </div>
       )}
 
-      {loading && trainees.length > 0 && (
-        <div className="h-0.5 w-full overflow-hidden bg-[#EFEFEF] dark:bg-[#3A3A3A]">
-          <div className="h-full bg-blue-600 animate-pulse" style={{ width: '40%' }} />
+      {/* Loading State */}
+      {loading ? (
+        <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
+              <div className="space-y-1.5 flex-1">
+                <Skeleton variant="text" width="40%" height={16} />
+                <Skeleton variant="text" width="25%" height={12} />
+              </div>
+              <Skeleton variant="text" width={80} height={24} />
+            </div>
+          ))}
         </div>
-      )}
+      ) : trainees.length === 0 ? (
+        <div className="bg-card border border-border rounded-lg">
+          <EmptyState
+            icon={InboxIcon}
+            title="No trainees found"
+            description={searchValue ? 'No trainees matched your search criteria.' : 'No trainees have been registered in the system.'}
+          />
+        </div>
+      ) : (
+        <>
+          {/* Mobile Card Layout (< md) */}
+          <div className="space-y-3 md:hidden">
+            {trainees.map((trainee) => {
+              const reqHours = Number(trainee.requiredHours || 300);
+              const compHours = Number(trainee.completedHours || 0);
+              const progressPct = reqHours > 0 ? Math.min(100, Math.round((compHours / reqHours) * 100)) : 0;
 
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Name</th>
-              <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Student ID</th>
-              <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Course</th>
-              <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Company</th>
-              <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Department</th>
-              <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Supervisor</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Type</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Status</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">OJT Status</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
-            {trainees.length === 0 ? (
-              <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">
-                  No trainees found
-                </td>
-              </tr>
-            ) : (
-              trainees.map(trainee => (
-                <tr key={trainee.id} className="hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50">
-                  <td className="px-4 py-4 text-sm text-[#121212] dark:text-white font-medium">
-                    {trainee.userName || '—'}
-                  </td>
-                  <td className="hidden md:table-cell px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
-                    {trainee.profile?.studentId || '-'}
-                  </td>
-                  <td className="hidden md:table-cell px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
-                    {trainee.profile?.course || '-'}
-                  </td>
-                  <td className="hidden lg:table-cell px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
-                    {trainee.companyName || '—'}
-                  </td>
-                  <td className="hidden lg:table-cell px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
-                    {trainee.departmentName || '—'}
-                  </td>
-                  <td className="hidden lg:table-cell px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
-                    {trainee.supervisorName || '-'}
-                  </td>
-                  <td className="px-4 py-4">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${trainee.placementType === 'external' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'}`}>
-                      {trainee.placementType === 'external' ? 'External' : 'Internal'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(trainee.status)}`}>
-                      {trainee.status.charAt(0).toUpperCase() + trainee.status.slice(1)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getOJTStatusColor(trainee.ojtStatus)}`}>
-                      {trainee.ojtStatus.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <div className="relative">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setStatusDropdownId(statusDropdownId === trainee.id ? null : trainee.id); }}
-                          className="px-3 py-1.5 text-xs font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors"
-                          disabled={updatingStatus === trainee.id}
-                        >
-                          {updatingStatus === trainee.id ? '...' : 'Status'}
-                        </button>
-                        {statusDropdownId === trainee.id && (
-                          <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-[#1E1E1E] border border-[#D5D5D5] dark:border-[#3A3A3A] rounded-lg shadow-lg z-50 py-1">
-                            {(['pending', 'active', 'on_leave', 'completed', 'terminated', 'archived'] as const).map(status => (
-                              <button
-                                key={status}
-                                onClick={() => handleOJTStatusUpdate(trainee.id, status)}
-                                disabled={trainee.ojtStatus === status}
-                                className={`w-full text-left px-4 py-2 text-sm hover:bg-[#EFEFEF] dark:hover:bg-[#3A3A3A] ${
-                                  trainee.ojtStatus === status
-                                    ? 'text-[#9E9E9E] dark:text-[#757575] cursor-not-allowed'
-                                    : 'text-[#3A3A3A] dark:text-[#BDBDBD]'
-                                }`}
-                              >
-                                {status.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <ActionsMenu
-                        items={[
-                          ...(onView ? [{ label: 'View', onClick: () => onView(trainee) }] : []),
-                          ...(onEdit ? [{ label: 'Edit', onClick: () => onEdit(trainee) }] : []),
-                          ...(onViewDocuments ? [{ label: 'Documents', onClick: () => onViewDocuments(trainee) }] : []),
-                        ]}
-                      />
+              return (
+                <div key={trainee.id} className="bg-card border border-border rounded-lg p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <button
+                        onClick={() => onView?.(trainee)}
+                        className="font-semibold text-sm text-foreground hover:text-primary transition-colors truncate block text-left"
+                      >
+                        {trainee.userName || 'Unnamed Trainee'}
+                      </button>
+                      <p className="text-xs text-muted-foreground truncate">
+                        ID: {trainee.profile?.studentId || '—'} {trainee.profile?.course ? `• ${trainee.profile.course}` : ''}
+                      </p>
                     </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+                    <ActionsMenu
+                      items={[
+                        ...(onView ? [{ label: 'View', onClick: () => onView(trainee) }] : []),
+                        ...(onEdit ? [{ label: 'Edit', onClick: () => onEdit(trainee) }] : []),
+                        ...(onViewDocuments ? [{ label: 'Documents', onClick: () => onViewDocuments(trainee) }] : []),
+                      ]}
+                    />
+                  </div>
 
-      {totalPages > 1 && (
-        <div className="px-4 py-3 border-t border-[#D5D5D5] dark:border-[#3A3A3A] flex items-center justify-between">
-          <div className="text-sm text-[#757575] dark:text-[#9E9E9E]">
-            Page {filters.page} of {totalPages} ({total} total)
+                  {/* OJT Progress bar */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>OJT Progress</span>
+                      <span className="font-semibold text-foreground">{progressPct}% ({compHours}/{reqHours}h)</span>
+                    </div>
+                    <div className="h-1 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${progressPct}%` }} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/60 text-xs">
+                    <div>
+                      <span className="text-muted-foreground block">Company</span>
+                      <span className="text-foreground truncate block">{trainee.companyName || '—'}</span>
+                    </div>
+
+                    <div>
+                      <span className="text-muted-foreground block">Supervisor</span>
+                      <span className="text-foreground truncate block">{trainee.supervisorName || '—'}</span>
+                    </div>
+
+                    <div>
+                      <span className="text-muted-foreground block">Type</span>
+                      <span className={`inline-block mt-0.5 px-2 py-0.5 rounded-full font-medium ${
+                        trainee.placementType === 'external' ? 'bg-accent/15 text-accent' : 'bg-primary/15 text-primary'
+                      }`}>
+                        {trainee.placementType === 'external' ? 'External' : 'Internal'}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-muted-foreground block">OJT Status</span>
+                      <span className={`inline-block mt-0.5 px-2 py-0.5 rounded-full font-medium ${
+                        ojtStatusBadgeClasses[trainee.ojtStatus] || 'bg-muted text-muted-foreground'
+                      }`}>
+                        {trainee.ojtStatus ? trainee.ojtStatus.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : 'Pending'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => handlePageChange((filters.page || 1) - 1)}
-              disabled={(filters.page || 1) <= 1}
-              className="px-3 py-2 text-sm text-[#121212] dark:text-white border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-            <button
-              onClick={() => handlePageChange((filters.page || 1) + 1)}
-              disabled={(filters.page || 1) >= totalPages}
-              className="px-3 py-2 text-sm text-[#121212] dark:text-white border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next
-            </button>
+
+          {/* Desktop Table Layout (>= md) */}
+          <div className="hidden md:block bg-card border border-border rounded-lg overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-muted">
+                <tr>
+                  <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Trainee
+                  </th>
+                  <th className="h-[44px] px-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Student ID
+                  </th>
+                  <th className="h-[44px] px-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Company
+                  </th>
+                  <th className="h-[44px] px-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Supervisor
+                  </th>
+                  <th className="h-[44px] px-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Type
+                  </th>
+                  <th className="h-[44px] px-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    OJT Progress
+                  </th>
+                  <th className="h-[44px] px-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Status
+                  </th>
+                  <th className="h-[44px] px-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {trainees.map((trainee) => {
+                  const reqHours = Number(trainee.requiredHours || 300);
+                  const compHours = Number(trainee.completedHours || 0);
+                  const progressPct = reqHours > 0 ? Math.min(100, Math.round((compHours / reqHours) * 100)) : 0;
+
+                  return (
+                    <tr key={trainee.id} className="h-[44px] hover:bg-muted/50 transition-colors">
+                      <td className="px-4 py-2.5">
+                        <button
+                          onClick={() => onView?.(trainee)}
+                          className="font-medium text-foreground hover:text-primary transition-colors text-left"
+                        >
+                          {trainee.userName || 'Unnamed Trainee'}
+                        </button>
+                        {trainee.profile?.course && (
+                          <p className="text-xs text-muted-foreground">{trainee.profile.course}</p>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 text-xs text-muted-foreground font-mono">
+                        {trainee.profile?.studentId || '—'}
+                      </td>
+                      <td className="px-3 py-2.5 text-xs text-muted-foreground">
+                        {trainee.companyName || '—'}
+                      </td>
+                      <td className="px-3 py-2.5 text-xs text-foreground">
+                        {trainee.supervisorName || '—'}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
+                          trainee.placementType === 'external' ? 'bg-accent/15 text-accent' : 'bg-primary/15 text-primary'
+                        }`}>
+                          {trainee.placementType === 'external' ? 'External' : 'Internal'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5 w-36">
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                            <span>{progressPct}%</span>
+                            <span>{compHours}/{reqHours}h</span>
+                          </div>
+                          <div className="h-1 bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-primary rounded-full" style={{ width: `${progressPct}%` }} />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
+                          ojtStatusBadgeClasses[trainee.ojtStatus] || 'bg-muted text-muted-foreground'
+                        }`}>
+                          {trainee.ojtStatus ? trainee.ojtStatus.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : 'Pending'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <div className="relative">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setStatusDropdownId(statusDropdownId === trainee.id ? null : trainee.id);
+                              }}
+                              className="px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10 rounded transition-colors"
+                              disabled={updatingStatus === trainee.id}
+                            >
+                              {updatingStatus === trainee.id ? '...' : 'Status'}
+                            </button>
+                            {statusDropdownId === trainee.id && (
+                              <div className="absolute right-0 top-full mt-1 w-36 bg-card border border-border rounded-lg shadow-lg z-50 py-1 animate-[modal-enter_150ms_ease-out]">
+                                {(['pending', 'active', 'on_leave', 'completed', 'terminated', 'archived'] as const).map((status) => (
+                                  <button
+                                    key={status}
+                                    onClick={() => handleOJTStatusUpdate(trainee.id, status)}
+                                    disabled={trainee.ojtStatus === status}
+                                    className={`w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition-colors ${
+                                      trainee.ojtStatus === status
+                                        ? 'text-muted-foreground/50 cursor-not-allowed'
+                                        : 'text-foreground'
+                                    }`}
+                                  >
+                                    {status.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <ActionsMenu
+                            items={[
+                              ...(onView ? [{ label: 'View', onClick: () => onView(trainee) }] : []),
+                              ...(onEdit ? [{ label: 'Edit', onClick: () => onEdit(trainee) }] : []),
+                              ...(onViewDocuments ? [{ label: 'Documents', onClick: () => onViewDocuments(trainee) }] : []),
+                            ]}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="p-4 bg-card border border-border rounded-lg flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                Page {filters.page || 1} of {totalPages} ({total} total)
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handlePageChange((filters.page || 1) - 1)}
+                  disabled={(filters.page || 1) <= 1}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handlePageChange((filters.page || 1) + 1)}
+                  disabled={(filters.page || 1) >= totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

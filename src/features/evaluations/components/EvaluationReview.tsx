@@ -4,6 +4,9 @@ import { EVALUATION_CATEGORIES, EVALUATION_TYPE_LABELS, RATING_LABELS } from '..
 import type { Evaluation, EvaluationStatus } from '../types';
 import { useAuth } from '@/features/auth';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
+import { Button } from '@/shared/components/ui/Button';
+import { Skeleton } from '@/shared/components/Skeleton';
+import { Star, CheckCircle2, ShieldCheck } from 'lucide-react';
 
 interface EvaluationReviewProps {
   evaluationId: string;
@@ -11,7 +14,7 @@ interface EvaluationReviewProps {
 }
 
 export function EvaluationReview({ evaluationId, onClose }: EvaluationReviewProps) {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [loading, setLoading] = useState(true);
   const [reviewComments, setReviewComments] = useState('');
@@ -45,7 +48,7 @@ export function EvaluationReview({ evaluationId, onClose }: EvaluationReviewProp
     if (action === 'finalize') {
       setConfirmDialog({
         title: 'Finalize Evaluation',
-        message: 'Are you sure you want to finalize this evaluation?',
+        message: 'Are you sure you want to finalize this evaluation? This makes the scores official.',
         danger: true,
         onConfirm: async () => {
           setSaving(true);
@@ -75,25 +78,23 @@ export function EvaluationReview({ evaluationId, onClose }: EvaluationReviewProp
 
   const getStatusBadge = (status: EvaluationStatus) => {
     const badges: Record<EvaluationStatus, string> = {
-      draft: 'bg-[#EFEFEF] text-[#3A3A3A] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]',
-      submitted: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-      reviewed: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-      finalized: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+      draft: 'bg-muted text-muted-foreground border-border',
+      submitted: 'bg-primary/10 text-primary border-primary/20',
+      reviewed: 'bg-warning/10 text-warning border-warning/20',
+      finalized: 'bg-success/10 text-success border-success/20',
     };
     return badges[status];
   };
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-[#D5D5D5] dark:bg-[#3A3A3A] rounded w-1/3" />
-          <div className="h-4 bg-[#D5D5D5] dark:bg-[#3A3A3A] rounded w-1/2" />
-          <div className="space-y-2">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-16 bg-[#D5D5D5] dark:bg-[#3A3A3A] rounded" />
-            ))}
-          </div>
+      <div className="bg-card rounded-xl shadow-sm border border-border p-6 space-y-4">
+        <Skeleton variant="text" width="40%" height={28} />
+        <Skeleton variant="rectangular" height={100} className="rounded-xl" />
+        <div className="space-y-3">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} variant="rectangular" height={60} className="rounded-xl" />
+          ))}
         </div>
       </div>
     );
@@ -101,68 +102,69 @@ export function EvaluationReview({ evaluationId, onClose }: EvaluationReviewProp
 
   if (!evaluation) {
     return (
-      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
-        <p className="text-[#757575] dark:text-[#9E9E9E]">Evaluation not found</p>
+      <div className="bg-card rounded-xl shadow-sm border border-border p-6 text-center">
+        <p className="text-muted-foreground text-sm">Evaluation not found</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
-      <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
-        <div className="flex items-center justify-between">
+    <div className="bg-card rounded-xl shadow-sm border border-border">
+      <div className="p-4 md:p-6 border-b border-border">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h3 className="text-lg font-semibold text-[#121212] dark:text-white">
+            <h3 className="text-lg font-bold text-foreground">
               Evaluation for {evaluation.traineeName}
             </h3>
-            <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">
+            <p className="text-xs text-muted-foreground mt-0.5">
               {EVALUATION_TYPE_LABELS[evaluation.type]} • Submitted by {evaluation.supervisorName}
             </p>
           </div>
-          <span className={`px-3 py-1 text-sm rounded-full ${getStatusBadge(evaluation.status)}`}>
-            {evaluation.status.charAt(0).toUpperCase() + evaluation.status.slice(1)}
+          <span className={`inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full border capitalize self-start sm:self-auto ${getStatusBadge(evaluation.status)}`}>
+            {evaluation.status}
           </span>
         </div>
       </div>
 
-      <div className="p-4 space-y-6">
-        <div className="grid grid-cols-2 gap-4 text-sm">
+      <div className="p-4 md:p-6 space-y-6">
+        <div className="grid grid-cols-2 gap-4 text-sm bg-muted/40 p-4 rounded-xl border border-border">
           <div>
-            <span className="text-[#757575] dark:text-[#9E9E9E]">Period:</span>
-            <p className="font-medium text-[#121212] dark:text-white">
-              {new Date(evaluation.period.startDate).toLocaleDateString()} - {new Date(evaluation.period.endDate).toLocaleDateString()}
+            <span className="text-xs text-muted-foreground">Evaluation Period:</span>
+            <p className="font-semibold text-foreground text-sm mt-0.5">
+              {new Date(evaluation.period.startDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })} – {new Date(evaluation.period.endDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
             </p>
           </div>
           <div>
-            <span className="text-[#757575] dark:text-[#9E9E9E]">Overall Rating:</span>
-            <p className="font-medium text-[#121212] dark:text-white">
-              {evaluation.overallRating}/5
+            <span className="text-xs text-muted-foreground">Overall Rating:</span>
+            <p className="font-bold text-foreground text-base mt-0.5 flex items-center gap-1">
+              <Star className="w-4 h-4 text-warning fill-warning" />
+              {evaluation.overallRating} / 5.0
             </p>
           </div>
         </div>
 
         <div className="space-y-3">
-          <h4 className="font-medium text-[#121212] dark:text-white">Category Ratings</h4>
+          <h4 className="font-bold text-foreground text-sm">Competency Ratings</h4>
           {evaluation.ratings.map((item) => {
             const category = EVALUATION_CATEGORIES.find((c) => c === item.category);
             if (!category) return null;
             return (
-              <div key={item.category} className="p-3 bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-[#121212] dark:text-white">
+              <div key={item.category} className="p-3.5 bg-muted/30 rounded-xl border border-border space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-foreground">
                     {item.category}
                   </span>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-[#757575] dark:text-[#9E9E9E]">
+                    <span className="text-xs text-muted-foreground">
                       {RATING_LABELS[item.rating]}
                     </span>
-                    <span className="font-semibold text-[#121212] dark:text-white">
+                    <span className="font-bold text-foreground text-sm">
                       {item.rating}/5
                     </span>
                   </div>
                 </div>
                 {item.comments && (
-                  <p className="text-sm text-[#555555] dark:text-[#9E9E9E]">{item.comments}</p>
+                  <p className="text-xs text-muted-foreground">{item.comments}</p>
                 )}
               </div>
             );
@@ -171,16 +173,16 @@ export function EvaluationReview({ evaluationId, onClose }: EvaluationReviewProp
 
         {evaluation.overallComments && (
           <div>
-            <h4 className="font-medium text-[#121212] dark:text-white mb-2">Supervisor Comments</h4>
-            <p className="text-[#555555] dark:text-[#9E9E9E] bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 p-3 rounded-lg">
+            <h4 className="font-bold text-foreground text-sm mb-2">Supervisor Comments</h4>
+            <p className="text-sm text-foreground bg-muted/40 p-3.5 rounded-xl border border-border">
               {evaluation.overallComments}
             </p>
           </div>
         )}
 
-        {evaluation.status === 'submitted' && (
+        {evaluation.status === 'submitted' && (role === 'coordinator' || role === 'admin') && (
           <div>
-            <label htmlFor="review-comments" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-2">
+            <label htmlFor="review-comments" className="block text-xs font-semibold text-foreground mb-1.5">
               Coordinator Review Comments
             </label>
             <textarea
@@ -188,35 +190,37 @@ export function EvaluationReview({ evaluationId, onClose }: EvaluationReviewProp
               value={reviewComments}
               onChange={(e) => setReviewComments(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Add your review comments..."
+              className="w-full p-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
+              placeholder="Add your review comments or feedback before marking reviewed..."
             />
           </div>
         )}
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
-          <button
+        <div className="flex flex-wrap items-center justify-end gap-2.5 pt-4 border-t border-border">
+          <Button
+            variant="secondary"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#555555]"
           >
             Close
-          </button>
-          {evaluation.status === 'submitted' && (
+          </Button>
+          {evaluation.status === 'submitted' && (role === 'coordinator' || role === 'admin') && (
             <>
-              <button
+              <Button
+                variant="secondary"
+                isLoading={saving}
                 onClick={() => handleReview('review')}
-                disabled={saving}
-                className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-yellow-600 rounded-lg hover:bg-yellow-700 disabled:opacity-50"
               >
-                {saving ? 'Saving...' : 'Mark Reviewed'}
-              </button>
-              <button
+                <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                Mark Reviewed
+              </Button>
+              <Button
+                variant="primary"
+                isLoading={saving}
                 onClick={() => handleReview('finalize')}
-                disabled={saving}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50"
               >
-                {saving ? 'Saving...' : 'Finalize'}
-              </button>
+                <ShieldCheck className="w-4 h-4 mr-1.5" />
+                Finalize
+              </Button>
             </>
           )}
         </div>

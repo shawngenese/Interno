@@ -5,13 +5,19 @@ import { getFirestoreInstancePublic } from '@/config/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import type { PlacementRequest, PlacementStatus } from '@/features/admin/types';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
+import { Modal } from '@/shared/components/Modal';
+import { Button } from '@/shared/components/ui/Button';
+import { Skeleton } from '@/shared/components/Skeleton';
+import { EmptyState } from '@/shared/components/EmptyState';
+import { FormField, FormTextarea } from '@/shared/components/FormField';
+import { Calendar, Building2, User } from 'lucide-react';
 
 interface PlacementRequestListProps {
   onRefresh?: () => void;
 }
 
 export function PlacementRequestList({ onRefresh }: PlacementRequestListProps) {
-  const { user, role } = useAuth();
+  const { user } = useAuth();
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [requests, setRequests] = useState<PlacementRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,18 +49,22 @@ export function PlacementRequestList({ onRefresh }: PlacementRequestListProps) {
       }
     }
     resolveCompanyId();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      cancelled = true;
+    };
   }, [user?.uid]);
 
   const fetchRequests = useCallback(async (signal?: AbortSignal) => {
-    if (!companyId) return;
+    if (!companyId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       const data = await placementService.getPlacementRequests(
         companyId,
-        filterStatus as PlacementStatus || undefined,
+        (filterStatus as PlacementStatus) || undefined,
       );
       if (!signal?.aborted) setRequests(data);
     } catch (err) {
@@ -76,8 +86,8 @@ export function PlacementRequestList({ onRefresh }: PlacementRequestListProps) {
   const handleApprove = async (request: PlacementRequest) => {
     if (!user) return;
     setConfirmDialog({
-      title: 'Approve Placement',
-      message: 'Approve this placement request?',
+      title: 'Approve Placement Request',
+      message: `Approve placement for ${request.traineeName} at ${request.externalCompanyName}?`,
       onConfirm: async () => {
         setProcessing(true);
         try {
@@ -99,8 +109,8 @@ export function PlacementRequestList({ onRefresh }: PlacementRequestListProps) {
   const handleReject = async (request: PlacementRequest) => {
     if (!user) return;
     setConfirmDialog({
-      title: 'Reject Placement',
-      message: 'Reject this placement request?',
+      title: 'Reject Placement Request',
+      message: `Reject placement request for ${request.traineeName}?`,
       danger: true,
       onConfirm: async () => {
         setProcessing(true);
@@ -120,187 +130,264 @@ export function PlacementRequestList({ onRefresh }: PlacementRequestListProps) {
     });
   };
 
-  const getStatusColor = (status: PlacementStatus) => {
+  const getStatusBadge = (status: PlacementStatus) => {
     switch (status) {
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+        return 'bg-warning/15 text-warning';
       case 'approved':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+        return 'bg-success/15 text-success';
       case 'rejected':
-        return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+        return 'bg-destructive/15 text-destructive';
       default:
-        return 'bg-[#EFEFEF] text-[#1E1E1E] dark:bg-[#3A3A3A] dark:text-[#9E9E9E]';
+        return 'bg-muted text-muted-foreground';
     }
   };
 
   return (
-    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
-      <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-[#121212] dark:text-white">
+    <div className="bg-card rounded-xl border border-border overflow-hidden">
+      <div className="p-4 sm:p-5 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-semibold text-foreground">
             Placement Requests
           </h3>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as PlacementStatus | '')}
-            className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-          </select>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Manage trainee applications for external company placements
+          </p>
         </div>
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value as PlacementStatus | '')}
+          className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="">All Statuses</option>
+          <option value="pending">Pending Review</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">
+        <div className="p-4 bg-destructive/10 border-b border-destructive/20 text-destructive text-sm">
           {error}
         </div>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Trainee</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">External Company</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Date Requested</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Status</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
-            {loading ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">
-                  <div className="flex items-center justify-center gap-2">
-                    <svg className="animate-spin h-5 w-5 text-blue-600" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    Loading...
-                  </div>
-                </td>
-              </tr>
-            ) : requests.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">
-                  No placement requests found
-                </td>
-              </tr>
-            ) : (
-              requests.map((request) => (
-                <tr key={request.id} className="hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50">
-                  <td className="px-4 py-4">
-                    <div className="text-sm font-medium text-[#121212] dark:text-white">{request.traineeName}</div>
-                    <div className="text-sm text-[#757575] dark:text-[#9E9E9E]">{request.traineeEmail}</div>
-                  </td>
-                  <td className="px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
-                    {request.externalCompanyName}
-                  </td>
-                  <td className="px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
-                    {request.createdAt?.seconds
-                      ? new Date(request.createdAt.seconds * 1000).toLocaleDateString()
-                      : '-'}
-                  </td>
-                  <td className="px-4 py-4">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(request.status)}`}>
-                      {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 text-right">
-                    {request.status === 'pending' && (
-                      <button
-                        onClick={() => setSelectedRequest(request)}
-                        className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                      >
-                        Review
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {selectedRequest && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-xl max-w-md w-full">
-            <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
-              <h4 className="text-lg font-semibold text-[#121212] dark:text-white">
-                Review Placement Request
-              </h4>
+      {/* Loading Skeleton */}
+      {loading ? (
+        <div className="p-5 space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="p-4 border border-border rounded-xl space-y-2">
+              <Skeleton variant="text" width="40%" height={18} />
+              <Skeleton variant="text" width="60%" height={14} />
             </div>
-            <div className="p-4 space-y-4">
-              <div>
-                <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Trainee</p>
-                <p className="font-medium text-[#121212] dark:text-white">{selectedRequest.traineeName}</p>
+          ))}
+        </div>
+      ) : requests.length === 0 ? (
+        <div className="p-8">
+          <EmptyState
+            title="No placement requests yet"
+            description="No placement requests yet. Trainees will appear here when they apply."
+          />
+        </div>
+      ) : (
+        <>
+          {/* Mobile Card Layout (md:hidden) */}
+          <div className="divide-y divide-border md:hidden">
+            {requests.map((request) => (
+              <div key={request.id} className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h4 className="font-semibold text-foreground text-sm">{request.traineeName}</h4>
+                    <p className="text-xs text-muted-foreground">{request.traineeEmail}</p>
+                  </div>
+                  <span
+                    className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full capitalize ${getStatusBadge(
+                      request.status,
+                    )}`}
+                  >
+                    {request.status}
+                  </span>
+                </div>
+
+                <div className="space-y-1 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 shrink-0" />
+                    <span>Company: <strong className="text-foreground font-medium">{request.externalCompanyName}</strong></span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      Requested:{' '}
+                      {request.createdAt?.seconds
+                        ? new Date(request.createdAt.seconds * 1000).toLocaleDateString()
+                        : '-'}
+                    </span>
+                  </div>
+                </div>
+
+                {request.status === 'pending' && (
+                  <div className="pt-2 flex justify-end">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => setSelectedRequest(request)}
+                    >
+                      Review Request
+                    </Button>
+                  </div>
+                )}
               </div>
-              <div>
-                <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">External Company</p>
-                <p className="font-medium text-[#121212] dark:text-white">{selectedRequest.externalCompanyName}</p>
+            ))}
+          </div>
+
+          {/* Desktop Table Layout (hidden md:block) */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 border-b border-border">
+                <tr>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Trainee
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    External Company
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Date Requested
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {requests.map((request) => (
+                  <tr key={request.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-5 py-3.5">
+                      <div className="font-medium text-foreground">{request.traineeName}</div>
+                      <div className="text-xs text-muted-foreground">{request.traineeEmail}</div>
+                    </td>
+                    <td className="px-4 py-3.5 text-foreground font-medium">
+                      {request.externalCompanyName}
+                    </td>
+                    <td className="px-4 py-3.5 text-muted-foreground text-xs">
+                      {request.createdAt?.seconds
+                        ? new Date(request.createdAt.seconds * 1000).toLocaleDateString()
+                        : '-'}
+                    </td>
+                    <td className="px-4 py-3.5 text-center">
+                      <span
+                        className={`inline-flex px-2.5 py-0.5 text-xs font-medium rounded-full capitalize ${getStatusBadge(
+                          request.status,
+                        )}`}
+                      >
+                        {request.status}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      {request.status === 'pending' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedRequest(request)}
+                        >
+                          Review
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {/* Review Modal */}
+      {selectedRequest && (
+        <Modal
+          open={!!selectedRequest}
+          size="md"
+          title="Review Placement Request"
+          onClose={() => {
+            setSelectedRequest(null);
+            setReviewNotes('');
+          }}
+        >
+          <div className="space-y-4">
+            <div className="p-4 bg-muted/40 rounded-xl space-y-2 border border-border">
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4 text-primary shrink-0" />
+                <span className="text-sm font-semibold text-foreground">{selectedRequest.traineeName}</span>
+                <span className="text-xs text-muted-foreground">({selectedRequest.traineeEmail})</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Building2 className="w-4 h-4 text-primary shrink-0" />
+                <span>External Company: <strong className="text-foreground font-medium">{selectedRequest.externalCompanyName}</strong></span>
               </div>
               {selectedRequest.requestNotes && (
-                <div>
-                  <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Request Notes</p>
-                  <p className="text-[#121212] dark:text-white">{selectedRequest.requestNotes}</p>
+                <div className="pt-2 border-t border-border text-xs">
+                  <p className="font-medium text-foreground mb-0.5">Trainee Notes:</p>
+                  <p className="text-muted-foreground">{selectedRequest.requestNotes}</p>
                 </div>
               )}
-              <div>
-                <label htmlFor="placement-review-notes" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-                  Review Notes (optional)
-                </label>
-                <textarea
-                  id="placement-review-notes"
-                  value={reviewNotes}
-                  onChange={(e) => setReviewNotes(e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Add notes about your decision..."
-                />
-              </div>
             </div>
-            <div className="p-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A] flex justify-end gap-3">
-              <button
+
+            <FormField id="placement-review-notes" label="Coordinator Decision Notes (Optional)">
+              <FormTextarea
+                id="placement-review-notes"
+                value={reviewNotes}
+                onValueChange={setReviewNotes}
+                rows={3}
+                placeholder="Add any remarks or conditions for this placement approval/rejection..."
+              />
+            </FormField>
+
+            <div className="flex items-center justify-between pt-4 border-t border-border">
+              <Button
+                variant="secondary"
+                type="button"
                 onClick={() => {
                   setSelectedRequest(null);
                   setReviewNotes('');
                 }}
-                className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#555555] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
               >
                 Cancel
-              </button>
-              {(role === 'coordinator' || role === 'admin') && (
-                <>
-                  <button
-                    onClick={() => handleReject(selectedRequest)}
-                    disabled={processing}
-                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Reject
-                  </button>
-                  <button
-                    onClick={() => handleApprove(selectedRequest)}
-                    disabled={processing}
-                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Approve
-                  </button>
-                </>
-              )}
+              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="destructive"
+                  type="button"
+                  onClick={() => handleReject(selectedRequest)}
+                  isLoading={processing}
+                >
+                  Reject
+                </Button>
+                <Button
+                  variant="primary"
+                  type="button"
+                  onClick={() => handleApprove(selectedRequest)}
+                  isLoading={processing}
+                >
+                  Approve
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
+
       <ConfirmDialog
         open={confirmDialog !== null}
         title={confirmDialog?.title || ''}
         message={confirmDialog?.message || ''}
         danger={confirmDialog?.danger}
-        onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
+        onConfirm={() => {
+          confirmDialog?.onConfirm();
+          setConfirmDialog(null);
+        }}
         onCancel={() => setConfirmDialog(null)}
       />
     </div>

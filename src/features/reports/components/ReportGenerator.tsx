@@ -6,6 +6,8 @@ import { formatDateTime12 } from '@/shared/utils/dateUtils';
 import { useFormValidation } from '@/shared/hooks/useFormValidation';
 import { required } from '@/shared/utils/validators';
 import { FormField, FormInput, FormSelect } from '@/shared/components/FormField';
+import { Button } from '@/shared/components/ui/Button';
+import { Download, Printer, AlertCircle } from 'lucide-react';
 
 type ReportType = 'attendance' | 'dtr' | 'tasks' | 'documents' | 'comprehensive';
 
@@ -161,7 +163,7 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
     { value: 'dtr', label: 'DTR (Daily Time Record)', description: 'Calculated daily hours, OT, late, undertime' },
     { value: 'tasks', label: 'Tasks', description: 'Task assignments, status, priorities, due dates' },
     { value: 'documents', label: 'Documents', description: 'Uploaded documents with status and metadata' },
-    { value: 'comprehensive', label: 'Comprehensive', description: 'All modules combined (Excel only for multi-sheet)' },
+    { value: 'comprehensive', label: 'Comprehensive', description: 'All modules combined (Excel multi-sheet + PDF)' },
   ];
 
   const startDateValue = filters.startDate ? new Date(filters.startDate).toISOString().split('T')[0] : '';
@@ -169,40 +171,43 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
-        <h2 className="text-lg font-semibold text-[#121212] dark:text-white mb-6">Report Generator</h2>
+      <div className="bg-card rounded-xl shadow-sm border border-border p-4 md:p-6">
+        <div className="mb-6">
+          <h2 className="text-lg font-bold text-foreground">Report Generator</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Export structured PDF and Excel analytical reports</p>
+        </div>
 
         <form
           onSubmit={handleSubmit(doGenerate)}
-          className="space-y-0"
+          className="space-y-6"
         >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label htmlFor="report-type" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+              <label htmlFor="report-type" className="block text-xs font-semibold text-foreground mb-1.5">
                 Report Type
               </label>
               <select
                 id="report-type"
                 value={reportType}
                 onChange={(e) => setReportType(e.target.value as ReportType)}
-                className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 {reportTypes.map(t => (
                   <option key={t.value} value={t.value}>{t.label}</option>
                 ))}
               </select>
-              <p className="mt-1 text-xs text-[#757575] dark:text-[#9E9E9E]">
+              <p className="mt-1.5 text-xs text-muted-foreground">
                 {reportTypes.find(t => t.value === reportType)?.description}
               </p>
             </div>
 
             <div>
-              <label htmlFor="format-pdf" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+              <span className="block text-xs font-semibold text-foreground mb-1.5">
                 Output Format
-              </label>
-              <div className="flex gap-2">
-                {['pdf', 'excel', 'both'].map(f => (
-                  <label key={f} className="flex items-center gap-1 cursor-pointer">
+              </span>
+              <div className="flex gap-4 pt-2">
+                {(['pdf', 'excel', 'both'] as const).map(f => (
+                  <label key={f} className="flex items-center gap-2 cursor-pointer">
                     <input
                       id={`format-${f}`}
                       type="radio"
@@ -210,9 +215,9 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
                       value={f}
                       checked={format === f}
                       onChange={(e) => setFormat(e.target.value as 'pdf' | 'excel' | 'both')}
-                      className="w-4 h-4 text-blue-600 border-[#BDBDBD] focus:ring-blue-500"
+                      className="w-4 h-4 text-primary border-input focus:ring-primary"
                     />
-                    <span className="text-sm text-[#3A3A3A] dark:text-[#BDBDBD] capitalize">{f}</span>
+                    <span className="text-xs font-medium text-foreground uppercase">{f}</span>
                   </label>
                 ))}
               </div>
@@ -239,7 +244,7 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
             </FormField>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               id="report-start-date"
               label="Start Date"
@@ -273,14 +278,14 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
             </FormField>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <FormField id="trainee-select" label="Trainee (optional)">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField id="trainee-select" label="Trainee Scope (optional)">
               <FormSelect
                 id="trainee-select"
                 value={filters.traineeId || ''}
                 onValueChange={handleTraineeChange}
               >
-                <option value="">All Trainees</option>
+                <option value="">All Trainees in Company</option>
                 {trainees.map((t) => (
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
@@ -293,72 +298,56 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
                 type="text"
                 value={filters.status || ''}
                 onValueChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
-                placeholder="Filter by status"
+                placeholder="Filter by specific status"
               />
             </FormField>
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
-              {error}
+            <div role="alert" className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
-          <div className="flex flex-wrap gap-3">
-            <button
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            <Button
               type="submit"
-              disabled={generating}
-              className="px-6 py-3 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              variant="primary"
+              size="lg"
+              isLoading={generating}
             >
-              {generating ? (
-                <>
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Generate Report ({format.toUpperCase()})
-                </>
-              )}
-            </button>
+              <Download className="w-4 h-4 mr-2" />
+              Generate Report ({format.toUpperCase()})
+            </Button>
+
+            <Button
+              type="button"
+              variant="secondary"
+              size="lg"
+              onClick={() => window.print()}
+            >
+              <Printer className="w-4 h-4 mr-2" />
+              Print View
+            </Button>
 
             {lastGenerated && (
-              <span className="flex items-center text-sm text-[#757575] dark:text-[#9E9E9E]">
+              <span className="text-xs text-muted-foreground ml-auto">
                 Last generated: {lastGenerated}
               </span>
             )}
-
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="px-4 py-3 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#1E1E1E] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] flex items-center gap-2"
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-              </svg>
-              Print
-            </button>
           </div>
         </form>
 
-        <div className="mt-6 p-4 bg-[#F5F5F5] dark:bg-[#1E1E1E]/50 rounded-lg text-sm text-[#555555] dark:text-[#9E9E9E]">
-          <h4 className="font-medium text-[#121212] dark:text-white mb-2">Report Details</h4>
+        <div className="mt-8 p-4 bg-muted/30 rounded-xl border border-border text-xs text-muted-foreground space-y-2">
+          <h4 className="font-bold text-foreground text-sm">Report Capabilities</h4>
           <ul className="list-disc list-inside space-y-1">
-            <li><strong>Attendance:</strong> Raw time in/out scans with late/undertime calculations</li>
-            <li><strong>DTR:</strong> Calculated daily hours including regular, overtime, late, undertime, night differential</li>
-            <li><strong>Tasks:</strong> Task assignments, statuses, priorities, due dates, approval timestamps</li>
-            <li><strong>Documents:</strong> Uploaded documents with type, status, file metadata</li>
-            <li><strong>Comprehensive:</strong> All modules in one Excel workbook (multi-sheet) + summary PDF</li>
+            <li><strong className="text-foreground">Attendance:</strong> Full punch logs with late/undertime calculations and locations</li>
+            <li><strong className="text-foreground">DTR:</strong> Official Daily Time Records with regular, OT, tardiness, and night differential</li>
+            <li><strong className="text-foreground">Tasks:</strong> Assignments, progress, completion status, due dates, and supervisor review notes</li>
+            <li><strong className="text-foreground">Documents:</strong> Compliance records, checklist approvals, upload dates, and review state</li>
+            <li><strong className="text-foreground">Comprehensive:</strong> All modules bundled into a multi-sheet Excel workbook and summary PDF</li>
           </ul>
-          <p className="mt-3 text-xs text-[#757575] dark:text-[#757575]">
-            PDF: A4 landscape with auto-table, page numbers, date range header. Excel: multi-sheet with auto-column widths.
-          </p>
         </div>
       </div>
     </div>

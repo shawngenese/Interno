@@ -89,7 +89,7 @@ export function ActionsMenu({ items, align = 'right' }: ActionsMenuProps) {
       <button
         ref={buttonRef}
         onClick={() => setOpen(!open)}
-        className="p-2.5 rounded-lg text-[#9E9E9E] hover:text-[#555555] dark:hover:text-[#BDBDBD] hover:bg-[#EFEFEF] dark:hover:bg-[#3A3A3A] transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="p-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors focus:outline-none focus:ring-2 focus:ring-ring touch-target flex items-center justify-center"
         aria-label="Actions"
         aria-haspopup="true"
         aria-expanded={open}
@@ -104,7 +104,7 @@ export function ActionsMenu({ items, align = 'right' }: ActionsMenuProps) {
       {open && createPortal(
         <div
           ref={menuRef}
-          className="fixed z-[9999] min-w-[160px] bg-white dark:bg-[#1E1E1E] border border-[#D5D5D5] dark:border-[#3A3A3A] rounded-lg shadow-lg py-1"
+          className="fixed z-[9999] min-w-[160px] bg-card border border-border rounded-lg shadow-lg py-1 animate-[modal-enter_150ms_ease-out]"
           style={{ top: pos.top, left: pos.left }}
           role="menu"
         >
@@ -113,14 +113,14 @@ export function ActionsMenu({ items, align = 'right' }: ActionsMenuProps) {
               <button
                 key={i}
                 onClick={() => handleItemClick(item)}
-                className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
+                className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors min-h-[36px] ${
                   item.danger
-                    ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
-                    : 'text-[#3A3A3A] dark:text-[#BDBDBD] hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50'
+                    ? 'text-destructive hover:bg-destructive/10'
+                    : 'text-foreground hover:bg-muted'
                 }`}
                 role="menuitem"
               >
-                {item.icon && <span className="h-4 w-4 flex-shrink-0">{item.icon}</span>}
+                {item.icon && <span className="h-4 w-4 shrink-0">{item.icon}</span>}
                 {item.label}
               </button>
             )

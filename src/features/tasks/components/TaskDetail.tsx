@@ -5,6 +5,9 @@ import { getStorageInstancePublic } from '@/config/firebase';
 import { TaskForm } from './TaskForm';
 import { formatDateTime12 } from '@/shared/utils/dateUtils';
 import { AlertModal } from '@/shared/components/AlertModal';
+import { Button } from '@/shared/components/ui/Button';
+import { Skeleton } from '@/shared/components/Skeleton';
+import { CheckCircle2, Clock, MessageSquare, Paperclip, Send, Edit, ArrowLeft, Upload } from 'lucide-react';
 import type { Task, SubmitTaskPayload, ReviewTaskPayload } from '../types';
 import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS, TASK_STATUS_COLORS, TASK_PRIORITY_COLORS } from '../types';
 
@@ -13,7 +16,7 @@ interface TaskDetailProps {
   onBack?: () => void;
 }
 
-export function TaskDetail({ taskId }: TaskDetailProps) {
+export function TaskDetail({ taskId, onBack }: TaskDetailProps) {
   const { user, role } = useAuth();
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
@@ -106,30 +109,28 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+      <div className="space-y-4">
+        <Skeleton variant="rectangular" height={200} className="rounded-xl" />
+        <Skeleton variant="rectangular" height={150} className="rounded-xl" />
       </div>
     );
   }
 
   if (!task && !error) {
     return (
-      <div className="text-center py-12 bg-white dark:bg-[#1E1E1E] rounded-xl border border-[#D5D5D5] dark:border-[#3A3A3A]">
-        <p className="text-[#757575] dark:text-[#9E9E9E]">Task not found.</p>
+      <div className="text-center py-12 bg-card rounded-xl border border-border p-6">
+        <p className="text-sm text-muted-foreground">Task not found.</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-12 bg-white dark:bg-[#1E1E1E] rounded-xl border border-[#D5D5D5] dark:border-[#3A3A3A]">
-        <p className="text-red-500 dark:text-red-400 mb-4">{error}</p>
-        <button
-          onClick={loadTask}
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-        >
+      <div className="text-center py-12 bg-card rounded-xl border border-border p-6">
+        <p className="text-sm text-destructive mb-4">{error}</p>
+        <Button variant="primary" onClick={loadTask}>
           Retry
-        </button>
+        </Button>
       </div>
     );
   }
@@ -144,145 +145,171 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
   if (editing) {
     return (
       <div className="space-y-4">
-        <button onClick={() => setEditing(false)} className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700">
-          ← Cancel editing
-        </button>
+        <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
+          <ArrowLeft className="w-4 h-4 mr-1.5" /> Cancel editing
+        </Button>
         <TaskForm taskId={taskId} onSaved={() => { setEditing(false); loadTask(); }} onCancel={() => setEditing(false)} />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <h2 className="text-xl font-semibold text-[#121212] dark:text-white">{task.title}</h2>
+    <div className="space-y-6">
+      {onBack && (
+        <Button variant="ghost" size="sm" onClick={onBack}>
+          <ArrowLeft className="w-4 h-4 mr-1.5" /> Back to tasks
+        </Button>
+      )}
+
+      <div className="bg-card rounded-xl shadow-sm border border-border p-4 md:p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <h2 className="text-xl font-bold text-foreground">{task.title}</h2>
               {isOverdue && (
-                <span className="px-2 py-0.5 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded">
+                <span className="px-2 py-0.5 text-xs font-semibold bg-destructive/15 text-destructive rounded-full border border-destructive/20">
                   Overdue
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-3 text-sm text-[#757575] dark:text-[#9E9E9E]">
-              <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${TASK_STATUS_COLORS[task.status].bg} ${TASK_STATUS_COLORS[task.status].text}`}>
+            <div className="flex flex-wrap items-center gap-2.5 text-xs text-muted-foreground">
+              <span className={`px-2.5 py-0.5 font-semibold rounded-full ${TASK_STATUS_COLORS[task.status].bg} ${TASK_STATUS_COLORS[task.status].text}`}>
                 {TASK_STATUS_LABELS[task.status]}
               </span>
-              <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${TASK_PRIORITY_COLORS[task.priority].bg} ${TASK_PRIORITY_COLORS[task.priority].text}`}>
+              <span className={`px-2.5 py-0.5 font-semibold rounded-full ${TASK_PRIORITY_COLORS[task.priority].bg} ${TASK_PRIORITY_COLORS[task.priority].text}`}>
                 {TASK_PRIORITY_LABELS[task.priority]}
               </span>
-              <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
-              {task.estimatedHours && <span>Est. {task.estimatedHours}h</span>}
+              <span className="flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5" /> Due: {new Date(task.dueDate).toLocaleDateString()}
+              </span>
+              {task.estimatedHours && <span>• Est. {task.estimatedHours}h</span>}
             </div>
           </div>
           {isSupervisor && task.status === 'pending' && (
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => setEditing(true)}
-              className="px-3 py-1.5 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-[#EFEFEF] dark:bg-[#3A3A3A] rounded-lg hover:bg-[#D5D5D5] dark:hover:bg-[#555555]"
             >
-              Edit
-            </button>
+              <Edit className="w-3.5 h-3.5 mr-1" /> Edit
+            </Button>
           )}
         </div>
 
-        <div className="prose prose-sm dark:prose-invert max-w-none mb-4">
-          <p className="text-[#3A3A3A] dark:text-[#BDBDBD] whitespace-pre-wrap">{task.description}</p>
+        <div className="pt-2 border-t border-border">
+          <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{task.description}</p>
         </div>
 
         {task.submission && (
-          <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-            <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">Trainee Submission</h4>
-            <p className="text-sm text-blue-700 dark:text-blue-300 whitespace-pre-wrap">{task.submission.text}</p>
+          <div className="mt-4 p-4 bg-primary/10 border border-primary/20 rounded-xl space-y-2">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-primary" />
+              <h4 className="text-xs font-bold text-primary uppercase tracking-wide">Trainee Submission</h4>
+            </div>
+            <p className="text-sm text-foreground whitespace-pre-wrap">{task.submission.text}</p>
             {task.submission.attachments && task.submission.attachments.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-2">
                 {task.submission.attachments.map((url, i) => (
-                  <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 dark:text-blue-400 underline">
-                    Attachment {i + 1}
+                  <a
+                    key={i}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-primary font-semibold hover:underline bg-card px-2.5 py-1 rounded-md border border-border"
+                  >
+                    <Paperclip className="w-3.5 h-3.5" /> Attachment {i + 1}
                   </a>
                 ))}
               </div>
             )}
-            <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+            <p className="text-[11px] text-muted-foreground pt-1">
               Submitted: {formatDateTime12(task.submission.submittedAt)}
             </p>
           </div>
         )}
 
         {task.feedback && (
-          <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-            <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-2">Supervisor Feedback</h4>
-            <p className="text-sm text-yellow-700 dark:text-yellow-300 whitespace-pre-wrap">{task.feedback}</p>
+          <div className="mt-4 p-4 bg-warning/10 border border-warning/20 rounded-xl space-y-1.5">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-warning" />
+              <h4 className="text-xs font-bold text-warning uppercase tracking-wide">Supervisor Feedback</h4>
+            </div>
+            <p className="text-sm text-warning/90 whitespace-pre-wrap">{task.feedback}</p>
           </div>
         )}
       </div>
 
       {task.status === 'submitted' && isSupervisor && (
-        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
-          <h3 className="text-lg font-semibold text-[#121212] dark:text-white mb-4">Review Submission</h3>
+        <div className="bg-card rounded-xl shadow-sm border border-border p-4 md:p-6 space-y-4">
+          <h3 className="text-base font-bold text-foreground">Review Submission</h3>
           <textarea
             value={reviewFeedback}
             onChange={(e) => setReviewFeedback(e.target.value)}
             rows={3}
-            placeholder="Add feedback (optional)..."
+            placeholder="Add feedback notes (optional)..."
             aria-label="Review feedback"
-            className="w-full px-4 py-2.5 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none mb-4"
+            className="w-full p-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
           />
-          <div className="flex gap-3">
-            <button
-              onClick={() => handleReview('approved')}
-              disabled={submitting}
-              className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50"
-            >
-              {submitting ? 'Processing...' : 'Approve'}
-            </button>
-            <button
+          <div className="flex justify-end gap-3 pt-2">
+            <Button
+              variant="destructive"
               onClick={() => handleReview('returned')}
-              disabled={submitting}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
+              isLoading={submitting}
             >
-              {submitting ? 'Processing...' : 'Return for Revision'}
-            </button>
+              Return for Revision
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => handleReview('approved')}
+              isLoading={submitting}
+            >
+              Approve
+            </Button>
           </div>
         </div>
       )}
 
       {(task.status === 'pending' || task.status === 'in_progress' || task.status === 'returned') && !isSupervisor && (
-        <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
-          <h3 className="text-lg font-semibold text-[#121212] dark:text-white mb-4">Submit Work</h3>
+        <div className="bg-card rounded-xl shadow-sm border border-border p-4 md:p-6 space-y-4">
+          <h3 className="text-base font-bold text-foreground">Submit Work</h3>
           <textarea
             value={submitText}
             onChange={(e) => setSubmitText(e.target.value)}
             rows={4}
-            placeholder="Describe your progress or paste your work..."
+            placeholder="Describe your progress or paste deliverables here..."
             aria-label="Describe your progress"
-            className="w-full px-4 py-2.5 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none mb-3"
+            className="w-full p-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
           />
-          <div className="mb-4">
-            <label htmlFor="attachment-input" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-              Attachments{task?.requireAttachment ? <span className="text-red-500 ml-1">(Required)</span> : <span className="text-[#757575] dark:text-[#9E9E9E] ml-1">(Optional)</span>}
+          <div>
+            <label htmlFor="attachment-input" className="block text-xs font-semibold text-foreground mb-1.5">
+              Attachments {task?.requireAttachment ? <span className="text-destructive">* (Required)</span> : <span className="text-muted-foreground">(Optional)</span>}
             </label>
-            <input
-              id="attachment-input"
-              type="file"
-              multiple
-              onChange={(e) => setSubmitFiles(Array.from(e.target.files || []))}
-              className="w-full text-sm text-[#757575] dark:text-[#9E9E9E] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 dark:file:bg-blue-900/30 dark:file:text-blue-300 hover:file:bg-blue-100"
-            />
-            {submitFiles.length > 0 && (
-              <p className="mt-1 text-xs text-[#757575] dark:text-[#9E9E9E]">{submitFiles.length} file(s) selected</p>
-            )}
+            <div className="relative border-2 border-dashed border-border rounded-xl p-4 text-center hover:border-primary transition-colors">
+              <Upload className="w-6 h-6 text-muted-foreground mx-auto mb-1.5" />
+              <p className="text-xs text-muted-foreground mb-2">Click or drag files here to attach</p>
+              <input
+                id="attachment-input"
+                type="file"
+                multiple
+                onChange={(e) => setSubmitFiles(Array.from(e.target.files || []))}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+              />
+              {submitFiles.length > 0 && (
+                <p className="text-xs font-semibold text-primary">{submitFiles.length} file(s) selected</p>
+              )}
+            </div>
           </div>
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-          >
-            {submitting ? 'Submitting...' : 'Submit for Review'}
-          </button>
+          <div className="flex justify-end pt-2">
+            <Button
+              variant="primary"
+              onClick={handleSubmit}
+              isLoading={submitting}
+            >
+              <Send className="w-4 h-4 mr-1.5" /> Submit for Review
+            </Button>
+          </div>
         </div>
       )}
-
 
       <AlertModal
         open={alertModal !== null}
@@ -293,3 +320,4 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
     </div>
   );
 }
+

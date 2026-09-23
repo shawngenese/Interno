@@ -4,6 +4,8 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { getFunctionsInstancePublic } from '@/config/firebase';
 import { httpsCallable } from 'firebase/functions';
 import { formatTime12 } from '@/shared/utils/dateUtils';
+import { Button } from '@/shared/components/ui/Button';
+import { Camera, QrCode, AlertCircle, CheckCircle2, KeyRound } from 'lucide-react';
 
 interface QRScannerProps {
   onScanResult?: (result: { action: 'time_in' | 'time_out'; timestamp: number; message: string }) => void;
@@ -130,11 +132,13 @@ export function QRScanner({ onScanResult, onError }: QRScannerProps) {
       const scanner = new Html5Qrcode('qr-reader');
       html5QrcodeRef.current = scanner;
 
+      // Responsive scan box: 70% of the narrowest viewport dimension, clamped 200–300px
+      const qrSize = Math.max(200, Math.min(300, Math.floor(Math.min(window.innerWidth, 480) * 0.7)));
       await scanner.start(
         { facingMode: 'environment' },
         {
           fps: 10,
-          qrbox: { width: 250, height: 250 },
+          qrbox: { width: qrSize, height: qrSize },
         },
         async (decodedText: string) => {
           if (processingRef.current) return;
@@ -184,7 +188,7 @@ export function QRScanner({ onScanResult, onError }: QRScannerProps) {
     e.preventDefault();
     setManualError(null);
     if (!manualToken.trim()) {
-      setManualError('Please enter a QR code token');
+      setManualError('Enter a valid QR code token');
       return;
     }
     setSubmitting(true);
@@ -196,34 +200,33 @@ export function QRScanner({ onScanResult, onError }: QRScannerProps) {
   if (permissionDenied && !manualMode) {
     const isInsecureContext = !window.isSecureContext;
     return (
-      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6 text-center">
-        <svg className="mx-auto h-12 w-12 text-[#9E9E9E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-        </svg>
-        <h3 className="mt-4 text-lg font-medium text-[#121212] dark:text-white">Camera Permission Required</h3>
+      <div className="bg-card rounded-xl shadow-sm border border-border p-6 text-center">
+        <div className="w-12 h-12 mx-auto rounded-full bg-warning/10 flex items-center justify-center text-warning">
+          <Camera className="w-6 h-6" />
+        </div>
+        <h3 className="mt-4 text-lg font-bold text-foreground">Camera Permission Required</h3>
         {isInsecureContext ? (
-          <p className="mt-2 text-[#757575] dark:text-[#9E9E9E]">
+          <p className="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
             Camera requires HTTPS. Access this page from <strong>localhost</strong> or ask your admin to enable HTTPS.
           </p>
         ) : (
-          <p className="mt-2 text-[#757575] dark:text-[#9E9E9E]">
+          <p className="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
             Please enable camera access in your browser settings to scan QR codes.
           </p>
         )}
-        <div className="mt-4 flex justify-center gap-3">
-          <button
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <Button
+            variant="primary"
             onClick={startScanning}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             Retry Camera
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="secondary"
             onClick={() => setManualMode(true)}
-            className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-[#EFEFEF] dark:bg-[#3A3A3A] rounded-lg hover:bg-[#D5D5D5] dark:hover:bg-[#555555] focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             Enter Code Manually
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -231,29 +234,33 @@ export function QRScanner({ onScanResult, onError }: QRScannerProps) {
 
   if (manualMode) {
     return (
-      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
+      <div className="bg-card rounded-xl shadow-sm border border-border p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-semibold text-[#121212] dark:text-white">Manual Code Entry</h2>
-            <p className="mt-1 text-sm text-[#757575] dark:text-[#9E9E9E]">
+            <div className="flex items-center gap-2">
+              <KeyRound className="w-5 h-5 text-primary" />
+              <h2 className="text-lg font-bold text-foreground">Manual Code Entry</h2>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
               Enter the QR code token shown on the supervisor's screen.
             </p>
           </div>
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => {
               setManualMode(false);
               setManualToken('');
               setManualError(null);
             }}
-            className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
           >
-            Use Camera
-          </button>
+            <Camera className="w-4 h-4 mr-1.5" /> Use Camera
+          </Button>
         </div>
 
         <form onSubmit={handleManualSubmit} className="space-y-4">
           <div>
-            <label htmlFor="manual-token" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+            <label htmlFor="manual-token" className="block text-xs font-semibold text-foreground mb-1.5">
               QR Token
             </label>
             <input
@@ -262,61 +269,73 @@ export function QRScanner({ onScanResult, onError }: QRScannerProps) {
               value={manualToken}
               onChange={(e) => setManualToken(e.target.value)}
               placeholder="Paste or type the QR code token..."
-              className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+              className="w-full h-11 px-4 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring font-mono text-sm"
             />
           </div>
 
           {manualError && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
-              {manualError}
+            <div role="alert" className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{manualError}</span>
             </div>
           )}
 
-          <button
+          <Button
             type="submit"
-            disabled={submitting || !manualToken.trim()}
-            className="w-full px-4 py-3 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            variant="primary"
+            isLoading={submitting}
+            disabled={!manualToken.trim()}
+            className="w-full h-11"
           >
-            {submitting ? 'Validating...' : 'Submit'}
-          </button>
+            Submit
+          </Button>
         </form>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] overflow-hidden">
-      <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
+    <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+      <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-[#121212] dark:text-white">QR Attendance Scanner</h2>
-            <p className="mt-1 text-sm text-[#757575] dark:text-[#9E9E9E]">
+            <div className="flex items-center gap-2">
+              <QrCode className="w-5 h-5 text-primary" />
+              <h2 className="text-lg font-bold text-foreground">QR Attendance Scanner</h2>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
               Point camera at supervisor's QR code. Scans {scanning ? 'active' : 'stopped'}.
             </p>
           </div>
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => {
               stopScanning();
               setManualMode(true);
             }}
-            className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
           >
-            Enter Code
-          </button>
+            <KeyRound className="w-4 h-4 mr-1.5" /> Enter Code
+          </Button>
         </div>
       </div>
 
-      <div className="relative aspect-square max-w-xs mx-auto">
-        <style>{`#qr-reader { border: none !important; padding: 0 !important; margin: 0 !important; } #qr-reader video { width: 100% !important; height: 100% !important; object-fit: cover !important; } #qr-reader__scan_region { min-height: 0 !important; } #qr-reader img[alt="Info icon"] { display: none !important; } #qr-reader__dashboard { display: none !important; }`}</style>
-        <div id="qr-reader" aria-label="QR code scanner camera view" className="w-full h-full" ref={videoRef as React.RefObject<HTMLDivElement>} />
+      <div className="relative aspect-square max-w-xs mx-auto p-4 flex items-center justify-center">
+        <style>{`#qr-reader { border: none !important; padding: 0 !important; margin: 0 !important; width: 100% !important; border-radius: 0.75rem; overflow: hidden; } #qr-reader video { width: 100% !important; height: 100% !important; object-fit: cover !important; border-radius: 0.75rem; } #qr-reader__scan_region { min-height: 0 !important; } #qr-reader img[alt="Info icon"] { display: none !important; } #qr-reader__dashboard { display: none !important; }`}</style>
+        <div id="qr-reader" aria-label="QR code scanner camera view" className="w-full h-full rounded-xl" ref={videoRef as React.RefObject<HTMLDivElement>} />
         {scanning && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="relative w-64 h-64">
-              <div className="absolute inset-0 border-4 border-blue-500 rounded-lg" />
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-xs px-2 py-0.5 rounded">
-                Align QR code within frame
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none p-6">
+            <div className="relative w-60 h-60 border-2 border-primary/40 rounded-2xl flex items-center justify-center">
+              {/* Corner accents */}
+              <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-primary rounded-tl-lg" />
+              <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-primary rounded-tr-lg" />
+              <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-primary rounded-bl-lg" />
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-primary rounded-br-lg" />
+              
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-primary text-on-primary text-[11px] font-semibold px-2.5 py-0.5 rounded-full shadow-sm">
+                Align QR code
               </div>
-              <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-xs px-2 py-0.5 rounded">
+              <div className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 bg-card border border-border text-foreground text-[11px] font-semibold px-2.5 py-0.5 rounded-full shadow-sm animate-pulse">
                 Scanning...
               </div>
             </div>
@@ -325,20 +344,23 @@ export function QRScanner({ onScanResult, onError }: QRScannerProps) {
       </div>
 
       {lastScan && (
-        <div className="p-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A] bg-green-50 dark:bg-green-900/20">
+        <div className="p-4 border-t border-border bg-success/10">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                {lastScan.action === 'time_in' ? 'Time In' : 'Time Out'} Recorded
-              </p>
-              <p className="text-xs text-green-600 dark:text-green-400">
-                {formatTime12(lastScan.timestamp)}
-              </p>
+            <div className="flex items-center gap-2.5">
+              <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
+              <div>
+                <p className="text-sm font-bold text-success">
+                  {lastScan.action === 'time_in' ? 'Time In' : 'Time Out'} Recorded
+                </p>
+                <p className="text-xs text-success/80">
+                  {formatTime12(lastScan.timestamp)}
+                </p>
+              </div>
             </div>
-            <span className="text-2xl">&#10003;</span>
           </div>
         </div>
       )}
     </div>
   );
 }
+

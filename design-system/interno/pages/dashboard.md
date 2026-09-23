@@ -18,13 +18,18 @@ Cards are tighter. Stats tiles use `padding: 12px`. Tables use compact rows.
 
 ---
 
-## Stats Cards
+## Stat Cards
 
-- Grid: 2 columns mobile, 4 columns desktop
-- Card padding: `var(--space-3)` (12px)
-- Stat number: `display-sm` weight `700`
-- Stat label: `body-sm` color `--color-muted-foreground`
-- Icon: 20px, color matches stat type (present=green, late=amber, absent=red)
+Grid: 2 columns mobile, 4 columns desktop. Card padding: `var(--space-3)` (12px). Stat number: `display-sm` weight `700`. Stat label: `body-sm` color `muted-foreground`. Icon: 20px.
+
+| Stat | Icon | Icon Color |
+|------|------|------------|
+| Total Trainees | `Users` | `primary` (teal) |
+| Present Today | `Check` | `success` (green) |
+| Late Today | `Clock` | `warning` (amber) |
+| Absent Today | `X` | `destructive` (red) |
+| Pending Approvals | `AlertCircle` | `accent` (amber) |
+| OJT Progress | `BarChart` | `primary` (teal) |
 
 ---
 
@@ -37,23 +42,32 @@ Cards are tighter. Stats tiles use `padding: 12px`. Tables use compact rows.
 
 ---
 
-## Charts
+## Chart Specs
 
-- Height: `200px` mobile, `300px` desktop
-- Use Recharts (already installed)
-- Chart colors: teal primary, amber accent, muted for inactive
-- Tooltips: visible on hover/tap
-- Legends: below chart, compact
+Height: `200px` mobile, `300px` desktop. Library: Recharts. Tooltips visible on hover/tap. Legends below chart, compact. All color values reference design tokens — no raw hex in chart config.
+
+| Dashboard | Chart | Type | Token Colors |
+|-----------|-------|------|--------------|
+| Admin | OJT Pipeline | Bar | `primary`, `secondary`, `muted` |
+| Admin | Attendance | Bar | `success`, `warning`, `destructive` |
+| Admin | Task Status | Pie | `primary`, `accent`, `success`, `muted` |
+| Coordinator | OJT Pipeline | Bar | `primary`, `secondary`, `muted` |
+| Coordinator | Attendance | Bar | `success`, `warning`, `destructive` |
+| Supervisor | Pending DTR | Table | — |
+| Supervisor | Assigned Trainees | Cards | — |
 
 ---
 
 ## Quick Actions
 
-- Grid: 3 columns mobile, 4 columns desktop
-- Button style: ghost with icon + label
-- Icon size: 20px
-- Label: `body-sm` weight `500`
-- Touch target: 44x44px minimum
+Grid: 3 columns mobile, 4 columns desktop. Button style: ghost with icon above label. Icon size: 20px. Label: `body-sm` weight `500`. Touch target: 44×44px minimum. All icons from Lucide React.
+
+| Action | Icon | Token Color |
+|--------|------|-------------|
+| Generate QR | `QrCode` | `primary` |
+| DTR Approvals | `FileCheck` | `accent` |
+| View Trainees | `Users` | `primary` |
+| Reports | `BarChart3` | `primary` |
 
 ---
 

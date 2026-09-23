@@ -117,10 +117,10 @@ export function SwipeableItem({
   const progress = Math.min(1, Math.abs(swipeOffset) / threshold);
 
   const actionColorClasses = {
-    red: 'bg-red-500',
-    green: 'bg-green-500',
-    blue: 'bg-blue-500',
-    yellow: 'bg-yellow-500',
+    red: 'bg-destructive',
+    green: 'bg-success',
+    blue: 'bg-primary',
+    yellow: 'bg-warning',
   };
 
   return (

@@ -5,6 +5,8 @@ import {
 } from 'recharts';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { Skeleton } from '@/shared/components/Skeleton';
+import { EmptyState } from '@/shared/components/EmptyState';
 
 interface ChartData {
   attendanceByDate: { date: string; present: number; late: number; absent: number }[];
@@ -21,7 +23,7 @@ interface ChartData {
   };
 }
 
-const COLORS = ['#22c55e', '#eab308', '#ef4444', '#3b82f6', '#8b5cf6', '#ec4899'];
+const COLORS = ['var(--color-success)', 'var(--color-warning)', 'var(--color-destructive)', 'var(--color-primary)', 'var(--color-info)', 'var(--color-muted-foreground)'];
 
 interface DashboardChartsProps {
   traineeId: string;
@@ -178,57 +180,76 @@ export function DashboardCharts({ traineeId, startDate, endDate }: DashboardChar
   }, [fetchData]);
 
   if (loading) {
-    return <div className="text-center py-8 text-[#757575] dark:text-[#9E9E9E]">Loading charts...</div>;
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[1, 2, 3, 4].map(i => <Skeleton key={i} variant="rectangular" height={80} className="rounded-xl" />)}
+        </div>
+        <Skeleton variant="rectangular" height={260} className="rounded-xl" />
+      </div>
+    );
   }
 
   if (!data) {
-    return <div className="text-center py-8 text-[#757575] dark:text-[#9E9E9E]">No data available</div>;
+    return (
+      <EmptyState
+        title="No data available"
+        description="No analytics or activity logs recorded for the selected time range."
+      />
+    );
   }
 
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4">
-          <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Present Days</p>
-          <p className="text-2xl font-bold text-green-600">{data.summary.totalPresent}</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Present Days</p>
+          <p className="text-2xl font-bold text-success mt-1">{data.summary.totalPresent}</p>
         </div>
-        <div className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4">
-          <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Late Days</p>
-          <p className="text-2xl font-bold text-yellow-600">{data.summary.totalLate}</p>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Late Days</p>
+          <p className="text-2xl font-bold text-warning mt-1">{data.summary.totalLate}</p>
         </div>
-        <div className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4">
-          <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Regular Hours</p>
-          <p className="text-2xl font-bold text-blue-600">{data.summary.totalRegularHours}h</p>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Regular Hours</p>
+          <p className="text-2xl font-bold text-primary mt-1">{data.summary.totalRegularHours}h</p>
         </div>
-        <div className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4">
-          <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Overtime Hours</p>
-          <p className="text-2xl font-bold text-purple-600">{data.summary.totalOvertimeHours}h</p>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Overtime Hours</p>
+          <p className="text-2xl font-bold text-primary mt-1">{data.summary.totalOvertimeHours}h</p>
         </div>
       </div>
 
       {/* Attendance Trend */}
-      <div className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4">
-        <h3 className="text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-4">Attendance Trend</h3>
-        <ResponsiveContainer width="100%" height={250}>
+      <div className="rounded-xl border border-border bg-card p-4 md:p-6">
+        <h3 className="text-sm font-bold text-foreground mb-4">Attendance Trend</h3>
+        <ResponsiveContainer width="100%" height={260} role="img" aria-label="Bar chart showing attendance trend">
           <BarChart data={data.attendanceByDate}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip />
+            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+            <XAxis dataKey="date" tick={{ fontSize: 12, fill: 'currentColor' }} />
+            <YAxis tick={{ fontSize: 12, fill: 'currentColor' }} />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: 'var(--card)',
+                borderColor: 'var(--border)',
+                borderRadius: '0.75rem',
+                color: 'var(--foreground)',
+              }}
+            />
             <Legend />
-            <Bar dataKey="present" fill="#22c55e" name="Present" />
-            <Bar dataKey="late" fill="#eab308" name="Late" />
-            <Bar dataKey="absent" fill="#ef4444" name="Absent" />
+            <Bar dataKey="present" fill="var(--color-success)" name="Present" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="late" fill="var(--color-warning)" name="Late" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="absent" fill="var(--color-destructive)" name="Absent" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Task Status */}
+      {/* Task Status & Hours by Week */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4">
-          <h3 className="text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-4">Task Status</h3>
-          <ResponsiveContainer width="100%" height={200}>
+        <div className="rounded-xl border border-border bg-card p-4 md:p-6">
+          <h3 className="text-sm font-bold text-foreground mb-4">Task Status Distribution</h3>
+          <ResponsiveContainer width="100%" height={220} role="img" aria-label="Pie chart showing task status distribution">
             <PieChart>
               <Pie
                 data={data.taskByStatus}
@@ -244,23 +265,37 @@ export function DashboardCharts({ traineeId, startDate, endDate }: DashboardChar
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'var(--card)',
+                  borderColor: 'var(--border)',
+                  borderRadius: '0.75rem',
+                  color: 'var(--foreground)',
+                }}
+              />
               <Legend />
             </PieChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4">
-          <h3 className="text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-4">Hours by Week</h3>
-          <ResponsiveContainer width="100%" height={200}>
+        <div className="rounded-xl border border-border bg-card p-4 md:p-6">
+          <h3 className="text-sm font-bold text-foreground mb-4">Hours Logged by Week</h3>
+          <ResponsiveContainer width="100%" height={220} role="img" aria-label="Line chart showing hours logged by week">
             <LineChart data={data.hoursByWeek}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="week" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip />
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+              <XAxis dataKey="week" tick={{ fontSize: 12, fill: 'currentColor' }} />
+              <YAxis tick={{ fontSize: 12, fill: 'currentColor' }} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'var(--card)',
+                  borderColor: 'var(--border)',
+                  borderRadius: '0.75rem',
+                  color: 'var(--foreground)',
+                }}
+              />
               <Legend />
-              <Line type="monotone" dataKey="regular" stroke="#3b82f6" name="Regular" />
-              <Line type="monotone" dataKey="overtime" stroke="#8b5cf6" name="Overtime" />
+              <Line type="monotone" dataKey="regular" stroke="var(--color-primary)" strokeWidth={2} name="Regular" />
+              <Line type="monotone" dataKey="overtime" stroke="var(--color-info)" strokeWidth={2} name="Overtime" />
             </LineChart>
           </ResponsiveContainer>
         </div>

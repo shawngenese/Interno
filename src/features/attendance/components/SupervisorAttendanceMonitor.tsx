@@ -5,6 +5,10 @@ import { getAssignedTrainees } from '@/features/supervisor/services/supervisorSe
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, query, where, onSnapshot, orderBy, limit, getDocs } from 'firebase/firestore';
 import { formatTime12 } from '@/shared/utils/dateUtils';
+import { Skeleton } from '@/shared/components/Skeleton';
+import { EmptyState } from '@/shared/components/EmptyState';
+import { Button } from '@/shared/components/ui/Button';
+import { Users, UserCheck, AlertTriangle, Activity } from 'lucide-react';
 
 interface TraineeAttendanceStatus {
   traineeId: string;
@@ -143,36 +147,43 @@ export function SupervisorAttendanceMonitor() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
-        <h2 className="text-lg font-semibold text-[#121212] dark:text-white mb-4">Attendance Monitor</h2>
-        <p className="text-sm text-[#757575] dark:text-[#9E9E9E] mb-6">Real-time attendance status of assigned trainees.</p>
+      <div className="bg-card rounded-xl shadow-sm border border-border p-4 md:p-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Activity className="w-5 h-5 text-primary" />
+          <h2 className="text-lg font-bold text-foreground">Attendance Monitor</h2>
+        </div>
+        <p className="text-xs text-muted-foreground mb-6">Real-time attendance status of assigned trainees.</p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-            <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Total Assigned</p>
-            <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{statuses.length}</p>
+          <div className="p-4 bg-primary/10 border border-primary/20 rounded-xl">
+            <div className="flex items-center gap-2 text-xs font-semibold text-primary mb-1">
+              <Users className="w-4 h-4" /> Total Assigned
+            </div>
+            <p className="text-2xl font-bold text-foreground">{statuses.length}</p>
           </div>
-          <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-            <p className="text-sm font-medium text-green-700 dark:text-green-300">Timed In</p>
-            <p className="text-2xl font-bold text-green-900 dark:text-green-100">{allTimedIn.length}</p>
+          <div className="p-4 bg-success/10 border border-success/20 rounded-xl">
+            <div className="flex items-center gap-2 text-xs font-semibold text-success mb-1">
+              <UserCheck className="w-4 h-4" /> Timed In
+            </div>
+            <p className="text-2xl font-bold text-foreground">{allTimedIn.length}</p>
           </div>
-          <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-            <p className="text-sm font-medium text-yellow-700 dark:text-yellow-300">Missing Time Out</p>
-            <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">{missingTimeOut.length}</p>
+          <div className="p-4 bg-warning/10 border border-warning/20 rounded-xl">
+            <div className="flex items-center gap-2 text-xs font-semibold text-warning mb-1">
+              <AlertTriangle className="w-4 h-4" /> Missing Time Out
+            </div>
+            <p className="text-2xl font-bold text-foreground">{missingTimeOut.length}</p>
           </div>
         </div>
 
         {missingTimeOut.length > 0 && (
-          <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+          <div role="alert" className="mb-6 p-4 bg-warning/10 border border-warning/20 rounded-xl">
             <div className="flex items-center gap-2 mb-2">
-              <svg className="h-5 w-5 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-              </svg>
-              <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+              <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
+              <p className="text-sm font-bold text-warning">
                 {missingTimeOut.length} trainee(s) have not timed out yet
               </p>
             </div>
-            <ul className="list-disc list-inside text-sm text-yellow-700 dark:text-yellow-300">
+            <ul className="list-disc list-inside text-xs text-warning/90 space-y-0.5 ml-1">
               {missingTimeOut.map((s) => (
                 <li key={s.traineeId}>{s.traineeName} (timed in at {s.timeInTime})</li>
               ))}
@@ -181,71 +192,119 @@ export function SupervisorAttendanceMonitor() {
         )}
 
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+          <div className="space-y-3">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} variant="rectangular" height={52} className="rounded-lg" />
+            ))}
           </div>
         ) : error ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-4">
-            <p className="text-red-500 dark:text-red-400">{error}</p>
-            <button
+          <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
+            <p className="text-sm text-destructive">{error}</p>
+            <Button
+              variant="secondary"
               onClick={() => { setError(null); setRetryKey(k => k + 1); }}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
             >
               Retry
-            </button>
+            </Button>
           </div>
         ) : statuses.length === 0 ? (
-          <p className="text-center text-[#757575] dark:text-[#9E9E9E] py-8">No assigned trainees found.</p>
+          <EmptyState
+            title="No assigned trainees"
+            description="Contact your coordinator to assign trainees to your supervision."
+          />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
-                  <th className="text-left py-3 px-4 font-medium text-[#3A3A3A] dark:text-[#BDBDBD]">Trainee</th>
-                  <th className="text-center py-3 px-4 font-medium text-[#3A3A3A] dark:text-[#BDBDBD]">Status</th>
-                  <th className="text-center py-3 px-4 font-medium text-[#3A3A3A] dark:text-[#BDBDBD]">Time In</th>
-                  <th className="text-center py-3 px-4 font-medium text-[#3A3A3A] dark:text-[#BDBDBD]">Time Out</th>
-                </tr>
-              </thead>
-              <tbody>
-                {statuses.map((status) => (
-                  <tr key={status.traineeId} className="border-b border-gray-100 dark:border-[#3A3A3A]/50 hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/30">
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-[#D5D5D5] dark:bg-[#555555] flex items-center justify-center text-xs font-medium text-[#555555] dark:text-[#BDBDBD]">
-                          {status.traineeName.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-                        </div>
-                        <span className="font-medium text-[#121212] dark:text-white">{status.traineeName}</span>
+          <>
+            {/* Mobile Cards */}
+            <div className="space-y-3 md:hidden">
+              {statuses.map((status) => (
+                <div key={status.traineeId} className="bg-card border border-border rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
+                        {status.traineeName.split(' ').map((n) => n[0]).join('').slice(0, 2)}
                       </div>
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      {status.hasTimeIn && status.hasTimeOut ? (
-                        <span className="px-2 py-1 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full">
-                          Complete
-                        </span>
-                      ) : status.hasTimeIn ? (
-                        <span className="px-2 py-1 text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded-full">
-                          Timed In
-                        </span>
-                      ) : (
-                        <span className="px-2 py-1 text-xs font-medium bg-[#EFEFEF] dark:bg-[#3A3A3A] text-[#757575] dark:text-[#9E9E9E] rounded-full">
-                          Not Started
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-center text-[#555555] dark:text-[#9E9E9E]">
-                      {status.timeInTime || '—'}
-                    </td>
-                    <td className="py-3 px-4 text-center text-[#555555] dark:text-[#9E9E9E]">
-                      {status.timeOutTime || '—'}
-                    </td>
+                      <span className="font-semibold text-sm text-foreground">{status.traineeName}</span>
+                    </div>
+                    {status.hasTimeIn && status.hasTimeOut ? (
+                      <span className="px-2.5 py-0.5 text-xs font-semibold bg-success/15 text-success rounded-full border border-success/20">
+                        Complete
+                      </span>
+                    ) : status.hasTimeIn ? (
+                      <span className="px-2.5 py-0.5 text-xs font-semibold bg-warning/15 text-warning rounded-full border border-warning/20">
+                        Timed In
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-0.5 text-xs font-semibold bg-muted text-muted-foreground rounded-full border border-border">
+                        Not Started
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs bg-muted/40 p-2.5 rounded-lg border border-border">
+                    <div>
+                      <span className="text-muted-foreground">Time In:</span>{' '}
+                      <span className="font-semibold text-foreground">{status.timeInTime || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Time Out:</span>{' '}
+                      <span className="font-semibold text-foreground">{status.timeOutTime || '—'}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto rounded-lg border border-border">
+              <table className="w-full text-sm">
+                <thead className="bg-muted">
+                  <tr>
+                    <th className="h-[44px] text-left py-3 px-4 font-semibold text-xs text-muted-foreground uppercase tracking-wider">Trainee</th>
+                    <th className="h-[44px] text-center py-3 px-4 font-semibold text-xs text-muted-foreground uppercase tracking-wider">Status</th>
+                    <th className="h-[44px] text-center py-3 px-4 font-semibold text-xs text-muted-foreground uppercase tracking-wider">Time In</th>
+                    <th className="h-[44px] text-center py-3 px-4 font-semibold text-xs text-muted-foreground uppercase tracking-wider">Time Out</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {statuses.map((status) => (
+                    <tr key={status.traineeId} className="h-[44px] hover:bg-muted/50 transition-colors">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
+                            {status.traineeName.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                          </div>
+                          <span className="font-medium text-foreground">{status.traineeName}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        {status.hasTimeIn && status.hasTimeOut ? (
+                          <span className="px-2.5 py-0.5 text-xs font-semibold bg-success/15 text-success rounded-full border border-success/20">
+                            Complete
+                          </span>
+                        ) : status.hasTimeIn ? (
+                          <span className="px-2.5 py-0.5 text-xs font-semibold bg-warning/15 text-warning rounded-full border border-warning/20">
+                            Timed In
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-0.5 text-xs font-semibold bg-muted text-muted-foreground rounded-full border border-border">
+                            Not Started
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-center text-muted-foreground">
+                        {status.timeInTime || '—'}
+                      </td>
+                      <td className="py-3 px-4 text-center text-muted-foreground">
+                        {status.timeOutTime || '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>
   );
 }
+

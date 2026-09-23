@@ -7,6 +7,10 @@ import { EvaluationReview } from './EvaluationReview';
 import { useAuth } from '@/features/auth';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { Button } from '@/shared/components/ui/Button';
+import { Skeleton } from '@/shared/components/Skeleton';
+import { EmptyState } from '@/shared/components/EmptyState';
+import { ArrowLeft, Plus, Star } from 'lucide-react';
 
 const FIRESTORE_IN_LIMIT = 30;
 
@@ -26,10 +30,10 @@ interface EvaluationListProps {
 }
 
 const STATUS_LABELS: Record<EvaluationStatus, { label: string; color: string }> = {
-  draft: { label: 'Draft', color: 'bg-[#EFEFEF] text-[#3A3A3A] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]' },
-  submitted: { label: 'Submitted', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-  reviewed: { label: 'Reviewed', color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' },
-  finalized: { label: 'Finalized', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+  draft: { label: 'Draft', color: 'bg-muted text-muted-foreground border-border' },
+  submitted: { label: 'Submitted', color: 'bg-primary/10 text-primary border-primary/20' },
+  reviewed: { label: 'Reviewed', color: 'bg-warning/10 text-warning border-warning/20' },
+  finalized: { label: 'Finalized', color: 'bg-success/10 text-success border-success/20' },
 };
 
 export function EvaluationList({ companyId: companyIdProp, role, userId: userIdProp, traineeId: traineeIdProp }: EvaluationListProps) {
@@ -132,12 +136,13 @@ export function EvaluationList({ companyId: companyIdProp, role, userId: userIdP
   if (selectedEvaluation) {
     return (
       <div className="space-y-4">
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => { setSelectedEvaluation(null); loadEvaluations(); }}
-          className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700"
         >
-          ← Back to evaluations
-        </button>
+          <ArrowLeft className="w-4 h-4 mr-1.5" /> Back to evaluations
+        </Button>
         <EvaluationReview evaluationId={selectedEvaluation.id} onClose={() => { setSelectedEvaluation(null); loadEvaluations(); }} />
       </div>
     );
@@ -145,17 +150,20 @@ export function EvaluationList({ companyId: companyIdProp, role, userId: userIdP
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
+      <div className="bg-card rounded-xl shadow-sm border border-border p-4 md:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <h2 className="text-lg font-semibold text-[#121212] dark:text-white">
-            {role === 'trainee' ? 'My Evaluations' : 'Evaluations'}
-          </h2>
-          <div className="flex flex-wrap gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">
+              {role === 'trainee' ? 'My Evaluations' : 'Evaluations'}
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Performance reviews, monthly assessments, and final evaluations</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2.5">
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value as EvaluationType | '')}
               aria-label="Filter by evaluation type"
-              className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">All Types</option>
               {Object.entries(EVALUATION_TYPE_LABELS).map(([value, label]) => (
@@ -166,7 +174,7 @@ export function EvaluationList({ companyId: companyIdProp, role, userId: userIdP
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value as EvaluationStatus | '')}
               aria-label="Filter by status"
-              className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">All Status</option>
               <option value="draft">Draft</option>
@@ -175,20 +183,26 @@ export function EvaluationList({ companyId: companyIdProp, role, userId: userIdP
               <option value="finalized">Finalized</option>
             </select>
             {role === 'supervisor' && (
-              <button
+              <Button
                 onClick={() => { setShowForm(!showForm); setSelectedTraineeId(''); setSelectedTraineeName(''); }}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                variant={showForm ? 'secondary' : 'primary'}
+                size="md"
               >
-                {showForm ? 'Cancel' : 'New Evaluation'}
-              </button>
+                {showForm ? 'Cancel' : (
+                  <>
+                    <Plus className="w-4 h-4 mr-1.5" />
+                    New Evaluation
+                  </>
+                )}
+              </Button>
             )}
           </div>
         </div>
 
         {showForm && role === 'supervisor' && (
-          <div className="mb-6 p-4 bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 rounded-lg">
-            <label htmlFor="select-trainee" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-2">
-              Select Trainee
+          <div className="mb-6 p-4 bg-muted/40 rounded-xl border border-border">
+            <label htmlFor="select-trainee" className="block text-xs font-semibold text-foreground mb-1.5">
+              Select Trainee to Evaluate
             </label>
             <select
               id="select-trainee"
@@ -200,7 +214,7 @@ export function EvaluationList({ companyId: companyIdProp, role, userId: userIdP
                 setSelectedTraineeName(found?.name || '');
               }}
               aria-label="Select trainee to evaluate"
-              className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">-- Choose a trainee --</option>
               {trainees.map((t) => (
@@ -211,30 +225,33 @@ export function EvaluationList({ companyId: companyIdProp, role, userId: userIdP
         )}
 
         {showForm && selectedTraineeId && selectedTraineeName && (
-          <EvaluationForm
-            traineeId={selectedTraineeId}
-            traineeName={selectedTraineeName}
-            companyId={companyId}
-            onSuccess={() => {
-              setShowForm(false);
-              setSelectedTraineeId('');
-              setSelectedTraineeName('');
-              loadEvaluations();
-            }}
-            onCancel={() => { setShowForm(false); setSelectedTraineeId(''); setSelectedTraineeName(''); }}
-          />
+          <div className="mb-6">
+            <EvaluationForm
+              traineeId={selectedTraineeId}
+              traineeName={selectedTraineeName}
+              companyId={companyId}
+              onSuccess={() => {
+                setShowForm(false);
+                setSelectedTraineeId('');
+                setSelectedTraineeName('');
+                loadEvaluations();
+              }}
+              onCancel={() => { setShowForm(false); setSelectedTraineeId(''); setSelectedTraineeName(''); }}
+            />
+          </div>
         )}
 
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-20 bg-[#EFEFEF] dark:bg-[#3A3A3A] rounded-lg animate-pulse" />
+              <Skeleton key={i} variant="rectangular" height={80} className="rounded-xl" />
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-[#757575] dark:text-[#9E9E9E]">No evaluations found</p>
-          </div>
+          <EmptyState
+            title="No evaluations found"
+            description="There are no evaluation records matching your selected filter criteria."
+          />
         ) : (
           <div className="space-y-3">
             {filtered.map((evaluation) => {
@@ -243,43 +260,44 @@ export function EvaluationList({ companyId: companyIdProp, role, userId: userIdP
                 <button
                   key={evaluation.id}
                   onClick={() => setSelectedEvaluation(evaluation)}
-                  className="w-full text-left p-4 bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 rounded-lg hover:bg-[#EFEFEF] dark:hover:bg-[#3A3A3A] transition-colors"
+                  className="w-full text-left p-4 bg-card border border-border rounded-xl hover:border-primary/60 hover:bg-muted/30 transition-all cursor-pointer space-y-2.5"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-[#121212] dark:text-white">
+                        <span className="font-semibold text-foreground text-sm">
                           {evaluation.traineeName}
                         </span>
-                        <span className={`px-2 py-0.5 text-xs rounded-full ${statusInfo.color}`}>
+                        <span className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full border capitalize ${statusInfo.color}`}>
                           {statusInfo.label}
                         </span>
                       </div>
-                      <p className="text-sm text-[#555555] dark:text-[#9E9E9E]">
+                      <p className="text-xs text-muted-foreground">
                         {EVALUATION_TYPE_LABELS[evaluation.type]} • by {evaluation.supervisorName}
                       </p>
                     </div>
                     <div className="flex items-center gap-4">
                       {evaluation.overallRating && (
                         <div className="flex items-center gap-2">
-                          <div className="w-24 h-2 bg-[#D5D5D5] dark:bg-[#555555] rounded-full overflow-hidden">
+                          <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
                             <div
-                              className="h-full bg-blue-600 rounded-full"
+                              className="h-full bg-primary rounded-full transition-all"
                               style={{ width: getRatingBarWidth(evaluation.overallRating) }}
                             />
                           </div>
-                          <span className="text-sm font-medium text-[#121212] dark:text-white">
+                          <span className="text-sm font-bold text-foreground flex items-center gap-1">
+                            <Star className="w-3.5 h-3.5 text-warning fill-warning" />
                             {evaluation.overallRating}
                           </span>
                         </div>
                       )}
-                      <span className="text-sm text-[#757575] dark:text-[#9E9E9E]">
-                        {new Date(evaluation.createdAt).toLocaleDateString()}
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(evaluation.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </span>
                     </div>
                   </div>
                   {evaluation.overallComments && (
-                    <p className="mt-2 text-sm text-[#555555] dark:text-[#9E9E9E] line-clamp-2">
+                    <p className="text-xs text-muted-foreground line-clamp-2 bg-muted/40 p-2.5 rounded-lg border border-border">
                       {evaluation.overallComments}
                     </p>
                   )}

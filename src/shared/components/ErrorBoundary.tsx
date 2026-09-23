@@ -39,7 +39,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <h2 className="text-xl font-semibold text-[#121212] dark:text-white mb-2">
               Something went wrong
             </h2>
-            <p className="text-[#555555] dark:text-[#9E9E9E] mb-6">
+            <p className="text-muted-foreground mb-6">
               An unexpected error occurred. Please try again.
             </p>
             <button
@@ -47,7 +47,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 this.setState({ hasError: false, error: null });
                 window.location.reload();
               }}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 bg-primary text-on-primary rounded-lg hover:bg-primary-hover transition-colors"
             >
               Reload Page
             </button>

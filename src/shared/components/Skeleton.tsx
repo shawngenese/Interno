@@ -9,28 +9,32 @@ interface SkeletonProps {
 }
 
 function SkeletonBase({ className = '', variant = 'text', width, height }: SkeletonProps) {
-  const baseClasses = 'animate-pulse bg-[#D5D5D5] dark:bg-[#3A3A3A]';
+  // Uses skeleton class from globals.css (bg-muted + skeleton-pulse keyframe)
   const variantClasses = {
-    text: 'rounded h-4',
-    circular: 'rounded-full',
-    rectangular: 'rounded-lg',
+    text:        'rounded h-4',
+    circular:    'rounded-full',
+    rectangular: 'rounded-md',
   };
 
   const style: React.CSSProperties = {
-    width: width || (variant === 'circular' ? 40 : '100%'),
-    height: height || (variant === 'text' ? 16 : variant === 'circular' ? 40 : 100),
+    width:  width  ?? (variant === 'circular' ? 40  : '100%'),
+    height: height ?? (variant === 'text'      ? 16  : variant === 'circular' ? 40 : 100),
   };
 
   return (
     <div
       aria-hidden="true"
-      className={`${baseClasses} ${variantClasses[variant]} ${className}`}
+      className={`skeleton ${variantClasses[variant]} ${className}`}
       style={style}
     />
   );
 }
 
-export const Skeleton = React.memo(function Skeleton({ count = 1, className = '', ...props }: SkeletonProps & { count?: number }) {
+export const Skeleton = React.memo(function Skeleton({
+  count = 1,
+  className = '',
+  ...props
+}: SkeletonProps & { count?: number }) {
   return (
     <div role="status" aria-label="Loading..." className={`space-y-3 ${className}`}>
       {Array.from({ length: count }).map((_, i) => (
@@ -42,7 +46,7 @@ export const Skeleton = React.memo(function Skeleton({ count = 1, className = ''
 
 export const SkeletonCard = React.memo(function SkeletonCard({ className = '' }: { className?: string }) {
   return (
-    <div className={`rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4 space-y-3 ${className}`}>
+    <div className={`rounded-lg border border-border bg-card p-4 space-y-3 ${className}`}>
       <div className="flex items-center gap-3">
         <Skeleton variant="circular" width={40} height={40} />
         <div className="flex-1 space-y-2">
@@ -56,7 +60,15 @@ export const SkeletonCard = React.memo(function SkeletonCard({ className = '' }:
   );
 });
 
-export const SkeletonTable = React.memo(function SkeletonTable({ rows = 5, cols = 4, className = '' }: { rows?: number; cols?: number; className?: string }) {
+export const SkeletonTable = React.memo(function SkeletonTable({
+  rows = 5,
+  cols = 4,
+  className = '',
+}: {
+  rows?: number;
+  cols?: number;
+  className?: string;
+}) {
   return (
     <div className={`space-y-3 ${className}`}>
       {/* Header */}

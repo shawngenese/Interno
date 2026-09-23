@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { evaluationService } from '../services/evaluationService';
 import { EVALUATION_TYPE_LABELS, RATING_LABELS } from '../types';
 import type { Evaluation } from '../types';
+import { Skeleton } from '@/shared/components/Skeleton';
+import { EmptyState } from '@/shared/components/EmptyState';
+import { Star, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface TraineeEvaluationViewProps {
   traineeId: string;
@@ -30,19 +33,19 @@ export function TraineeEvaluationView({ traineeId }: TraineeEvaluationViewProps)
 
   const getStatusBadge = (status: string) => {
     const badges: Record<string, string> = {
-      draft: 'bg-[#EFEFEF] text-[#3A3A3A] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]',
-      submitted: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-      reviewed: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-      finalized: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+      draft: 'bg-muted text-muted-foreground border-border',
+      submitted: 'bg-primary/10 text-primary border-primary/20',
+      reviewed: 'bg-warning/10 text-warning border-warning/20',
+      finalized: 'bg-success/10 text-success border-success/20',
     };
-    return badges[status] || 'bg-[#EFEFEF] text-[#3A3A3A]';
+    return badges[status] || 'bg-muted text-muted-foreground border-border';
   };
 
   if (loading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-24 bg-[#EFEFEF] dark:bg-[#3A3A3A] rounded-lg animate-pulse" />
+          <Skeleton key={i} variant="rectangular" height={80} className="rounded-xl" />
         ))}
       </div>
     );
@@ -50,117 +53,126 @@ export function TraineeEvaluationView({ traineeId }: TraineeEvaluationViewProps)
 
   if (evaluations.length === 0) {
     return (
-      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
-        <div className="text-center py-12">
-          <p className="text-[#757575] dark:text-[#9E9E9E]">No evaluations yet</p>
-        </div>
+      <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+        <EmptyState
+          title="No evaluations yet"
+          description="Your supervisor has not submitted any evaluations yet. Check back after your evaluation cycle."
+        />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
-        <h2 className="text-lg font-semibold text-[#121212] dark:text-white mb-4">
-          My Evaluations
-        </h2>
+      <div className="bg-card rounded-xl shadow-sm border border-border p-4 md:p-6">
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-foreground">
+            My Evaluations
+          </h2>
+          <p className="text-xs text-muted-foreground mt-0.5">View your performance reviews and feedback from your supervisor</p>
+        </div>
 
         <div className="space-y-3">
           {evaluations.map((evaluation) => {
             const isSelected = selectedEvaluation?.id === evaluation.id;
             return (
-              <div key={evaluation.id}>
+              <div key={evaluation.id} className="rounded-xl border border-border overflow-hidden">
                 <button
                   onClick={() => setSelectedEvaluation(isSelected ? null : evaluation)}
-                  className="w-full text-left p-4 bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 rounded-lg hover:bg-[#EFEFEF] dark:hover:bg-[#3A3A3A] transition-colors"
+                  className="w-full text-left p-4 bg-card hover:bg-muted/30 transition-colors flex items-center justify-between cursor-pointer"
                 >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`px-2 py-0.5 text-xs rounded-full ${getStatusBadge(evaluation.status)}`}>
-                          {evaluation.status.charAt(0).toUpperCase() + evaluation.status.slice(1)}
-                        </span>
-                        <span className="font-medium text-[#121212] dark:text-white">
-                          {EVALUATION_TYPE_LABELS[evaluation.type]}
-                        </span>
-                      </div>
-                      <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">
-                        By {evaluation.supervisorName} • {new Date(evaluation.createdAt).toLocaleDateString()}
-                      </p>
+                  <div className="flex-1 min-w-0 pr-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full border capitalize ${getStatusBadge(evaluation.status)}`}>
+                        {evaluation.status}
+                      </span>
+                      <span className="font-semibold text-foreground text-sm">
+                        {EVALUATION_TYPE_LABELS[evaluation.type]}
+                      </span>
                     </div>
+                    <p className="text-xs text-muted-foreground truncate">
+                      By {evaluation.supervisorName} • {new Date(evaluation.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 flex-shrink-0">
                     {evaluation.overallRating && (
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-lg text-[#121212] dark:text-white">
+                      <div className="flex items-center gap-1">
+                        <Star className="w-4 h-4 text-warning fill-warning" />
+                        <span className="font-bold text-base text-foreground">
                           {evaluation.overallRating}
                         </span>
-                        <span className="text-sm text-[#757575] dark:text-[#9E9E9E]">/5</span>
+                        <span className="text-xs text-muted-foreground">/5</span>
                       </div>
+                    )}
+                    {isSelected ? (
+                      <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
                     )}
                   </div>
                 </button>
 
                 {isSelected && (
-                  <div className="mt-2 p-4 bg-white dark:bg-[#1E1E1E] border border-[#D5D5D5] dark:border-[#3A3A3A] rounded-lg">
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-[#757575] dark:text-[#9E9E9E]">Period:</span>
-                          <p className="font-medium text-[#121212] dark:text-white">
-                            {new Date(evaluation.period.startDate).toLocaleDateString()} -{' '}
-                            {new Date(evaluation.period.endDate).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-[#757575] dark:text-[#9E9E9E]">Overall Rating:</span>
-                          <p className="font-medium text-[#121212] dark:text-white">
-                            {evaluation.overallRating != null ? `${evaluation.overallRating}/5 (${RATING_LABELS[evaluation.overallRating as keyof typeof RATING_LABELS]})` : 'N/A'}
-                          </p>
-                        </div>
+                  <div className="p-4 bg-muted/20 border-t border-border space-y-4">
+                    <div className="grid grid-cols-2 gap-3 text-xs bg-muted/40 p-3 rounded-lg border border-border">
+                      <div>
+                        <span className="text-muted-foreground">Period:</span>
+                        <p className="font-semibold text-foreground text-sm mt-0.5">
+                          {new Date(evaluation.period.startDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })} -{' '}
+                          {new Date(evaluation.period.endDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </p>
                       </div>
-
-                      <div className="space-y-2">
-                        {evaluation.ratings.map((item) => (
-                          <div key={item.category} className="flex items-center justify-between py-1">
-                            <span className="text-sm text-[#3A3A3A] dark:text-[#BDBDBD]">
-                              {item.category}
-                            </span>
-                            <div className="flex items-center gap-2">
-                              <div className="w-20 h-2 bg-[#D5D5D5] dark:bg-[#555555] rounded-full overflow-hidden">
-                                <div
-                                  className="h-full bg-blue-600 rounded-full"
-                                  style={{ width: `${(item.rating / 5) * 100}%` }}
-                                />
-                              </div>
-                              <span className="text-sm font-medium text-[#121212] dark:text-white w-8 text-right">
-                                {item.rating}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
+                      <div>
+                        <span className="text-muted-foreground">Overall Rating:</span>
+                        <p className="font-semibold text-foreground text-sm mt-0.5">
+                          {evaluation.overallRating != null ? `${evaluation.overallRating}/5 (${RATING_LABELS[evaluation.overallRating as keyof typeof RATING_LABELS] || 'Good'})` : 'N/A'}
+                        </p>
                       </div>
-
-                      {evaluation.overallComments && (
-                        <div>
-                          <span className="text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD]">
-                            Supervisor Comments:
-                          </span>
-                          <p className="mt-1 text-sm text-[#555555] dark:text-[#9E9E9E] bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 p-3 rounded-lg">
-                            {evaluation.overallComments}
-                          </p>
-                        </div>
-                      )}
-
-                      {evaluation.reviewComments && (
-                        <div>
-                          <span className="text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD]">
-                            Coordinator Feedback:
-                          </span>
-                          <p className="mt-1 text-sm text-[#555555] dark:text-[#9E9E9E] bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
-                            {evaluation.reviewComments}
-                          </p>
-                        </div>
-                      )}
                     </div>
+
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Category Breakdown</h4>
+                      {evaluation.ratings.map((item) => (
+                        <div key={item.category} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
+                          <span className="text-xs font-medium text-foreground">
+                            {item.category}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-primary rounded-full transition-all"
+                                style={{ width: `${(item.rating / 5) * 100}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-bold text-foreground w-6 text-right">
+                              {item.rating}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {evaluation.overallComments && (
+                      <div>
+                        <span className="text-xs font-semibold text-foreground">
+                          Supervisor Feedback:
+                        </span>
+                        <p className="mt-1 text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg border border-border">
+                          {evaluation.overallComments}
+                        </p>
+                      </div>
+                    )}
+
+                    {evaluation.reviewComments && (
+                      <div>
+                        <span className="text-xs font-semibold text-foreground">
+                          Coordinator Feedback:
+                        </span>
+                        <p className="mt-1 text-xs text-warning bg-warning/10 p-3 rounded-lg border border-warning/20">
+                          {evaluation.reviewComments}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

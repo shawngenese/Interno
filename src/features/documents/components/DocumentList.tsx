@@ -7,6 +7,10 @@ import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { resolveDocName } from '@/shared/utils/resolveDocName';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
+import { Button } from '@/shared/components/ui/Button';
+import { Skeleton } from '@/shared/components/Skeleton';
+import { EmptyState } from '@/shared/components/EmptyState';
+import { FileText, CheckCircle2, XCircle, Trash2, ExternalLink } from 'lucide-react';
 import type { Document, DocumentType, DocumentStatus, ListDocumentsParams } from '../types';
 
 function formatDate(ms: number): string {
@@ -21,12 +25,16 @@ function formatSize(bytes: number): string {
 
 function statusBadge(status: DocumentStatus): React.ReactNode {
   const styles: Record<DocumentStatus, string> = {
-    pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-    approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-    rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-    archived: 'bg-[#EFEFEF] text-[#3A3A3A] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]',
+    pending: 'bg-warning/10 text-warning border-warning/20',
+    approved: 'bg-success/10 text-success border-success/20',
+    rejected: 'bg-destructive/10 text-destructive border-destructive/20',
+    archived: 'bg-muted text-muted-foreground border-border',
   };
-  return <span className={`px-2 py-0.5 text-xs font-medium rounded ${styles[status]}`}>{status}</span>;
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full border capitalize ${styles[status]}`}>
+      {status}
+    </span>
+  );
 }
 
 function typeLabel(type: DocumentType): string {
@@ -84,6 +92,7 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [traineeNameMap, setTraineeNameMap] = useState<Map<string, string>>(new Map());
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
     title: string;
     message: string;
@@ -139,27 +148,35 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
   }, [fetchDocuments]);
 
   const handleApprove = async (doc: Document) => {
+    setActionLoadingId(doc.id);
     try {
       await updateDocumentStatus(doc.id, 'approved');
+      addToast('success', 'Document approved');
       await fetchDocuments();
     } catch (err) {
       console.error('Approve failed:', err);
       addToast('error', 'Failed to approve document');
+    } finally {
+      setActionLoadingId(null);
     }
   };
 
   const handleReject = (doc: Document) => {
     setConfirmDialog({
       title: 'Reject Document',
-      message: 'Reject this document?',
+      message: 'Are you sure you want to reject this document?',
       danger: true,
       onConfirm: async () => {
+        setActionLoadingId(doc.id);
         try {
           await updateDocumentStatus(doc.id, 'rejected');
+          addToast('success', 'Document rejected');
           await fetchDocuments();
         } catch (err) {
           console.error('Reject failed:', err);
           addToast('error', 'Failed to reject document');
+        } finally {
+          setActionLoadingId(null);
         }
       },
     });
@@ -168,15 +185,19 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
   const handleDelete = (doc: Document) => {
     setConfirmDialog({
       title: 'Delete Document',
-      message: 'Delete this document permanently?',
+      message: 'Delete this document permanently? This action cannot be undone.',
       danger: true,
       onConfirm: async () => {
+        setActionLoadingId(doc.id);
         try {
           await deleteDocument(doc.id);
+          addToast('success', 'Document deleted');
           await fetchDocuments();
         } catch (err) {
           console.error('Delete failed:', err);
           addToast('error', 'Failed to delete document');
+        } finally {
+          setActionLoadingId(null);
         }
       },
     });
@@ -191,153 +212,227 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
       )}
 
       {role !== 'trainee' && (
-      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <h2 className="text-lg font-semibold text-[#121212] dark:text-white">
-            {isSupervisor ? 'Assigned Trainees\' Documents' : 'All Documents'}
-          </h2>
-          <div className="flex flex-wrap gap-3">
-            <select
-              value={filters.status || ''}
-              onChange={(e) => setFilters(f => ({ ...f, status: e.target.value as DocumentStatus | undefined, page: 1 }))}
-              aria-label="Filter by status"
-              className="px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
-            >
-              <option value="">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-              <option value="archived">Archived</option>
-            </select>
-            <select
-              value={filters.type || ''}
-              onChange={(e) => setFilters(f => ({ ...f, type: e.target.value as DocumentType | undefined, page: 1 }))}
-              aria-label="Filter by document type"
-              className="px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
-            >
-              <option value="">All Types</option>
-              <option value="endorsement">Endorsement</option>
-              <option value="agreement">Agreement</option>
-              <option value="medical">Medical</option>
-              <option value="consent">Consent</option>
-              <option value="resume">Resume</option>
-              <option value="school_reqs">School Reqs</option>
-              <option value="completion">Completion</option>
-              <option value="other">Other</option>
-            </select>
+        <div className="bg-card rounded-xl shadow-sm border border-border p-4 md:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-lg font-bold text-foreground">
+                {isSupervisor ? 'Assigned Trainees\' Documents' : 'All Documents'}
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Review, approve, or reject trainee document submissions</p>
+            </div>
+            <div className="flex flex-wrap gap-2.5">
+              <select
+                value={filters.status || ''}
+                onChange={(e) => setFilters(f => ({ ...f, status: e.target.value as DocumentStatus | undefined, page: 1 }))}
+                aria-label="Filter by status"
+                className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="archived">Archived</option>
+              </select>
+              <select
+                value={filters.type || ''}
+                onChange={(e) => setFilters(f => ({ ...f, type: e.target.value as DocumentType | undefined, page: 1 }))}
+                aria-label="Filter by document type"
+                className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">All Types</option>
+                <option value="endorsement">Endorsement</option>
+                <option value="agreement">Agreement</option>
+                <option value="medical">Medical</option>
+                <option value="consent">Consent</option>
+                <option value="resume">Resume</option>
+                <option value="school_reqs">School Reqs</option>
+                <option value="completion">Completion</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
           </div>
-        </div>
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm flex items-center justify-between">
-            <span>{error}</span>
-            <button onClick={() => { setError(null); fetchDocuments(); }} className="text-sm font-medium text-red-700 dark:text-red-400 hover:underline">Retry</button>
-          </div>
-        )}
-
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Trainee</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Type</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">File</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Size</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Uploaded</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Status</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center">
-                    <svg className="animate-spin mx-auto h-8 w-8 text-blue-600" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                  </td>
-                </tr>
-              ) : documents.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">No documents found</td>
-                </tr>
-              ) : (
-                documents.map((doc) => (
-                  <tr key={doc.id} className="hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50">
-                    <td className="px-4 py-3 text-sm font-medium text-[#121212] dark:text-white">{traineeNameMap.get(doc.traineeId) || doc.traineeId.slice(0, 8) + '...'}</td>
-                    <td className="px-4 py-3 text-sm text-[#757575] dark:text-[#9E9E9E]">{typeLabel(doc.type)}</td>
-                    <td className="px-4 py-3 text-sm text-[#121212] dark:text-white truncate max-w-xs">{doc.fileName}</td>
-                    <td className="px-4 py-3 text-sm text-[#757575] dark:text-[#9E9E9E]">{formatSize(doc.fileSize)}</td>
-                    <td className="px-4 py-3 text-sm text-[#757575] dark:text-[#9E9E9E]">{formatDate(doc.createdAt)}</td>
-                    <td className="px-4 py-3 text-sm">{statusBadge(doc.status)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <a
-                          href={doc.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
-                        >
-                          View
-                        </a>
-                        {canApproveReject && doc.status === 'pending' && (
-                          <>
-                            <button
-                              onClick={() => handleApprove(doc)}
-                              className="px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => handleReject(doc)}
-                              className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700"
-                            >
-                              Reject
-                            </button>
-                          </>
-                        )}
-                        {canDelete && (
-                          <button
-                            onClick={() => handleDelete(doc)}
-                            className="px-3 py-1.5 text-xs font-medium text-[#555555] dark:text-[#9E9E9E] hover:text-red-600 dark:hover:text-red-400"
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-
-          {totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-between">
-              <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">
-                Showing {((filters.page ?? 1) - 1) * (filters.limit || 20) + 1} to {Math.min((filters.page ?? 1) * (filters.limit || 20), total)} of {total}
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setFilters(f => ({ ...f, page: (f.page || 1) - 1 }))}
-                  disabled={(filters.page || 1) <= 1}
-                  className="px-3 py-1 text-sm text-[#121212] dark:text-white border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() => setFilters(f => ({ ...f, page: (f.page || 1) + 1 }))}
-                  disabled={(filters.page || 1) >= totalPages}
-                  className="px-3 py-1 text-sm text-[#121212] dark:text-white border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50"
-                >
-                  Next
-                </button>
-              </div>
+          {error && (
+            <div role="alert" className="mb-4 p-3.5 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm flex items-center justify-between">
+              <span>{error}</span>
+              <Button variant="ghost" size="sm" onClick={() => { setError(null); fetchDocuments(); }}>Retry</Button>
             </div>
           )}
+
+          {loading ? (
+            <div className="space-y-3">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} variant="rectangular" height={52} className="rounded-lg" />
+              ))}
+            </div>
+          ) : documents.length === 0 ? (
+            <EmptyState
+              title="No documents found"
+              description="No document submissions match your current filters."
+            />
+          ) : (
+            <>
+              {/* Mobile Card Layout */}
+              <div className="space-y-3 md:hidden">
+                {documents.map((doc) => (
+                  <div key={doc.id} className="bg-card border border-border rounded-xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-primary" />
+                        <div>
+                          <p className="font-semibold text-foreground text-sm">{typeLabel(doc.type)}</p>
+                          <p className="text-xs text-muted-foreground">{traineeNameMap.get(doc.traineeId) || doc.traineeId.slice(0, 8) + '...'}</p>
+                        </div>
+                      </div>
+                      {statusBadge(doc.status)}
+                    </div>
+
+                    <div className="text-xs text-muted-foreground bg-muted/40 p-2.5 rounded-lg border border-border flex items-center justify-between">
+                      <span className="truncate max-w-[200px] text-foreground font-medium">{doc.fileName}</span>
+                      <span>{formatSize(doc.fileSize)} • {formatDate(doc.createdAt)}</span>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-1 border-t border-border">
+                      <a
+                        href={doc.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center h-8 px-3 text-xs font-medium text-foreground bg-muted hover:bg-muted/80 rounded-lg transition-colors"
+                      >
+                        <ExternalLink className="w-3 h-3 mr-1" /> View
+                      </a>
+                      {canApproveReject && doc.status === 'pending' && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            isLoading={actionLoadingId === doc.id}
+                            onClick={() => handleApprove(doc)}
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            isLoading={actionLoadingId === doc.id}
+                            onClick={() => handleReject(doc)}
+                          >
+                            <XCircle className="w-3.5 h-3.5 mr-1" /> Reject
+                          </Button>
+                        </>
+                      )}
+                      {canDelete && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDelete(doc)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto rounded-lg border border-border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted">
+                    <tr>
+                      <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Trainee</th>
+                      <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Type</th>
+                      <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">File</th>
+                      <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Size</th>
+                      <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Uploaded</th>
+                      <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
+                      <th className="h-[44px] px-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wide">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {documents.map((doc) => (
+                      <tr key={doc.id} className="h-[44px] hover:bg-muted/50 transition-colors">
+                        <td className="px-4 py-3 font-medium text-foreground">{traineeNameMap.get(doc.traineeId) || doc.traineeId.slice(0, 8) + '...'}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{typeLabel(doc.type)}</td>
+                        <td className="px-4 py-3 text-foreground font-medium truncate max-w-xs">{doc.fileName}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{formatSize(doc.fileSize)}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{formatDate(doc.createdAt)}</td>
+                        <td className="px-4 py-3">{statusBadge(doc.status)}</td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <a
+                              href={doc.fileUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center h-8 px-2.5 text-xs font-medium text-foreground bg-muted hover:bg-muted/80 rounded-lg transition-colors"
+                            >
+                              <ExternalLink className="w-3 h-3 mr-1" /> View
+                            </a>
+                            {canApproveReject && doc.status === 'pending' && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="primary"
+                                  isLoading={actionLoadingId === doc.id}
+                                  onClick={() => handleApprove(doc)}
+                                >
+                                  Approve
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  isLoading={actionLoadingId === doc.id}
+                                  onClick={() => handleReject(doc)}
+                                >
+                                  Reject
+                                </Button>
+                              </>
+                            )}
+                            {canDelete && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDelete(doc)}
+                              >
+                                <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {totalPages > 1 && (
+                <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+                  <p>
+                    Showing {((filters.page ?? 1) - 1) * (filters.limit || 20) + 1} to {Math.min((filters.page ?? 1) * (filters.limit || 20), total)} of {total} records
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setFilters(f => ({ ...f, page: (f.page || 1) - 1 }))}
+                      disabled={(filters.page || 1) <= 1}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setFilters(f => ({ ...f, page: (f.page || 1) + 1 }))}
+                      disabled={(filters.page || 1) >= totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
-      </div>
       )}
       <ConfirmDialog
         open={confirmDialog !== null}

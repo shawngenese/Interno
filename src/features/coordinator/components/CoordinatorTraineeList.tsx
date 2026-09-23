@@ -1,8 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { getCoordinatorTrainees, updateTraineeAssignment, getSupervisors } from '../services/coordinatorService';
 import { useAuth } from '@/features/auth';
 import type { CoordinatorTrainee } from '../types';
+import { Modal } from '@/shared/components/Modal';
+import { Button } from '@/shared/components/ui/Button';
+import { Skeleton } from '@/shared/components/Skeleton';
+import { EmptyState } from '@/shared/components/EmptyState';
+import { FormField, FormSelect } from '@/shared/components/FormField';
+import { UserCheck, Clock } from 'lucide-react';
 
 interface Supervisor {
   id: string;
@@ -13,7 +18,6 @@ interface Supervisor {
 
 export function CoordinatorTraineeList() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [trainees, setTrainees] = useState<CoordinatorTrainee[]>([]);
   const [supervisors, setSupervisors] = useState<Supervisor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,7 +44,7 @@ export function CoordinatorTraineeList() {
 
       if (!signal?.aborted) {
         setTrainees(traineeData);
-        setSupervisors(supervisorData.filter(s => s.companyId === cid));
+        setSupervisors(supervisorData.filter((s) => s.companyId === cid));
       }
     } catch (err) {
       if (!signal?.aborted) {
@@ -60,7 +64,7 @@ export function CoordinatorTraineeList() {
     return () => controller.abort();
   }, [fetchData]);
 
-  const handleAssign = async (trainee: CoordinatorTrainee) => {
+  const handleAssign = (trainee: CoordinatorTrainee) => {
     setSelectedTrainee(trainee);
     setSelectedSupervisorId(trainee.supervisorId || '');
     setAssigning(true);
@@ -84,180 +88,249 @@ export function CoordinatorTraineeList() {
     }
   };
 
-  const filteredTrainees = trainees.filter(t => {
+  const filteredTrainees = trainees.filter((t) => {
     if (filterStatus && t.status !== filterStatus) return false;
     return true;
   });
 
   const getSupervisorName = (supervisorId?: string) => {
     if (!supervisorId) return 'Unassigned';
-    return supervisors.find(s => s.id === supervisorId)?.name || 'Unknown';
+    return supervisors.find((s) => s.id === supervisorId)?.name || 'Unknown';
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-[#121212] dark:text-white">Manage Trainees</h2>
-        <button
-          onClick={() => navigate('/coordinator')}
-          className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#555555] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-        >
-          Back to Dashboard
-        </button>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-foreground">Manage Trainees</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Monitor progress and assign departmental supervisors to trainees
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">All Statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
+        <div role="alert" className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm">
           {error}
         </div>
       )}
 
-      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
-        <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
-          <div className="flex items-center gap-4">
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">All Statuses</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="completed">Completed</option>
-            </select>
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
+        {loading ? (
+          <div className="p-5 space-y-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="p-4 border border-border rounded-xl space-y-2">
+                <Skeleton variant="text" width="40%" height={20} />
+                <Skeleton variant="text" width="60%" height={16} />
+              </div>
+            ))}
           </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Trainee</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Supervisor</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">OJT Progress</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
-              {loading ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">
-                    <div className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin h-5 w-5 text-blue-600" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      Loading trainees...
+        ) : filteredTrainees.length === 0 ? (
+          <div className="p-8">
+            <EmptyState
+              title="No trainees found"
+              description={filterStatus ? `No trainees match the status "${filterStatus}".` : 'No trainees are registered under your department yet.'}
+            />
+          </div>
+        ) : (
+          <>
+            {/* Mobile Card Layout (md:hidden) */}
+            <div className="divide-y divide-border md:hidden">
+              {filteredTrainees.map((trainee) => (
+                <div key={trainee.traineeId} className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h4 className="font-semibold text-foreground text-sm">{trainee.name}</h4>
+                      <p className="text-xs text-muted-foreground">{trainee.email}</p>
                     </div>
-                  </td>
-                </tr>
-              ) : filteredTrainees.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-[#757575] dark:text-[#9E9E9E]">
-                    No trainees found
-                  </td>
-                </tr>
-              ) : (
-                filteredTrainees.map((trainee) => (
-                  <tr key={trainee.traineeId} className="hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50">
-                    <td className="px-4 py-4">
-                      <div className="font-medium text-[#121212] dark:text-white">{trainee.name}</div>
-                      <div className="text-sm text-[#757575] dark:text-[#9E9E9E]">{trainee.email}</div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                    <span
+                      className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full capitalize ${
                         trainee.status === 'active'
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                          ? 'bg-success/15 text-success'
                           : trainee.status === 'completed'
-                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
-                          : 'bg-[#EFEFEF] text-[#1E1E1E] dark:bg-[#3A3A3A] dark:text-[#9E9E9E]'
-                      }`}>
-                        {trainee.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 text-sm text-[#757575] dark:text-[#9E9E9E]">
-                      {getSupervisorName(trainee.supervisorId)}
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="text-sm text-[#121212] dark:text-white">
-                        {trainee.ojtHoursCompleted}/{trainee.ojtHoursRequired}h
-                      </div>
-                      <div className="w-full bg-[#D5D5D5] dark:bg-[#3A3A3A] rounded-full h-1.5 mt-1">
-                        <div
-                          className="bg-blue-600 h-1.5 rounded-full"
-                          style={{ width: `${trainee.ojtHoursRequired > 0 ? Math.min(100, (trainee.ojtHoursCompleted / trainee.ojtHoursRequired) * 100) : 0}%` }}
-                        />
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 text-right">
-                      <button
-                        onClick={() => handleAssign(trainee)}
-                        className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                      >
-                        Assign
-                      </button>
-                    </td>
+                          ? 'bg-primary/15 text-primary'
+                          : 'bg-muted text-muted-foreground'
+                      }`}
+                    >
+                      {trainee.status}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1.5">
+                      <UserCheck className="w-3.5 h-3.5 shrink-0" />
+                      <span>{getSupervisorName(trainee.supervisorId)}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 shrink-0" />
+                      <span>{trainee.ojtHoursCompleted} / {trainee.ojtHoursRequired}h</span>
+                    </div>
+                  </div>
+
+                  <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className="bg-primary h-1.5 rounded-full transition-all"
+                      style={{
+                        width: `${
+                          trainee.ojtHoursRequired > 0
+                            ? Math.min(100, (trainee.ojtHoursCompleted / trainee.ojtHoursRequired) * 100)
+                            : 0
+                        }%`,
+                      }}
+                    />
+                  </div>
+
+                  <div className="flex justify-end pt-1">
+                    <Button variant="secondary" size="sm" onClick={() => handleAssign(trainee)}>
+                      Assign Supervisor
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table Layout (hidden md:block) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/40 border-b border-border">
+                  <tr>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Trainee
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Assigned Supervisor
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      OJT Progress
+                    </th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {filteredTrainees.map((trainee) => (
+                    <tr key={trainee.traineeId} className="hover:bg-muted/30 transition-colors">
+                      <td className="px-5 py-3.5">
+                        <div className="font-medium text-foreground">{trainee.name}</div>
+                        <div className="text-xs text-muted-foreground">{trainee.email}</div>
+                      </td>
+                      <td className="px-4 py-3.5 text-center">
+                        <span
+                          className={`inline-flex px-2.5 py-0.5 text-xs font-medium rounded-full capitalize ${
+                            trainee.status === 'active'
+                              ? 'bg-success/15 text-success'
+                              : trainee.status === 'completed'
+                              ? 'bg-primary/15 text-primary'
+                              : 'bg-muted text-muted-foreground'
+                          }`}
+                        >
+                          {trainee.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-muted-foreground text-xs">
+                        {getSupervisorName(trainee.supervisorId)}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="text-xs text-foreground font-medium">
+                          {trainee.ojtHoursCompleted} / {trainee.ojtHoursRequired}h
+                        </div>
+                        <div className="w-28 bg-muted rounded-full h-1.5 mt-1 overflow-hidden">
+                          <div
+                            className="bg-primary h-1.5 rounded-full transition-all"
+                            style={{
+                              width: `${
+                                trainee.ojtHoursRequired > 0
+                                  ? Math.min(100, (trainee.ojtHoursCompleted / trainee.ojtHoursRequired) * 100)
+                                  : 0
+                              }%`,
+                            }}
+                          />
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5 text-right">
+                        <Button variant="ghost" size="sm" onClick={() => handleAssign(trainee)}>
+                          Assign
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
 
       {assigning && selectedTrainee && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-xl max-w-md w-full">
-            <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
-              <h4 className="text-lg font-semibold text-[#121212] dark:text-white">
-                Assign Supervisor
-              </h4>
+        <Modal
+          open={assigning && !!selectedTrainee}
+          size="md"
+          title="Assign Supervisor"
+          onClose={() => {
+            setAssigning(false);
+            setSelectedTrainee(null);
+          }}
+        >
+          <div className="space-y-4">
+            <div className="p-3 bg-muted/40 rounded-xl border border-border">
+              <p className="text-xs text-muted-foreground">Trainee</p>
+              <p className="font-semibold text-foreground text-sm">{selectedTrainee.name}</p>
+              <p className="text-xs text-muted-foreground">{selectedTrainee.email}</p>
             </div>
-            <div className="p-4 space-y-4">
-              <div>
-                <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Trainee</p>
-                <p className="font-medium text-[#121212] dark:text-white">{selectedTrainee.name}</p>
-              </div>
-              <div>
-                <label htmlFor="supervisor-select" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
-                  Select Supervisor
-                </label>
-                <select
-                  id="supervisor-select"
-                  value={selectedSupervisorId}
-                  onChange={(e) => setSelectedSupervisorId(e.target.value)}
-                  className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">No Supervisor</option>
-                  {supervisors.map((sup) => (
-                    <option key={sup.id} value={sup.id}>
-                      {sup.name} ({sup.email})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="p-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A] flex justify-end gap-3">
-              <button
+
+            <FormField id="supervisor-select" label="Select Supervisor">
+              <FormSelect
+                id="supervisor-select"
+                value={selectedSupervisorId}
+                onValueChange={setSelectedSupervisorId}
+              >
+                <option value="">No Supervisor (Unassigned)</option>
+                {supervisors.map((sup) => (
+                  <option key={sup.id} value={sup.id}>
+                    {sup.name} ({sup.email})
+                  </option>
+                ))}
+              </FormSelect>
+            </FormField>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+              <Button
+                variant="secondary"
+                type="button"
                 onClick={() => {
                   setAssigning(false);
                   setSelectedTrainee(null);
                 }}
-                className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#555555] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
+                type="button"
                 onClick={handleSaveAssignment}
-                disabled={saving}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                isLoading={saving}
               >
-                {saving ? 'Saving...' : 'Save'}
-              </button>
+                Save
+              </Button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

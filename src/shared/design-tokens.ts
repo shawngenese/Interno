@@ -13,9 +13,9 @@ export const Colors = {
   systemBlue: "#0A84FF",
   systemPurple: "#AF52DE",
   
-  // Custom Trainee Management Colors
-  primary: "#0A84FF",
-  primaryHover: "#0871E5",
+  // Custom Trainee Management Colors — corporate blue (matches tokens.css / SAMPLE.HTML)
+  primary: "#1D4ED8",
+  primaryHover: "#1E40AF",
   secondary: "#86868B",
   success: "#34C759",
   warning: "#FF9F0A",

@@ -23,6 +23,9 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import { Modal } from '@/shared/components/Modal';
+import { Button } from '@/shared/components/ui/Button';
+import { PageTransition } from '@/shared/components/PageTransition';
+import { ChevronLeft } from 'lucide-react';
 import type { User, Company, Department, Supervisor, Trainee, WorkSchedule, OJTSchedule } from '../types';
 
 type Tab = 'dashboard' | 'users' | 'companies' | 'departments' | 'supervisors' | 'coordinators' | 'trainees' | 'work-schedules' | 'ojt-schedules';
@@ -307,321 +310,311 @@ export function AdminDashboard() {
   };
 
   return (
-    <>
-    <div>
-      {view === 'assign' && assigningSupervisor && (
-        <div className="mb-4">
-          <button
-            onClick={handleAssignmentClose}
-            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium flex items-center gap-1"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to Supervisors
-          </button>
-        </div>
-      )}
+    <PageTransition>
+      <div className="space-y-6">
+        {view === 'assign' && assigningSupervisor && (
+          <div className="mb-4">
+            <button
+              onClick={handleAssignmentClose}
+              className="text-primary hover:text-primary-hover text-sm font-medium flex items-center gap-1 transition-colors"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Back to Supervisors
+            </button>
+          </div>
+        )}
 
-      {activeTab === 'dashboard' && <AdminOverview />}
+        {activeTab === 'dashboard' && <AdminOverview />}
 
-      {activeTab === 'users' && (
-        <>
-          {view === 'list' && (
-            <>
-              <div className="mb-6 flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold text-[#121212] dark:text-white">User Management</h1>
-                  <p className="text-[#555555] dark:text-[#9E9E9E] mt-1">Manage system users and their roles</p>
+        {activeTab === 'users' && (
+          <>
+            {view === 'list' && (
+              <>
+                <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h1 className="text-2xl font-bold text-foreground">User Management</h1>
+                    <p className="text-muted-foreground mt-1">Manage system users and their roles</p>
+                  </div>
+                  <Button
+                    onClick={() => { setView('create'); setEditingUserId(null); }}
+                  >
+                    Add User
+                  </Button>
                 </div>
-                <button
-                  onClick={() => { setView('create'); setEditingUserId(null); }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-                >
-                  Add User
-                </button>
-              </div>
-              <UserList onEdit={handleEditUser} onView={handleViewUser} />
-            </>
-          )}
+                <UserList onEdit={handleEditUser} onView={handleViewUser} />
+              </>
+            )}
 
-          {view === 'create' && (
-            <Modal open title={FORM_TITLES[activeTab].create} onClose={handleBackToList}>
-              <UserForm onCancel={handleBackToList} onSaved={handleBackToList} />
-            </Modal>
-          )}
-          {view === 'edit' && editingUserId && (
-            <Modal open title={FORM_TITLES[activeTab].edit} onClose={handleBackToList}>
-              <UserForm editingId={editingUserId} onCancel={handleBackToList} onSaved={handleBackToList} />
-            </Modal>
-          )}
-        </>
-      )}
+            {view === 'create' && (
+              <Modal open title={FORM_TITLES[activeTab].create} onClose={handleBackToList}>
+                <UserForm onCancel={handleBackToList} onSaved={handleBackToList} />
+              </Modal>
+            )}
+            {view === 'edit' && editingUserId && (
+              <Modal open title={FORM_TITLES[activeTab].edit} onClose={handleBackToList}>
+                <UserForm editingId={editingUserId} onCancel={handleBackToList} onSaved={handleBackToList} />
+              </Modal>
+            )}
+          </>
+        )}
 
-      {activeTab === 'companies' && (
-        <>
-          {view === 'list' && (
-            <>
-              <div className="mb-6 flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold text-[#121212] dark:text-white">Company Management</h1>
-                  <p className="text-[#555555] dark:text-[#9E9E9E] mt-1">Manage companies</p>
+        {activeTab === 'companies' && (
+          <>
+            {view === 'list' && (
+              <>
+                <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h1 className="text-2xl font-bold text-foreground">Company Management</h1>
+                    <p className="text-muted-foreground mt-1">Manage companies</p>
+                  </div>
+                  <Button
+                    onClick={() => { setView('create'); setEditingCompanyId(null); }}
+                  >
+                    Add Company
+                  </Button>
                 </div>
-                <button
-                  onClick={() => { setView('create'); setEditingCompanyId(null); }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-                >
-                  Add Company
-                </button>
-              </div>
-              <CompanyList onEdit={handleEditCompany} />
-            </>
-          )}
+                <CompanyList onEdit={handleEditCompany} />
+              </>
+            )}
 
-          {view === 'create' && (
-            <Modal open title={FORM_TITLES[activeTab].create} onClose={handleBackToList}>
-              <CompanyForm onCancel={handleBackToList} onSaved={handleBackToList} />
-            </Modal>
-          )}
-          {view === 'edit' && editingCompanyId && (
-            <Modal open title={FORM_TITLES[activeTab].edit} onClose={handleBackToList}>
-              <CompanyForm editingId={editingCompanyId} onCancel={handleBackToList} onSaved={handleBackToList} />
-            </Modal>
-          )}
-        </>
-      )}
+            {view === 'create' && (
+              <Modal open title={FORM_TITLES[activeTab].create} onClose={handleBackToList}>
+                <CompanyForm onCancel={handleBackToList} onSaved={handleBackToList} />
+              </Modal>
+            )}
+            {view === 'edit' && editingCompanyId && (
+              <Modal open title={FORM_TITLES[activeTab].edit} onClose={handleBackToList}>
+                <CompanyForm editingId={editingCompanyId} onCancel={handleBackToList} onSaved={handleBackToList} />
+              </Modal>
+            )}
+          </>
+        )}
 
-      {activeTab === 'departments' && (
-        <>
-          {view === 'list' && (
-            <>
-              <div className="mb-6 flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold text-[#121212] dark:text-white">Department Management</h1>
-                  <p className="text-[#555555] dark:text-[#9E9E9E] mt-1">Manage departments</p>
+        {activeTab === 'departments' && (
+          <>
+            {view === 'list' && (
+              <>
+                <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h1 className="text-2xl font-bold text-foreground">Department Management</h1>
+                    <p className="text-muted-foreground mt-1">Manage departments</p>
+                  </div>
+                  <Button
+                    onClick={() => { setView('create'); setEditingDepartmentId(null); }}
+                  >
+                    Add Department
+                  </Button>
                 </div>
-                <button
-                  onClick={() => { setView('create'); setEditingDepartmentId(null); }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-                >
-                  Add Department
-                </button>
-              </div>
-              <DepartmentList onEdit={handleEditDepartment} />
-            </>
-          )}
+                <DepartmentList onEdit={handleEditDepartment} />
+              </>
+            )}
 
-          {view === 'create' && (
-            <Modal open title={FORM_TITLES[activeTab].create} onClose={handleBackToList}>
-              <DepartmentForm onCancel={handleBackToList} onSaved={handleBackToList} />
-            </Modal>
-          )}
-          {view === 'edit' && editingDepartmentId && (
-            <Modal open title={FORM_TITLES[activeTab].edit} onClose={handleBackToList}>
-              <DepartmentForm editingId={editingDepartmentId} onCancel={handleBackToList} onSaved={handleBackToList} />
-            </Modal>
-          )}
-        </>
-      )}
+            {view === 'create' && (
+              <Modal open title={FORM_TITLES[activeTab].create} onClose={handleBackToList}>
+                <DepartmentForm onCancel={handleBackToList} onSaved={handleBackToList} />
+              </Modal>
+            )}
+            {view === 'edit' && editingDepartmentId && (
+              <Modal open title={FORM_TITLES[activeTab].edit} onClose={handleBackToList}>
+                <DepartmentForm editingId={editingDepartmentId} onCancel={handleBackToList} onSaved={handleBackToList} />
+              </Modal>
+            )}
+          </>
+        )}
 
-      {activeTab === 'supervisors' && (
-        <>
-          {view === 'list' && (
-            <>
-              <div className="mb-6 flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold text-[#121212] dark:text-white">Supervisor Management</h1>
-                  <p className="text-[#555555] dark:text-[#9E9E9E] mt-1">Manage supervisors and trainee assignments</p>
+        {activeTab === 'supervisors' && (
+          <>
+            {view === 'list' && (
+              <>
+                <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h1 className="text-2xl font-bold text-foreground">Supervisor Management</h1>
+                    <p className="text-muted-foreground mt-1">Manage supervisors and trainee assignments</p>
+                  </div>
+                  <Button
+                    onClick={() => { setView('create'); setEditingUserId(null); setEditingSupervisorId(null); }}
+                  >
+                    Add Supervisor
+                  </Button>
                 </div>
-                <button
-                  onClick={() => { setView('create'); setEditingUserId(null); setEditingSupervisorId(null); }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-                >
-                  Add Supervisor
-                </button>
-              </div>
-              <SupervisorList onEdit={handleEditSupervisor} onAssignTrainees={handleAssignTrainees} />
-            </>
-          )}
+                <SupervisorList onEdit={handleEditSupervisor} onAssignTrainees={handleAssignTrainees} />
+              </>
+            )}
 
-          {view === 'create' && (
-            <Modal open title={FORM_TITLES[activeTab].create} onClose={handleBackToList}>
-              <SupervisorForm onCancel={handleBackToList} onSaved={handleBackToList} />
-            </Modal>
-          )}
-          {view === 'edit' && editingSupervisorId && (
-            <Modal open title={FORM_TITLES[activeTab].edit} onClose={handleBackToList}>
-              <SupervisorForm
-                editingId={editingUserId ?? undefined}
-                editingSupervisorId={editingSupervisorId}
-                onCancel={handleBackToList}
-                onSaved={handleBackToList}
+            {view === 'create' && (
+              <Modal open title={FORM_TITLES[activeTab].create} onClose={handleBackToList}>
+                <SupervisorForm onCancel={handleBackToList} onSaved={handleBackToList} />
+              </Modal>
+            )}
+            {view === 'edit' && editingSupervisorId && (
+              <Modal open title={FORM_TITLES[activeTab].edit} onClose={handleBackToList}>
+                <SupervisorForm
+                  editingId={editingUserId ?? undefined}
+                  editingSupervisorId={editingSupervisorId}
+                  onCancel={handleBackToList}
+                  onSaved={handleBackToList}
+                />
+              </Modal>
+            )}
+
+            {view === 'assign' && assigningSupervisor && (
+              <SupervisorTraineeAssignment
+                supervisor={assigningSupervisor}
+                onClose={handleAssignmentClose}
+                onSuccess={handleAssignmentSuccess}
               />
-            </Modal>
-          )}
+            )}
+          </>
+        )}
 
-          {view === 'assign' && assigningSupervisor && (
-            <SupervisorTraineeAssignment
-              supervisor={assigningSupervisor}
-              onClose={handleAssignmentClose}
-              onSuccess={handleAssignmentSuccess}
-            />
-          )}
-        </>
-      )}
-
-      {activeTab === 'coordinators' && (
-        <>
-          {view === 'list' && (
-            <>
-              <div className="mb-6 flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold text-[#121212] dark:text-white">Coordinator Management</h1>
-                  <p className="text-[#555555] dark:text-[#9E9E9E] mt-1">Manage coordinators in your department</p>
+        {activeTab === 'coordinators' && (
+          <>
+            {view === 'list' && (
+              <>
+                <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h1 className="text-2xl font-bold text-foreground">Coordinator Management</h1>
+                    <p className="text-muted-foreground mt-1">Manage coordinators in your department</p>
+                  </div>
+                  <Button
+                    onClick={() => { setView('create'); setEditingCoordinatorId(null); }}
+                  >
+                    Add Coordinator
+                  </Button>
                 </div>
-                <button
-                  onClick={() => { setView('create'); setEditingCoordinatorId(null); }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-                >
-                  Add Coordinator
-                </button>
-              </div>
-              <CoordinatorList onEdit={handleEditCoordinator} />
-            </>
-          )}
+                <CoordinatorList onEdit={handleEditCoordinator} />
+              </>
+            )}
 
-          {view === 'create' && (
-            <Modal open title={FORM_TITLES[activeTab].create} onClose={handleBackToList}>
-              <CoordinatorForm onCancel={handleBackToList} onSaved={handleBackToList} />
-            </Modal>
-          )}
-          {view === 'edit' && editingCoordinatorId && (
-            <Modal open title={FORM_TITLES[activeTab].edit} onClose={handleBackToList}>
-              <CoordinatorForm editingCoordinatorId={editingCoordinatorId} editingId={editingUserId ?? undefined} onCancel={handleBackToList} onSaved={handleBackToList} />
-            </Modal>
-          )}
-        </>
-      )}
+            {view === 'create' && (
+              <Modal open title={FORM_TITLES[activeTab].create} onClose={handleBackToList}>
+                <CoordinatorForm onCancel={handleBackToList} onSaved={handleBackToList} />
+              </Modal>
+            )}
+            {view === 'edit' && editingCoordinatorId && (
+              <Modal open title={FORM_TITLES[activeTab].edit} onClose={handleBackToList}>
+                <CoordinatorForm editingCoordinatorId={editingCoordinatorId} editingId={editingUserId ?? undefined} onCancel={handleBackToList} onSaved={handleBackToList} />
+              </Modal>
+            )}
+          </>
+        )}
 
-      {activeTab === 'trainees' && (
-        <>
-          {view === 'list' && (
-            <>
-              <div className="mb-6 flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold text-[#121212] dark:text-white">Trainee Management</h1>
-                  <p className="text-[#555555] dark:text-[#9E9E9E] mt-1">Manage trainees and their profiles</p>
+        {activeTab === 'trainees' && (
+          <>
+            {view === 'list' && (
+              <>
+                <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h1 className="text-2xl font-bold text-foreground">Trainee Management</h1>
+                    <p className="text-muted-foreground mt-1">Manage trainees and their profiles</p>
+                  </div>
+                  <Button
+                    onClick={() => { setView('create'); setEditingTraineeId(null); }}
+                  >
+                    Add Trainee
+                  </Button>
                 </div>
-                <button
-                  onClick={() => { setView('create'); setEditingTraineeId(null); }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-                >
-                  Add Trainee
-                </button>
-              </div>
-              <TraineeList 
-                onEdit={handleEditTrainee} 
-                onView={handleViewTrainee}
-                onViewDocuments={handleViewTraineeDocuments}
-                onStatusChange={() => window.location.reload()} 
+                <TraineeList 
+                  onEdit={handleEditTrainee} 
+                  onView={handleViewTrainee}
+                  onViewDocuments={handleViewTraineeDocuments}
+                  onStatusChange={() => window.location.reload()} 
+                />
+              </>
+            )}
+
+            {view === 'create' && (
+              <Modal open title={FORM_TITLES[activeTab].create} onClose={handleBackToList}>
+                <TraineeForm onCancel={handleBackToList} onSaved={handleBackToList} />
+              </Modal>
+            )}
+            {view === 'edit' && editingTraineeId && (
+              <Modal open title={FORM_TITLES[activeTab].edit} onClose={handleBackToList}>
+                <TraineeForm editingId={editingTraineeId} viewOnly={viewOnly} onCancel={handleBackToList} onSaved={handleBackToList} />
+              </Modal>
+            )}
+            {view === 'documents' && editingTraineeId && viewingTraineeCompanyId && (
+              <DocumentRequirements 
+                traineeId={editingTraineeId} 
+                companyId={viewingTraineeCompanyId}
               />
-            </>
-          )}
+            )}
+          </>
+        )}
 
-          {view === 'create' && (
-            <Modal open title={FORM_TITLES[activeTab].create} onClose={handleBackToList}>
-              <TraineeForm onCancel={handleBackToList} onSaved={handleBackToList} />
-            </Modal>
-          )}
-          {view === 'edit' && editingTraineeId && (
-            <Modal open title={FORM_TITLES[activeTab].edit} onClose={handleBackToList}>
-              <TraineeForm editingId={editingTraineeId} viewOnly={viewOnly} onCancel={handleBackToList} onSaved={handleBackToList} />
-            </Modal>
-          )}
-          {view === 'documents' && editingTraineeId && viewingTraineeCompanyId && (
-            <DocumentRequirements 
-              traineeId={editingTraineeId} 
-              companyId={viewingTraineeCompanyId}
-            />
-          )}
-        </>
-      )}
-
-      {activeTab === 'work-schedules' && (
-        <>
-          {view === 'list' && (
-            <>
-              <div className="mb-6 flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold text-[#121212] dark:text-white">Work Schedule Management</h1>
-                  <p className="text-[#555555] dark:text-[#9E9E9E] mt-1">Manage work schedules</p>
+        {activeTab === 'work-schedules' && (
+          <>
+            {view === 'list' && (
+              <>
+                <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h1 className="text-2xl font-bold text-foreground">Work Schedule Management</h1>
+                    <p className="text-muted-foreground mt-1">Manage work schedules</p>
+                  </div>
+                  <Button
+                    onClick={() => { setView('create'); setEditingWorkScheduleId(null); }}
+                  >
+                    Add Work Schedule
+                  </Button>
                 </div>
-                <button
-                  onClick={() => { setView('create'); setEditingWorkScheduleId(null); }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-                >
-                  Add Work Schedule
-                </button>
-              </div>
-              <WorkScheduleList onEdit={handleEditWorkSchedule} onView={handleViewWorkSchedule} onDelete={handleDeleteWorkSchedule} />
-            </>
-          )}
+                <WorkScheduleList onEdit={handleEditWorkSchedule} onView={handleViewWorkSchedule} onDelete={handleDeleteWorkSchedule} />
+              </>
+            )}
 
-          {view === 'create' && (
-            <Modal open title={FORM_TITLES[activeTab].create} onClose={handleBackToList}>
-              <WorkScheduleForm onCancel={handleBackToList} onSaved={handleBackToList} />
-            </Modal>
-          )}
-          {view === 'edit' && editingWorkScheduleId && (
-            <Modal open title={FORM_TITLES[activeTab].edit} onClose={handleBackToList}>
-              <WorkScheduleForm editingId={editingWorkScheduleId} viewOnly={viewOnly} onCancel={handleBackToList} onSaved={handleBackToList} />
-            </Modal>
-          )}
-        </>
-      )}
+            {view === 'create' && (
+              <Modal open title={FORM_TITLES[activeTab].create} onClose={handleBackToList}>
+                <WorkScheduleForm onCancel={handleBackToList} onSaved={handleBackToList} />
+              </Modal>
+            )}
+            {view === 'edit' && editingWorkScheduleId && (
+              <Modal open title={FORM_TITLES[activeTab].edit} onClose={handleBackToList}>
+                <WorkScheduleForm editingId={editingWorkScheduleId} viewOnly={viewOnly} onCancel={handleBackToList} onSaved={handleBackToList} />
+              </Modal>
+            )}
+          </>
+        )}
 
-      {activeTab === 'ojt-schedules' && (
-        <>
-          {view === 'list' && (
-            <>
-              <div className="mb-6 flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold text-[#121212] dark:text-white">OJT Schedule Management</h1>
-                  <p className="text-[#555555] dark:text-[#9E9E9E] mt-1">Manage OJT schedules</p>
+        {activeTab === 'ojt-schedules' && (
+          <>
+            {view === 'list' && (
+              <>
+                <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h1 className="text-2xl font-bold text-foreground">OJT Schedule Management</h1>
+                    <p className="text-muted-foreground mt-1">Manage OJT schedules</p>
+                  </div>
+                  <Button
+                    onClick={() => { setView('create'); setEditingOJTScheduleId(null); }}
+                  >
+                    Add OJT Schedule
+                  </Button>
                 </div>
-                <button
-                  onClick={() => { setView('create'); setEditingOJTScheduleId(null); }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-                >
-                  Add OJT Schedule
-                </button>
-              </div>
-              <OJTScheduleList onEdit={handleEditOJTSchedule} onView={handleViewOJTSchedule} />
-            </>
-          )}
+                <OJTScheduleList onEdit={handleEditOJTSchedule} onView={handleViewOJTSchedule} />
+              </>
+            )}
 
-          {view === 'create' && (
-            <Modal open title={FORM_TITLES[activeTab].create} onClose={handleBackToList}>
-              <OJTScheduleForm onCancel={handleBackToList} onSaved={handleBackToList} />
-            </Modal>
-          )}
-          {view === 'edit' && editingOJTScheduleId && (
-            <Modal open title={FORM_TITLES[activeTab].edit} onClose={handleBackToList}>
-              <OJTScheduleForm editingId={editingOJTScheduleId} viewOnly={viewOnly} onCancel={handleBackToList} onSaved={handleBackToList} />
-            </Modal>
-          )}
-        </>
-      )}
-    </div>
+            {view === 'create' && (
+              <Modal open title={FORM_TITLES[activeTab].create} onClose={handleBackToList}>
+                <OJTScheduleForm onCancel={handleBackToList} onSaved={handleBackToList} />
+              </Modal>
+            )}
+            {view === 'edit' && editingOJTScheduleId && (
+              <Modal open title={FORM_TITLES[activeTab].edit} onClose={handleBackToList}>
+                <OJTScheduleForm editingId={editingOJTScheduleId} viewOnly={viewOnly} onCancel={handleBackToList} onSaved={handleBackToList} />
+              </Modal>
+            )}
+          </>
+        )}
 
-    <ConfirmDialog
-      open={confirmDialog !== null}
-      title={confirmDialog?.title || ''}
-      message={confirmDialog?.message || ''}
-      danger={confirmDialog?.danger}
-      onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
-      onCancel={() => setConfirmDialog(null)}
-    />
-    </>
+        <ConfirmDialog
+          open={confirmDialog !== null}
+          title={confirmDialog?.title || ''}
+          message={confirmDialog?.message || ''}
+          danger={confirmDialog?.danger}
+          onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
+          onCancel={() => setConfirmDialog(null)}
+        />
+      </div>
+    </PageTransition>
   );
 }

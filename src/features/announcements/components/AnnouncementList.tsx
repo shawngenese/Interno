@@ -7,6 +7,10 @@ import { useAuth } from '@/features/auth';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import { Modal } from '@/shared/components/Modal';
+import { Button } from '@/shared/components/ui/Button';
+import { Skeleton } from '@/shared/components/Skeleton';
+import { EmptyState } from '@/shared/components/EmptyState';
+import { Plus } from 'lucide-react';
 import { doc, getDoc } from 'firebase/firestore';
 import type { Announcement, AnnouncementStatus, AnnouncementPriority } from '../types';
 
@@ -128,18 +132,21 @@ export function AnnouncementList({ companyId: companyIdProp, role }: Announcemen
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
+      <div className="bg-card rounded-xl shadow-sm border border-border p-4 md:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <h2 className="text-lg font-semibold text-[#121212] dark:text-white">
-            Announcements
-          </h2>
-          <div className="flex flex-wrap gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">
+              Announcements
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Stay updated with the latest news, notices, and updates</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2.5">
             {(role === 'admin' || role === 'coordinator') ? (
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value as AnnouncementStatus | '')}
                 aria-label="Filter by status"
-                className="px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
+                className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">All Status</option>
                 <option value="published">Published</option>
@@ -151,7 +158,7 @@ export function AnnouncementList({ companyId: companyIdProp, role }: Announcemen
                 value={filterPriority}
                 onChange={(e) => setFilterPriority(e.target.value as AnnouncementPriority | '')}
                 aria-label="Filter by priority"
-                className="px-4 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white"
+                className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">All Priorities</option>
                 <option value="urgent">Urgent</option>
@@ -161,22 +168,24 @@ export function AnnouncementList({ companyId: companyIdProp, role }: Announcemen
               </select>
             )}
             {showActions && (
-              <button
+              <Button
                 onClick={() => {
                   setEditingAnnouncement(null);
-                  setShowForm(!showForm);
+                  setShowForm(true);
                 }}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                variant="primary"
+                size="md"
               >
-                {showForm ? 'Cancel' : 'New Announcement'}
-              </button>
+                <Plus className="w-4 h-4 mr-1.5" />
+                New Announcement
+              </Button>
             )}
           </div>
         </div>
 
         {showForm && (
           <Modal
-            open
+            open={showForm}
             title={editingAnnouncement ? 'Edit Announcement' : 'New Announcement'}
             onClose={() => { setShowForm(false); setEditingAnnouncement(null); }}
           >
@@ -190,36 +199,37 @@ export function AnnouncementList({ companyId: companyIdProp, role }: Announcemen
         )}
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm flex items-center justify-between">
+          <div role="alert" className="mb-4 p-3.5 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm flex items-center justify-between">
             <span>{error}</span>
-            <button onClick={() => { setError(null); loadAnnouncements(); }} className="text-sm font-medium text-red-700 dark:text-red-400 hover:underline">Retry</button>
+            <Button variant="ghost" size="sm" onClick={() => { setError(null); loadAnnouncements(); }}>Retry</Button>
           </div>
         )}
 
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-24 bg-[#EFEFEF] dark:bg-[#3A3A3A] rounded-lg animate-pulse" />
+              <Skeleton key={i} variant="rectangular" height={120} className="rounded-xl" />
             ))}
           </div>
         ) : announcements.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-[#757575] dark:text-[#9E9E9E]">No announcements found</p>
-          </div>
+          <EmptyState
+            title="No announcements found"
+            description="There are currently no active announcements or updates posted."
+          />
         ) : (
           <div className="space-y-3">
             {announcements
               .filter((a) => !filterPriority || a.priority === filterPriority)
               .map((announcement) => (
-              <AnnouncementCard
-                key={announcement.id}
-                announcement={announcement}
-                showActions={showActions}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onRefresh={() => loadAnnouncements()}
-              />
-            ))}
+                <AnnouncementCard
+                  key={announcement.id}
+                  announcement={announcement}
+                  showActions={showActions}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onRefresh={() => loadAnnouncements()}
+                />
+              ))}
           </div>
         )}
       </div>

@@ -162,33 +162,33 @@ function renderChangeDescription(original: Record<string, unknown>, updated: Rec
     if (JSON.stringify(oldVal) === JSON.stringify(newVal)) continue;
     
     changes.push(
-      <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-1 py-1.5 border-b border-[#E5E5E5] dark:border-[#2A2A2A] last:border-0">
-        <span className="font-medium text-[#121212] dark:text-white min-w-30">{formatFieldKey(key)}</span>
+      <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-1 py-1.5 border-b border-border last:border-0">
+        <span className="font-medium text-foreground min-w-30">{formatFieldKey(key)}</span>
         {oldVal !== undefined && newVal !== undefined ? (
           <>
-            <span className="text-red-500 dark:text-red-400 line-through">{formatValue(oldVal, nameCache)}</span>
-            <span className="text-[#757575] dark:text-[#9E9E9E]">→</span>
-            <span className="text-green-600 dark:text-green-400">{formatValue(newVal, nameCache)}</span>
+            <span className="text-destructive line-through">{formatValue(oldVal, nameCache)}</span>
+            <span className="text-muted-foreground">→</span>
+            <span className="text-success">{formatValue(newVal, nameCache)}</span>
           </>
         ) : oldVal !== undefined ? (
-          <span className="text-red-500 dark:text-red-400 line-through">{formatValue(oldVal, nameCache)}</span>
+          <span className="text-destructive line-through">{formatValue(oldVal, nameCache)}</span>
         ) : (
-          <span className="text-[#555555] dark:text-[#9E9E9E]">{formatValue(newVal, nameCache)}</span>
+          <span className="text-muted-foreground">{formatValue(newVal, nameCache)}</span>
         )}
       </div>
     );
   }
   
-  return changes.length > 0 ? changes : <span className="text-[#757575] dark:text-[#9E9E9E]">No changes</span>;
+  return changes.length > 0 ? changes : <span className="text-muted-foreground">No changes</span>;
 }
 
 function renderMetadata(metadata: Record<string, unknown>, nameCache?: Record<string, unknown>): React.ReactNode {
   if (!metadata || Object.keys(metadata).length === 0) return null;
   
   return Object.entries(metadata).map(([key, value]) => (
-    <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-1 py-1.5 border-b border-[#E5E5E5] dark:border-[#2A2A2A] last:border-0">
-      <span className="font-medium text-[#121212] dark:text-white min-w-30">{formatFieldKey(key)}</span>
-      <span className="text-[#555555] dark:text-[#9E9E9E]">{formatValue(value, nameCache as Record<string, string>)}</span>
+    <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-1 py-1.5 border-b border-border last:border-0">
+      <span className="font-medium text-foreground min-w-30">{formatFieldKey(key)}</span>
+      <span className="text-muted-foreground">{formatValue(value, nameCache as Record<string, string>)}</span>
     </div>
   ));
 }
@@ -509,17 +509,17 @@ export function AuditLogViewer() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h2 className="text-lg font-semibold text-[#121212] dark:text-white">Audit Logs</h2>
+        <h2 className="text-lg font-semibold text-foreground">Audit Logs</h2>
         <div className="flex gap-2">
           <button
             onClick={() => handleExport('pdf')}
-            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+            className="px-4 py-2 min-h-[44px] text-sm font-medium text-on-destructive bg-destructive rounded-lg hover:bg-destructive-hover focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           >
             Export PDF
           </button>
           <button
             onClick={() => handleExport('excel')}
-            className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+            className="px-4 py-2 min-h-[44px] text-sm font-medium text-on-primary bg-primary rounded-lg hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           >
             Export Excel
           </button>
@@ -532,7 +532,7 @@ export function AuditLogViewer() {
           value={filters.action}
           onChange={(e) => setFilters((f) => ({ ...f, action: e.target.value }))}
           aria-label="Filter by action"
-          className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="px-3 py-2 min-h-[44px] border border-input rounded-lg bg-card text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
         >
           <option value="">All Actions</option>
           {Object.entries(ACTION_LABELS).map(([key, label]) => (
@@ -543,7 +543,7 @@ export function AuditLogViewer() {
           value={filters.entityType}
           onChange={(e) => setFilters((f) => ({ ...f, entityType: e.target.value }))}
           aria-label="Filter by entity type"
-          className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="px-3 py-2 min-h-[44px] border border-input rounded-lg bg-card text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
         >
           <option value="">All Entities</option>
           {Object.entries(ENTITY_LABELS).map(([key, label]) => (
@@ -555,19 +555,19 @@ export function AuditLogViewer() {
           value={filters.startDate}
           onChange={(e) => setFilters((f) => ({ ...f, startDate: e.target.value }))}
           aria-label="Start date"
-          className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="px-3 py-2 min-h-[44px] border border-input rounded-lg bg-card text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
         />
         <input
           type="date"
           value={filters.endDate}
           onChange={(e) => setFilters((f) => ({ ...f, endDate: e.target.value }))}
           aria-label="End date"
-          className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="px-3 py-2 min-h-[44px] border border-input rounded-lg bg-card text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
         />
         {(filters.action || filters.entityType || filters.startDate || filters.endDate) && (
           <button
             onClick={() => setFilters({ action: '', entityType: '', startDate: '', endDate: '' })}
-            className="px-3 py-2 text-sm font-medium text-[#555555] dark:text-[#9E9E9E] hover:text-[#1E1E1E] dark:hover:text-[#D5D5D5] focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg"
+            className="px-3 py-2 min-h-[44px] text-sm font-medium text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring rounded-lg"
           >
             Clear Filters
           </button>
@@ -580,60 +580,60 @@ export function AuditLogViewer() {
           {[1, 2, 3, 4, 5].map((i) => <SkeletonCard key={i} />)}
         </div>
       ) : logs.length === 0 ? (
-        <div className="text-center py-8 text-[#757575] dark:text-[#9E9E9E]">No audit logs found</div>
+        <div className="text-center py-8 text-muted-foreground">No audit logs found</div>
       ) : (
         <div className="space-y-2">
           {logs.map((log) => (
             <div
               key={log.id}
-              className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] overflow-hidden"
+              className="rounded-lg border border-border bg-card overflow-hidden"
             >
               <button
                 onClick={() => setExpandedLog(expandedLog === log.id ? null : log.id)}
                 aria-label="Toggle details"
                 aria-expanded={expandedLog === log.id}
-                className="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50"
+                className="w-full px-4 py-3 min-h-[44px] text-left flex items-center justify-between hover:bg-muted"
               >
                 <div className="flex items-center gap-3">
                   <span className={`px-2 py-0.5 text-xs font-medium rounded ${
-                    log.action === 'create' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
-                      log.action === 'update' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
-                    log.action === 'delete' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
-                    'bg-[#EFEFEF] text-[#1E1E1E] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]'
+                    log.action === 'create' ? 'bg-success/15 text-success' :
+                      log.action === 'update' ? 'bg-primary/10 text-primary' :
+                    log.action === 'delete' ? 'bg-destructive/15 text-destructive' :
+                    'bg-muted text-muted-foreground'
                   }`}>
                     {ACTION_LABELS[log.action] || log.action}
                   </span>
-                  <span className="text-sm font-medium text-[#121212] dark:text-white">
+                  <span className="text-sm font-medium text-foreground">
                     {ENTITY_LABELS[log.entityType] || log.entityType}
                   </span>
-                  <span className="text-xs text-[#757575] dark:text-[#9E9E9E]">
+                  <span className="text-xs text-muted-foreground">
                     {log.entityName || '—'}
                   </span>
                 </div>
-                <span className="text-xs text-[#757575] dark:text-[#9E9E9E]">
+                <span className="text-xs text-muted-foreground">
                   {formatTimestamp(log.timestamp)}
                 </span>
               </button>
 
               {expandedLog === log.id && (
-                <div className="px-4 pb-3 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
+                <div className="px-4 pb-3 border-t border-border">
                   <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     <div className="flex items-start gap-2">
-                      <svg className="w-4 h-4 mt-0.5 text-[#757575] dark:text-[#9E9E9E]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <svg className="w-4 h-4 mt-0.5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                       </svg>
                       <div>
-                        <span className="font-medium text-[#121212] dark:text-white">User</span>
-                        <p className="text-[#555555] dark:text-[#9E9E9E]">{log.userName || '—'}</p>
+                        <span className="font-medium text-foreground">User</span>
+                        <p className="text-muted-foreground">{log.userName || '—'}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-2">
-                      <svg className="w-4 h-4 mt-0.5 text-[#757575] dark:text-[#9E9E9E]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <svg className="w-4 h-4 mt-0.5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
                       </svg>
                       <div>
-                        <span className="font-medium text-[#121212] dark:text-white">Entity</span>
-                        <p className="text-[#555555] dark:text-[#9E9E9E]">
+                        <span className="font-medium text-foreground">Entity</span>
+                        <p className="text-muted-foreground">
                           {ENTITY_LABELS[log.entityType] || log.entityType}
                           {log.entityName && ` — ${log.entityName}`}
                         </p>
@@ -644,12 +644,12 @@ export function AuditLogViewer() {
                   {log.originalValue && log.newValue && (
                     <div className="mt-3">
                       <div className="flex items-center gap-2 mb-2">
-                        <svg className="w-4 h-4 text-[#757575] dark:text-[#9E9E9E]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                        <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
                         </svg>
-                        <span className="font-medium text-[#121212] dark:text-white text-sm">Changes</span>
+                        <span className="font-medium text-foreground text-sm">Changes</span>
                       </div>
-                      <div className="p-3 bg-[#F8F9FA] dark:bg-[#1A1A1A] rounded-lg border border-[#E5E5E5] dark:border-[#2A2A2A]">
+                      <div className="p-3 bg-muted rounded-lg border border-border">
                         {renderChangeDescription(log.originalValue, log.newValue, resolvedNames)}
                       </div>
                     </div>
@@ -658,12 +658,12 @@ export function AuditLogViewer() {
                   {log.originalValue && !log.newValue && (
                     <div className="mt-3">
                       <div className="flex items-center gap-2 mb-2">
-                        <svg className="w-4 h-4 text-[#757575] dark:text-[#9E9E9E]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                        <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                         </svg>
-                        <span className="font-medium text-[#121212] dark:text-white text-sm">Previous Values</span>
+                        <span className="font-medium text-foreground text-sm">Previous Values</span>
                       </div>
-                      <div className="p-3 bg-[#F8F9FA] dark:bg-[#1A1A1A] rounded-lg border border-[#E5E5E5] dark:border-[#2A2A2A]">
+                      <div className="p-3 bg-muted rounded-lg border border-border">
                         {renderMetadata(log.originalValue, resolvedNames)}
                       </div>
                     </div>
@@ -672,12 +672,12 @@ export function AuditLogViewer() {
                   {log.newValue && !log.originalValue && (
                     <div className="mt-3">
                       <div className="flex items-center gap-2 mb-2">
-                        <svg className="w-4 h-4 text-[#757575] dark:text-[#9E9E9E]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                        <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
                         </svg>
-                        <span className="font-medium text-[#121212] dark:text-white text-sm">New Values</span>
+                        <span className="font-medium text-foreground text-sm">New Values</span>
                       </div>
-                      <div className="p-3 bg-[#F8F9FA] dark:bg-[#1A1A1A] rounded-lg border border-[#E5E5E5] dark:border-[#2A2A2A]">
+                      <div className="p-3 bg-muted rounded-lg border border-border">
                         {renderMetadata(log.newValue, resolvedNames)}
                       </div>
                     </div>
@@ -686,12 +686,12 @@ export function AuditLogViewer() {
                   {log.metadata && Object.keys(log.metadata).length > 0 && (
                     <div className="mt-3">
                       <div className="flex items-center gap-2 mb-2">
-                        <svg className="w-4 h-4 text-[#757575] dark:text-[#9E9E9E]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                        <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
                         </svg>
-                        <span className="font-medium text-[#121212] dark:text-white text-sm">Additional Details</span>
+                        <span className="font-medium text-foreground text-sm">Additional Details</span>
                       </div>
-                      <div className="p-3 bg-[#F8F9FA] dark:bg-[#1A1A1A] rounded-lg border border-[#E5E5E5] dark:border-[#2A2A2A]">
+                      <div className="p-3 bg-muted rounded-lg border border-border">
                         {renderMetadata(log.metadata, resolvedNames)}
                       </div>
                     </div>
@@ -708,7 +708,7 @@ export function AuditLogViewer() {
         <div className="text-center">
           <button
             onClick={() => fetchLogs(false)}
-            className="px-6 py-2 text-sm font-medium text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-6 py-2 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary-light dark:hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-ring"
           >
             Load More
           </button>
@@ -716,7 +716,7 @@ export function AuditLogViewer() {
       )}
 
       {loading && logs.length > 0 && (
-        <div className="text-center py-4 text-[#757575] dark:text-[#9E9E9E]">Loading more...</div>
+        <div className="text-center py-4 text-muted-foreground">Loading more...</div>
       )}
     </div>
   );

@@ -3,6 +3,8 @@ import { createTask, updateTask, getTask } from '../services/taskService';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { Button } from '@/shared/components/ui/Button';
+import { CheckSquare } from 'lucide-react';
 import type { CreateTaskPayload, UpdateTaskPayload, Task, TaskPriority } from '../types';
 import { TASK_PRIORITY_LABELS } from '../types';
 
@@ -109,7 +111,7 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
     try {
       if (!title.trim()) throw new Error('Title is required');
       if (!description.trim()) throw new Error('Description is required');
-      if (!selectedTraineeId) throw new Error('Please select a trainee');
+      if (!selectedTraineeId) throw new Error('Select a trainee');
       if (!dueDate) throw new Error('Due date is required');
 
       const dueDateMs = new Date(dueDate).getTime();
@@ -148,20 +150,23 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
-      <h2 className="text-lg font-semibold text-[#121212] dark:text-white mb-6">
-        {taskId ? 'Edit Task' : 'Create Task'}
-      </h2>
+    <form onSubmit={handleSubmit} className="bg-card rounded-xl shadow-sm border border-border p-4 md:p-6">
+      <div className="flex items-center gap-2 mb-6">
+        <CheckSquare className="w-5 h-5 text-primary" />
+        <h2 className="text-lg font-bold text-foreground">
+          {taskId ? 'Edit Task' : 'Create Task'}
+        </h2>
+      </div>
 
       {error && (
-        <div role="alert" className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
+        <div role="alert" className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm">
           {error}
         </div>
       )}
 
       <div className="space-y-4">
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+          <label htmlFor="title" className="block text-xs font-semibold text-foreground mb-1.5">
             Title *
           </label>
           <input
@@ -169,13 +174,13 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
             id="title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-4 py-2.5 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full h-10 px-4 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             placeholder="Task title"
           />
         </div>
 
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+          <label htmlFor="description" className="block text-xs font-semibold text-foreground mb-1.5">
             Description *
           </label>
           <textarea
@@ -183,21 +188,21 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
-            className="w-full px-4 py-2.5 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-            placeholder="Describe the task..."
+            className="w-full p-3 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+            placeholder="Describe the task instructions..."
           />
         </div>
 
         {!initialTraineeId && (
           <div>
-            <label htmlFor="trainee" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+            <label htmlFor="trainee" className="block text-xs font-semibold text-foreground mb-1.5">
               Assign to Trainee *
             </label>
             <select
               id="trainee"
               value={selectedTraineeId}
               onChange={(e) => setSelectedTraineeId(e.target.value)}
-              className="w-full px-4 py-2.5 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">Select a trainee</option>
               {trainees.map((t) => (
@@ -209,14 +214,14 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label htmlFor="priority" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+            <label htmlFor="priority" className="block text-xs font-semibold text-foreground mb-1.5">
               Priority
             </label>
             <select
               id="priority"
               value={priority}
               onChange={(e) => setPriority(e.target.value as TaskPriority)}
-              className="w-full px-4 py-2.5 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
               {Object.entries(TASK_PRIORITY_LABELS).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
@@ -225,7 +230,7 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
           </div>
 
           <div>
-            <label htmlFor="dueDate" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+            <label htmlFor="dueDate" className="block text-xs font-semibold text-foreground mb-1.5">
               Due Date *
             </label>
             <input
@@ -233,12 +238,12 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
               id="dueDate"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="w-full px-4 py-2.5 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
 
           <div>
-            <label htmlFor="hours" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+            <label htmlFor="hours" className="block text-xs font-semibold text-foreground mb-1.5">
               Est. Hours
             </label>
             <input
@@ -248,44 +253,45 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
               onChange={(e) => setEstimatedHours(e.target.value)}
               min="0"
               step="0.5"
-              className="w-full px-4 py-2.5 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder="0"
             />
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 pt-2">
           <input
             type="checkbox"
             id="requireAttachment"
             checked={requireAttachment}
             onChange={(e) => setRequireAttachment(e.target.checked)}
-            className="h-4 w-4 text-blue-600 border-[#BDBDBD] rounded focus:ring-blue-500"
+            className="w-4 h-4 text-primary border-input rounded focus:ring-ring focus:ring-2"
           />
-          <label htmlFor="requireAttachment" className="text-sm text-[#3A3A3A] dark:text-[#BDBDBD]">
+          <label htmlFor="requireAttachment" className="text-xs text-foreground cursor-pointer">
             Require file attachment on submission
           </label>
         </div>
       </div>
 
-      <div className="flex justify-end gap-3 mt-6">
+      <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">
         {onCancel && (
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-[#EFEFEF] dark:bg-[#3A3A3A] rounded-lg hover:bg-[#D5D5D5] dark:hover:bg-[#555555]"
           >
             Cancel
-          </button>
+          </Button>
         )}
-        <button
+        <Button
           type="submit"
-          disabled={loading}
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+          variant="primary"
+          isLoading={loading}
         >
-          {loading ? 'Saving...' : taskId ? 'Update Task' : 'Create Task'}
-        </button>
+          Save
+        </Button>
       </div>
     </form>
   );
 }
+

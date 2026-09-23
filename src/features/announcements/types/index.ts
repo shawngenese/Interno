@@ -34,16 +34,16 @@ export interface AnnouncementFormData {
 }
 
 export const ANNOUNCEMENT_PRIORITY_LABELS: Record<AnnouncementPriority, { label: string; color: string }> = {
-  low: { label: 'Low', color: 'bg-[#EFEFEF] text-[#3A3A3A] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]' },
-  normal: { label: 'Normal', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-  high: { label: 'High', color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' },
-  urgent: { label: 'Urgent', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
+  low: { label: 'Low', color: 'bg-muted text-muted-foreground' },
+  normal: { label: 'Normal', color: 'bg-primary/10 text-primary' },
+  high: { label: 'High', color: 'bg-warning/15 text-warning' },
+  urgent: { label: 'Urgent', color: 'bg-destructive/15 text-destructive' },
 };
 
 export const ANNOUNCEMENT_STATUS_LABELS: Record<AnnouncementStatus, { label: string; color: string }> = {
-  draft: { label: 'Draft', color: 'bg-[#EFEFEF] text-[#3A3A3A] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]' },
-  published: { label: 'Published', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
-  archived: { label: 'Archived', color: 'bg-[#D5D5D5] text-[#555555] dark:bg-[#555555] dark:text-[#9E9E9E]' },
+  draft: { label: 'Draft', color: 'bg-muted text-muted-foreground' },
+  published: { label: 'Published', color: 'bg-success/15 text-success' },
+  archived: { label: 'Archived', color: 'bg-muted text-muted-foreground' },
 };
 
 export const ROLE_LABELS: Record<string, string> = {

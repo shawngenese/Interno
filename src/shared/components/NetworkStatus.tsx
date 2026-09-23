@@ -84,7 +84,7 @@ export const NetworkStatusIndicator = React.memo(function NetworkStatusIndicator
         <button
           onClick={handleSync}
           disabled={syncing || !online}
-          className="px-2 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+          className="px-2 py-1 text-xs font-medium text-white bg-primary rounded hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
           aria-label={syncing ? 'Syncing...' : online ? 'Sync pending changes' : 'Waiting for connection'}
         >
           {online ? (

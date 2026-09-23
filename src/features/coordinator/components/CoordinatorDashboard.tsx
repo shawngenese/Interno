@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -6,22 +7,37 @@ import {
 import { useAuth } from '@/features/auth/AuthProvider';
 import { getCoordinatorDashboardData } from '../services/coordinatorService';
 import { AnimatedCard } from '@/shared/components/AnimatedCard';
+import { Skeleton } from '@/shared/components/Skeleton';
+import { Button } from '@/shared/components/ui/Button';
+import { EmptyState } from '@/shared/components/EmptyState';
+import {
+  Users,
+  Clock,
+  Award,
+  CheckCircle2,
+  Building2,
+  UserPlus,
+  Send,
+  RefreshCw,
+} from 'lucide-react';
 import type { CoordinatorDashboardData } from '../types';
 
 const TASK_STATUS_COLORS: Record<string, string> = {
-  Pending: '#eab308',
-  'In Progress': '#3b82f6',
-  Submitted: '#8b5cf6',
-  Approved: '#22c55e',
-  Returned: '#f97316',
+  Pending: 'var(--color-warning)',
+  'In Progress': 'var(--color-primary)',
+  Submitted: 'var(--color-accent)',
+  Approved: 'var(--color-success)',
+  Returned: 'var(--color-destructive)',
 };
 
 export function CoordinatorDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [data, setData] = useState<CoordinatorDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const companyIdRef = useRef<string | null>(null);
+
   const period = useMemo(() => {
     const now = new Date();
     return {
@@ -73,7 +89,7 @@ export function CoordinatorDashboard() {
   }, [data]);
 
   const stats = useMemo(() => {
-    if (!data) return { totalTrainees: 0, activeTrainees: 0, avgAttendance: 0, avgOJT: 0, totalMissingDocs: 0, totalTasks: 0, approvedTasks: 0, overdueTasks: 0, totalDocuments: 0, approvedDocuments: 0 };
+    if (!data) return { totalTrainees: 0, activeTrainees: 0, avgAttendance: 0, avgOJT: 0, totalMissingDocs: 0, totalTasks: 0, approvedTasks: 0, overdueTasks: 0, totalDocuments: 0, approvedDocuments: 0, pendingTasks: 0 };
     const totalTrainees = data.trainees.length;
     const activeTrainees = data.trainees.filter((t) => t.status === 'active').length;
     const avgAttendance = data.attendance.length > 0
@@ -85,10 +101,11 @@ export function CoordinatorDashboard() {
     const totalMissingDocs = data.documents.reduce((sum, d) => sum + d.missingRequired.length, 0);
     const totalTasks = data.tasks.reduce((sum, t) => sum + t.totalTasks, 0);
     const approvedTasks = data.tasks.reduce((sum, t) => sum + t.approvedTasks, 0);
+    const pendingTasks = data.tasks.reduce((sum, t) => sum + t.pendingTasks, 0);
     const overdueTasks = data.tasks.reduce((sum, t) => sum + t.overdueTasks, 0);
     const totalDocuments = data.documents.reduce((sum, d) => sum + d.totalDocuments, 0);
     const approvedDocuments = data.documents.reduce((sum, d) => sum + d.approvedDocuments, 0);
-    return { totalTrainees, activeTrainees, avgAttendance, avgOJT, totalMissingDocs, totalTasks, approvedTasks, overdueTasks, totalDocuments, approvedDocuments };
+    return { totalTrainees, activeTrainees, avgAttendance, avgOJT, totalMissingDocs, totalTasks, approvedTasks, pendingTasks, overdueTasks, totalDocuments, approvedDocuments };
   }, [data]);
 
   const pipelineData = useMemo(() => {
@@ -99,15 +116,15 @@ export function CoordinatorDashboard() {
       statusMap.set(label, (statusMap.get(label) || 0) + 1);
     });
     const colorMap: Record<string, string> = {
-      Active: '#22c55e',
-      Pending: '#eab308',
-      Completed: '#3b82f6',
-      Inactive: '#9ca3af',
+      Active: 'var(--color-success)',
+      Pending: 'var(--color-warning)',
+      Completed: 'var(--color-primary)',
+      Inactive: 'var(--color-muted-foreground)',
     };
     return Array.from(statusMap.entries()).map(([status, count]) => ({
       status,
       count,
-      fill: colorMap[status] || '#BDBDBD',
+      fill: colorMap[status] || 'var(--color-muted-foreground)',
     }));
   }, [data]);
 
@@ -134,35 +151,37 @@ export function CoordinatorDashboard() {
     return Array.from(map.entries()).map(([name, value]) => ({
       name,
       value,
-      fill: TASK_STATUS_COLORS[name] || '#BDBDBD',
+      fill: TASK_STATUS_COLORS[name] || 'var(--color-muted-foreground)',
     }));
   }, [data]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <svg className="animate-spin h-8 w-8 text-blue-600" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="p-5 rounded-xl border border-border bg-card space-y-3">
+              <Skeleton variant="text" width="60%" height={16} />
+              <Skeleton variant="text" width="40%" height={28} />
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Skeleton variant="rectangular" height={280} className="rounded-xl" />
+          <Skeleton variant="rectangular" height={280} className="rounded-xl" />
+        </div>
       </div>
     );
   }
 
   if (!data) {
-    return error ? (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
-          <button
-            onClick={() => { setError(null); fetchData(); }}
-            className="mt-2 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    ) : null;
+    return (
+      <EmptyState
+        title="Failed to load dashboard"
+        description={error || 'Unable to connect to the server.'}
+        action={{ label: 'Retry', onClick: () => { fetchData(); } }}
+      />
+    );
   }
 
   const totalForPipeline = pipelineData.reduce((sum, item) => sum + item.count, 0);
@@ -170,73 +189,152 @@ export function CoordinatorDashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-[#121212] dark:text-white">Dashboard</h1>
-        <p className="text-[#757575] dark:text-[#9E9E9E] mt-1">Trainee overview and key metrics</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div>
+          <h2 className="text-xl font-bold text-foreground">
+            Coordinator Dashboard
+          </h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Overview of trainees, attendance, placements, and pending reviews
+          </p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => fetchData()} disabled={loading} className="self-start sm:self-auto gap-1.5 text-xs text-muted-foreground">
+          <RefreshCw className="w-3.5 h-3.5" />
+          Refresh
+        </Button>
       </div>
 
-      {/* Hero Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <AnimatedCard delay={0} className="rounded-xl border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-6">
+      {/* Quick Stat Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <AnimatedCard delay={0} className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-[#757575] dark:text-[#9E9E9E]">Total Trainees</p>
-              <p className="text-3xl font-bold text-[#121212] dark:text-white mt-1">{stats.totalTrainees}</p>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-              <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
+            <p className="text-sm font-medium text-muted-foreground">Total Trainees</p>
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Users className="w-5 h-5 text-primary" />
             </div>
           </div>
-          <div className="mt-3 flex items-center gap-2 text-sm">
-            <span className="text-[#757575] dark:text-[#9E9E9E]">{stats.activeTrainees} active</span>
-          </div>
+          <p className="text-2xl font-bold text-foreground mt-2">{stats.totalTrainees}</p>
+          <p className="text-xs text-muted-foreground mt-1">{stats.activeTrainees} actively placed</p>
         </AnimatedCard>
 
-        <AnimatedCard delay={0.05} className="rounded-xl border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-6">
+        <AnimatedCard delay={0.05} className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-[#757575] dark:text-[#9E9E9E]">Avg Attendance</p>
-              <p className="text-3xl font-bold text-[#121212] dark:text-white mt-1">{stats.avgAttendance}%</p>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-              <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-              </svg>
+            <p className="text-sm font-medium text-muted-foreground">Avg Attendance</p>
+            <div className="w-9 h-9 rounded-lg bg-success/10 flex items-center justify-center">
+              <Clock className="w-5 h-5 text-success" />
             </div>
           </div>
-          <div className="mt-3 flex items-center gap-2 text-sm">
-            <span className="text-[#757575] dark:text-[#9E9E9E]">Across all trainees</span>
-          </div>
+          <p className="text-2xl font-bold text-foreground mt-2">{stats.avgAttendance}%</p>
+          <p className="text-xs text-muted-foreground mt-1">This month</p>
         </AnimatedCard>
 
-        <AnimatedCard delay={0.1} className="rounded-xl border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-6">
+        <AnimatedCard delay={0.1} className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-[#757575] dark:text-[#9E9E9E]">Avg OJT Progress</p>
-              <p className="text-3xl font-bold text-[#121212] dark:text-white mt-1">{stats.avgOJT}%</p>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-              <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
+            <p className="text-sm font-medium text-muted-foreground">Avg OJT Progress</p>
+            <div className="w-9 h-9 rounded-lg bg-accent/15 flex items-center justify-center">
+              <Award className="w-5 h-5 text-accent" />
             </div>
           </div>
-          <div className="mt-3 flex items-center gap-2 text-sm">
-            <span className="text-[#757575] dark:text-[#9E9E9E]">
-              {stats.totalMissingDocs > 0 ? `${stats.totalMissingDocs} missing docs` : 'All docs complete'}
-            </span>
+          <p className="text-2xl font-bold text-foreground mt-2">{stats.avgOJT}%</p>
+          <p className="text-xs text-muted-foreground mt-1">Completed hours</p>
+        </AnimatedCard>
+
+        <AnimatedCard delay={0.15} className="rounded-xl border border-border bg-card p-5">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-muted-foreground">Pending Tasks</p>
+            <div className="w-9 h-9 rounded-lg bg-warning/10 flex items-center justify-center">
+              <CheckCircle2 className="w-5 h-5 text-warning" />
+            </div>
           </div>
+          <p className="text-2xl font-bold text-foreground mt-2">{stats.pendingTasks}</p>
+          <p className="text-xs text-muted-foreground mt-1">{stats.overdueTasks} overdue</p>
         </AnimatedCard>
       </div>
 
-      {/* OJT Pipeline */}
-      <AnimatedCard delay={0.15} className="rounded-xl border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-6">
-        <h3 className="text-sm font-semibold text-[#121212] dark:text-white mb-4">OJT Pipeline</h3>
+      {/* Quick Action Buttons */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <h2 className="text-sm font-semibold text-foreground mb-3">Quick Actions</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <button
+            onClick={() => navigate('/coordinator/assign')}
+            className="flex items-start gap-4 p-5 bg-muted/30 border border-border rounded-xl hover:border-primary/50 hover:bg-muted/60 transition-all text-left cursor-pointer group"
+          >
+            <div className="p-3 bg-card border border-border rounded-xl group-hover:border-primary/30 transition-colors">
+              <Users className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <span className="font-bold text-foreground text-sm">Assign Trainees</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-card border border-border px-2 py-0.5 rounded-md">
+                  Assign
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">Place trainees with supervisors</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => navigate('/coordinator/companies')}
+            className="flex items-start gap-4 p-5 bg-muted/30 border border-border rounded-xl hover:border-primary/50 hover:bg-muted/60 transition-all text-left cursor-pointer group"
+          >
+            <div className="p-3 bg-card border border-border rounded-xl group-hover:border-primary/30 transition-colors">
+              <Building2 className="h-5 w-5 text-info" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <span className="font-bold text-foreground text-sm">Verify Companies</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-card border border-border px-2 py-0.5 rounded-md">
+                  Verify
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">Review external companies</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => navigate('/coordinator/placements')}
+            className="flex items-start gap-4 p-5 bg-muted/30 border border-border rounded-xl hover:border-primary/50 hover:bg-muted/60 transition-all text-left cursor-pointer group"
+          >
+            <div className="p-3 bg-card border border-border rounded-xl group-hover:border-primary/30 transition-colors">
+              <Send className="h-5 w-5 text-warning" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <span className="font-bold text-foreground text-sm">Placements</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-card border border-border px-2 py-0.5 rounded-md">
+                  Requests
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">Approve placement requests</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => navigate('/coordinator/invite-supervisors')}
+            className="flex items-start gap-4 p-5 bg-muted/30 border border-border rounded-xl hover:border-primary/50 hover:bg-muted/60 transition-all text-left cursor-pointer group"
+          >
+            <div className="p-3 bg-card border border-border rounded-xl group-hover:border-primary/30 transition-colors">
+              <UserPlus className="h-5 w-5 text-success" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <span className="font-bold text-foreground text-sm">Invite Supervisor</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-card border border-border px-2 py-0.5 rounded-md">
+                  Invite
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">Onboard company supervisors</p>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* OJT Pipeline Bar */}
+      <AnimatedCard delay={0.2} className="rounded-xl border border-border bg-card p-5">
+        <h3 className="text-sm font-semibold text-foreground mb-3">Trainee Status Distribution</h3>
         {totalForPipeline > 0 ? (
           <>
-            <div className="flex h-4 rounded-full overflow-hidden bg-[#EFEFEF] dark:bg-[#3A3A3A]">
+            <div className="flex h-3 rounded-full overflow-hidden bg-muted">
               {pipelineData.map((item) => {
                 const pct = (item.count / totalForPipeline) * 100;
                 return pct > 0 ? (
@@ -251,59 +349,60 @@ export function CoordinatorDashboard() {
             </div>
             <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
               {pipelineData.map((item) => (
-                <div key={item.status} className="flex items-center gap-2 text-sm">
-                  <span className="w-3 h-3 rounded-full" style={{ backgroundColor: item.fill }} />
-                  <span className="text-[#555555] dark:text-[#9E9E9E]">{item.status}</span>
-                  <span className="font-semibold text-[#121212] dark:text-white">{item.count}</span>
+                <div key={item.status} className="flex items-center gap-2 text-xs sm:text-sm">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.fill }} />
+                  <span className="text-muted-foreground">{item.status}</span>
+                  <span className="font-semibold text-foreground">{item.count}</span>
                 </div>
               ))}
             </div>
           </>
         ) : (
-          <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">No trainees yet</p>
+          <p className="text-sm text-muted-foreground">No trainees yet</p>
         )}
       </AnimatedCard>
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <AnimatedCard delay={0.2} className="rounded-xl border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-6">
-          <h3 className="text-sm font-semibold text-[#121212] dark:text-white mb-4">Attendance Overview</h3>
+        <AnimatedCard delay={0.25} className="rounded-xl border border-border bg-card p-5">
+          <h3 className="text-sm font-semibold text-foreground mb-4">Weekly Attendance by Trainee</h3>
           {attendanceChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={attendanceChartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#EFEFEF" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#9E9E9E' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#9E9E9E' }} allowDecimals={false} axisLine={false} tickLine={false} />
+              <BarChart data={attendanceChartData} margin={{ top: 5, right: 10, left: -15, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'currentColor' }} className="text-muted-foreground" axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: 'currentColor' }} className="text-muted-foreground" allowDecimals={false} axisLine={false} tickLine={false} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #D5D5D5',
+                    backgroundColor: 'var(--color-card)',
+                    borderColor: 'var(--color-border)',
+                    color: 'var(--color-foreground)',
                     borderRadius: '8px',
                     fontSize: '12px',
                   }}
                 />
-                <Bar dataKey="present" fill="#22c55e" radius={[4, 4, 0, 0]} name="Present" />
-                <Bar dataKey="late" fill="#eab308" radius={[4, 4, 0, 0]} name="Late" />
-                <Bar dataKey="absent" fill="#ef4444" radius={[4, 4, 0, 0]} name="Absent" />
+                <Bar dataKey="present" fill="var(--color-success)" radius={[4, 4, 0, 0]} name="Present" />
+                <Bar dataKey="late" fill="var(--color-warning)" radius={[4, 4, 0, 0]} name="Late" />
+                <Bar dataKey="absent" fill="var(--color-destructive)" radius={[4, 4, 0, 0]} name="Absent" />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-sm text-[#757575] dark:text-[#9E9E9E] text-center py-8">No attendance data</p>
+            <p className="text-sm text-muted-foreground text-center py-8">No attendance recorded</p>
           )}
         </AnimatedCard>
 
-        <AnimatedCard delay={0.25} className="rounded-xl border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-6">
-          <h3 className="text-sm font-semibold text-[#121212] dark:text-white mb-4">Task Status Distribution</h3>
+        <AnimatedCard delay={0.3} className="rounded-xl border border-border bg-card p-5">
+          <h3 className="text-sm font-semibold text-foreground mb-4">Task Status Distribution</h3>
           {taskStatusData.length > 0 ? (
-            <div className="flex items-center justify-center gap-8">
-              <ResponsiveContainer width={160} height={160}>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+              <ResponsiveContainer width={150} height={150}>
                 <PieChart>
                   <Pie
                     data={taskStatusData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={45}
-                    outerRadius={70}
+                    innerRadius={42}
+                    outerRadius={65}
                     paddingAngle={4}
                     dataKey="value"
                   >
@@ -313,169 +412,127 @@ export function CoordinatorDashboard() {
                   </Pie>
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#FFFFFF',
-                      border: '1px solid #D5D5D5',
+                      backgroundColor: 'var(--color-card)',
+                      borderColor: 'var(--color-border)',
+                      color: 'var(--color-foreground)',
                       borderRadius: '8px',
                       fontSize: '12px',
                     }}
                   />
                 </PieChart>
               </ResponsiveContainer>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {taskStatusData.map((item) => (
-                  <div key={item.name} className="flex items-center gap-3">
-                    <span className="w-3 h-3 rounded-full" style={{ backgroundColor: item.fill }} />
-                    <div>
-                      <p className="text-sm font-medium text-[#121212] dark:text-white">{item.name}</p>
-                      <p className="text-xs text-[#757575] dark:text-[#9E9E9E]">{item.value} tasks</p>
-                    </div>
+                  <div key={item.name} className="flex items-center gap-2.5 text-xs sm:text-sm">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.fill }} />
+                    <span className="text-muted-foreground">{item.name}:</span>
+                    <span className="font-semibold text-foreground">{item.value}</span>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <p className="text-sm text-[#757575] dark:text-[#9E9E9E] text-center py-8">No tasks yet</p>
+            <p className="text-sm text-muted-foreground text-center py-8">No task data available</p>
           )}
         </AnimatedCard>
       </div>
 
-      {/* Bottom Section: Summary + Trainee Table */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="space-y-4">
-          <AnimatedCard delay={0.3} className="rounded-xl border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-5">
-            <h3 className="text-sm font-semibold text-[#121212] dark:text-white mb-3">Summary</h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <span className="text-sm text-[#555555] dark:text-[#9E9E9E]">Overdue Tasks</span>
-                </div>
-                <span className="text-sm font-semibold text-[#121212] dark:text-white">{stats.overdueTasks}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <span className="text-sm text-[#555555] dark:text-[#9E9E9E]">Tasks Approved</span>
-                </div>
-                <span className="text-sm font-semibold text-[#121212] dark:text-white">{stats.approvedTasks}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                  </div>
-                  <span className="text-sm text-[#555555] dark:text-[#9E9E9E]">Total Documents</span>
-                </div>
-                <span className="text-sm font-semibold text-[#121212] dark:text-white">{stats.totalDocuments}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
-                  </div>
-                  <span className="text-sm text-[#555555] dark:text-[#9E9E9E]">Missing Docs</span>
-                </div>
-                <span className="text-sm font-semibold text-[#121212] dark:text-white">{stats.totalMissingDocs}</span>
-              </div>
-            </div>
-          </AnimatedCard>
+      {/* Trainee Overview Table */}
+      <AnimatedCard delay={0.35} className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-foreground">Trainee Progress Overview</h3>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/coordinator/trainees')}>
+            View All
+          </Button>
         </div>
-
-        <AnimatedCard delay={0.3} className="md:col-span-2 rounded-xl border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] overflow-hidden">
-          <div className="px-6 py-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
-            <h3 className="text-sm font-semibold text-[#121212] dark:text-white">Trainee Overview</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/40 border-b border-border">
+              <tr>
+                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Trainee</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">Attendance</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tasks</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">Docs</th>
+                <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">OJT Progress</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {data.trainees.length === 0 ? (
                 <tr>
-                  <th className="px-6 py-3 text-left text-[#555555] dark:text-[#BDBDBD] font-medium">Name</th>
-                  <th className="px-4 py-3 text-center text-[#555555] dark:text-[#BDBDBD] font-medium">Status</th>
-                  <th className="px-4 py-3 text-center text-[#555555] dark:text-[#BDBDBD] font-medium">Attendance</th>
-                  <th className="px-4 py-3 text-center text-[#555555] dark:text-[#BDBDBD] font-medium">Tasks</th>
-                  <th className="px-4 py-3 text-center text-[#555555] dark:text-[#BDBDBD] font-medium">Docs</th>
-                  <th className="px-4 py-3 text-center text-[#555555] dark:text-[#BDBDBD] font-medium">OJT Hours</th>
+                  <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                    No trainees assigned to your department.
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
-                {data.trainees.map((trainee) => {
+              ) : (
+                data.trainees.slice(0, 10).map((trainee) => {
                   const att = attendanceMap.get(trainee.traineeId);
                   const task = tasksMap.get(trainee.traineeId);
                   const doc = documentsMap.get(trainee.traineeId);
                   const ojt = ojtMap.get(trainee.traineeId);
 
                   return (
-                    <tr key={trainee.traineeId} className="hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/30 transition-colors">
-                      <td className="px-6 py-3">
-                        <div className="font-medium text-[#121212] dark:text-white">{trainee.name}</div>
-                        <div className="text-xs text-[#757575] dark:text-[#9E9E9E]">{trainee.email}</div>
+                    <tr key={trainee.traineeId} className="hover:bg-muted/40 transition-colors">
+                      <td className="px-5 py-3">
+                        <div className="font-medium text-foreground">{trainee.name}</div>
+                        <div className="text-xs text-muted-foreground">{trainee.email}</div>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`px-2 py-0.5 text-xs font-medium rounded ${
-                          trainee.status === 'active'
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                            : trainee.status === 'completed'
-                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                            : 'bg-[#EFEFEF] text-[#555555] dark:bg-[#3A3A3A] dark:text-[#9E9E9E]'
-                        }`}>
+                        <span
+                          className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                            trainee.status === 'active'
+                              ? 'bg-success/15 text-success'
+                              : trainee.status === 'completed'
+                              ? 'bg-primary/15 text-primary'
+                              : 'bg-muted text-muted-foreground'
+                          }`}
+                        >
                           {trainee.status}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <div className="text-[#121212] dark:text-white">
-                          {att ? `${att.presentDays}/${att.totalDays}` : '-'}
+                        <div className="text-foreground">
+                          {att ? `${att.presentDays}/${att.totalDays}d` : '-'}
                         </div>
-                        <div className="text-xs text-[#757575] dark:text-[#9E9E9E]">
-                          {att && att.lateDays > 0 ? `${att.lateDays} late` : ''}
-                        </div>
+                        {att && att.lateDays > 0 && (
+                          <div className="text-[11px] text-warning">{att.lateDays} late</div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <div className="text-[#121212] dark:text-white">
+                        <div className="text-foreground">
                           {task ? `${task.approvedTasks}/${task.totalTasks}` : '-'}
                         </div>
-                        <div className="text-xs text-[#757575] dark:text-[#9E9E9E]">
-                          {task && task.overdueTasks > 0 ? `${task.overdueTasks} overdue` : ''}
-                        </div>
+                        {task && task.overdueTasks > 0 && (
+                          <div className="text-[11px] text-destructive">{task.overdueTasks} overdue</div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <div className="text-[#121212] dark:text-white">
+                        <div className="text-foreground">
                           {doc ? `${doc.approvedDocuments}/${doc.totalDocuments}` : '-'}
                         </div>
-                        <div className="text-xs text-red-500 dark:text-red-400">
-                          {doc && doc.missingRequired.length > 0 ? `${doc.missingRequired.length} missing` : ''}
-                        </div>
+                        {doc && doc.missingRequired.length > 0 && (
+                          <div className="text-[11px] text-destructive">{doc.missingRequired.length} missing</div>
+                        )}
                       </td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="text-[#121212] dark:text-white">
-                          {ojt ? `${ojt.completed}/${ojt.required}h` : '-'}
+                      <td className="px-5 py-3 text-right">
+                        <div className="text-foreground font-medium">
+                          {ojt ? `${ojt.percentComplete}%` : '0%'}
                         </div>
-                        <div className="w-full bg-[#D5D5D5] dark:bg-[#3A3A3A] rounded-full h-1.5 mt-1">
+                        <div className="w-24 ml-auto bg-muted rounded-full h-1.5 mt-1 overflow-hidden">
                           <div
-                            className="bg-blue-600 h-1.5 rounded-full transition-all duration-500"
+                            className="bg-primary h-1.5 rounded-full transition-all duration-500"
                             style={{ width: `${ojt?.percentComplete || 0}%` }}
                           />
                         </div>
                       </td>
                     </tr>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </AnimatedCard>
-      </div>
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </AnimatedCard>
     </div>
   );
 }

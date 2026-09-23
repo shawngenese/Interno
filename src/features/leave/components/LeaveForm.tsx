@@ -3,6 +3,7 @@ import { createLeaveRequest } from '../services/leaveService';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { Button } from '@/shared/components/ui/Button';
 import type { LeaveFormValues, LeaveType, LeaveRequest } from '../types';
 
 const LEAVE_TYPES: { value: LeaveType; label: string }[] = [
@@ -78,13 +79,21 @@ export function LeaveForm({ onSaved, onCancel }: LeaveFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <div role="alert" className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm">
+          {error}
+        </div>
+      )}
+
       <div>
-        <label htmlFor="leave-type" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">Leave Type</label>
+        <label htmlFor="leave-type" className="block text-xs font-semibold text-foreground mb-1.5">
+          Leave Type
+        </label>
         <select
           id="leave-type"
           value={type}
           onChange={(e) => setType(e.target.value as LeaveType)}
-          className="w-full rounded-lg border border-[#BDBDBD] dark:border-[#555555] bg-white dark:bg-[#1E1E1E] px-3 py-2 text-sm dark:text-white"
+          className="w-full h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         >
           {LEAVE_TYPES.map((lt) => (
             <option key={lt.value} value={lt.value}>{lt.label}</option>
@@ -92,62 +101,66 @@ export function LeaveForm({ onSaved, onCancel }: LeaveFormProps) {
         </select>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-3">
         <div>
-          <label htmlFor="start-date" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">Start Date</label>
+          <label htmlFor="start-date" className="block text-xs font-semibold text-foreground mb-1.5">
+            Start Date
+          </label>
           <input
             id="start-date"
             type="date"
             value={startDate}
             min={today}
             onChange={(e) => setStartDate(e.target.value)}
-            className="w-full rounded-lg border border-[#BDBDBD] dark:border-[#555555] bg-white dark:bg-[#1E1E1E] px-3 py-2 text-sm dark:text-white"
+            className="w-full h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
         <div>
-          <label htmlFor="end-date" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">End Date</label>
+          <label htmlFor="end-date" className="block text-xs font-semibold text-foreground mb-1.5">
+            End Date
+          </label>
           <input
             id="end-date"
             type="date"
             value={endDate}
             min={startDate || today}
             onChange={(e) => setEndDate(e.target.value)}
-            className="w-full rounded-lg border border-[#BDBDBD] dark:border-[#555555] bg-white dark:bg-[#1E1E1E] px-3 py-2 text-sm dark:text-white"
+            className="w-full h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
       </div>
 
       <div>
-        <label htmlFor="leave-reason" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">Reason</label>
+        <label htmlFor="leave-reason" className="block text-xs font-semibold text-foreground mb-1.5">
+          Reason for Leave
+        </label>
         <textarea
           id="leave-reason"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           rows={3}
-          className="w-full rounded-lg border border-[#BDBDBD] dark:border-[#555555] bg-white dark:bg-[#1E1E1E] px-3 py-2 text-sm dark:text-white"
-          placeholder="Describe the reason for your leave..."
+          className="w-full p-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
+          placeholder="Describe the reason for your leave request..."
         />
       </div>
 
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-
-      <div className="flex gap-3">
-        <button
-          type="submit"
-          disabled={loading}
-          className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {loading ? 'Submitting...' : 'Submit Request'}
-        </button>
+      <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-border">
         {onCancel && (
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={onCancel}
-            className="flex-1 rounded-lg border border-[#BDBDBD] dark:border-[#555555] px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] hover:bg-[#F5F5F5] dark:hover:bg-[#1E1E1E]"
           >
             Cancel
-          </button>
+          </Button>
         )}
+        <Button
+          type="submit"
+          variant="primary"
+          isLoading={loading}
+        >
+          Submit Request
+        </Button>
       </div>
     </form>
   );

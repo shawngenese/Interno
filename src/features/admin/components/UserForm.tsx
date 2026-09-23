@@ -4,6 +4,8 @@ import { resolveDocName } from '@/shared/utils/resolveDocName';
 import { useFormValidation } from '@/shared/hooks/useFormValidation';
 import { required, email, minLength } from '@/shared/utils/validators';
 import { FormField, FormInput, FormSelect } from '@/shared/components/FormField';
+import { Button } from '@/shared/components/ui/Button';
+import { Skeleton } from '@/shared/components/Skeleton';
 import type { UserFormData, UserRole, Company, Department, Supervisor } from '../types';
 
 interface UserFormProps {
@@ -17,11 +19,11 @@ export function UserForm({ editingId, defaultRole, onCancel, onSaved }: UserForm
   const isEditing = !!editingId;
 
   const validationRules = {
-    email: [required('Email is required'), email()],
+    email: [required('Email is required'), email('Enter a valid email')],
     displayName: [required('Display name is required')],
     role: [required('Role is required')],
     companyId: [required('Company is required')],
-    ...(!isEditing ? { password: [required('Password is required'), minLength(6)] } : {}),
+    ...(!isEditing ? { password: [required('Password is required'), minLength(8, 'Password must be 8+ characters')] } : {}),
   };
 
   const {
@@ -112,6 +114,8 @@ export function UserForm({ editingId, defaultRole, onCancel, onSaved }: UserForm
     loadCompanies();
     if (isEditing && editingId) {
       loadUser(editingId);
+    } else {
+      setLoading(false);
     }
   }, [editingId, isEditing]);
 
@@ -144,96 +148,84 @@ export function UserForm({ editingId, defaultRole, onCancel, onSaved }: UserForm
     }
   };
 
-  const handleCancel = () => {
-    onCancel?.();
-  };
-
-  useEffect(() => {
-    if (!isEditing) {
-      setLoading(false);
-    }
-  }, [isEditing]);
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <svg className="animate-spin h-8 w-8 text-blue-600" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
+      <div className="p-6 space-y-4">
+        <Skeleton variant="text" width="50%" height={24} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Skeleton variant="rectangular" height={40} className="sm:col-span-2" />
+          <Skeleton variant="rectangular" height={40} />
+          <Skeleton variant="rectangular" height={40} />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6 max-w-2xl mx-auto">
-      <h2 className="text-xl font-semibold text-[#121212] dark:text-white mb-6">
-        {isEditing ? 'Edit User' : `Create ${formData.role.charAt(0).toUpperCase() + formData.role.slice(1)}`}
-      </h2>
-
+    <form onSubmit={handleSubmitValidation(onSubmit)} className="space-y-4">
       {error && (
-        <div role="alert" className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
+        <div role="alert" className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
           {error}
         </div>
       )}
 
-      <form onSubmit={handleSubmitValidation(onSubmit)} className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FormField id="email" label="Email" required error={touched.email ? errors.email : undefined} className="sm:col-span-2">
-            <FormInput
-              type="email"
-              id="email"
-              value={formData.email}
-              onValueChange={handleChange('email')}
-              onBlur={handleBlur('email')}
-              error={touched.email ? errors.email : undefined}
-              placeholder="user@example.com"
-              disabled={isEditing}
-            />
-          </FormField>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <FormField id="email" label="Email" required error={touched.email ? errors.email : undefined} className="sm:col-span-2">
+          <FormInput
+            type="email"
+            id="email"
+            value={formData.email}
+            onValueChange={handleChange('email')}
+            onBlur={handleBlur('email')}
+            error={touched.email ? errors.email : undefined}
+            placeholder="user@example.com"
+            disabled={isEditing}
+          />
+        </FormField>
 
-          <FormField id="displayName" label="Display Name" required error={touched.displayName ? errors.displayName : undefined}>
-            <FormInput
-              type="text"
-              id="displayName"
-              value={formData.displayName}
-              onValueChange={handleChange('displayName')}
-              onBlur={handleBlur('displayName')}
-              error={touched.displayName ? errors.displayName : undefined}
-              placeholder="John Doe"
-            />
-          </FormField>
+        <FormField id="displayName" label="Display Name" required error={touched.displayName ? errors.displayName : undefined}>
+          <FormInput
+            type="text"
+            id="displayName"
+            value={formData.displayName}
+            onValueChange={handleChange('displayName')}
+            onBlur={handleBlur('displayName')}
+            error={touched.displayName ? errors.displayName : undefined}
+            placeholder="Jane Doe"
+          />
+        </FormField>
 
-          <FormField id="role" label="Role" required error={touched.role ? errors.role : undefined}>
-            <FormSelect
-              id="role"
-              value={formData.role}
-              onValueChange={handleChange('role')}
-              onBlur={handleBlur('role')}
-              error={touched.role ? errors.role : undefined}
-            >
-              <option value="trainee">Trainee</option>
-              <option value="supervisor">Supervisor</option>
-              <option value="coordinator">Coordinator</option>
-              <option value="admin">Admin</option>
-            </FormSelect>
-          </FormField>
+        <FormField id="role" label="Role" required error={touched.role ? errors.role : undefined}>
+          <FormSelect
+            id="role"
+            value={formData.role}
+            onValueChange={handleChange('role')}
+            onBlur={handleBlur('role')}
+            error={touched.role ? errors.role : undefined}
+          >
+            <option value="trainee">Trainee</option>
+            <option value="supervisor">Supervisor</option>
+            <option value="coordinator">Coordinator</option>
+            <option value="admin">Admin</option>
+          </FormSelect>
+        </FormField>
 
-          <FormField id="companyId" label="Company" required error={touched.companyId ? errors.companyId : undefined}>
-            <FormSelect
-              id="companyId"
-              value={formData.companyId}
-              onValueChange={handleChange('companyId')}
-              onBlur={handleBlur('companyId')}
-              error={touched.companyId ? errors.companyId : undefined}
-            >
-              <option value="">Select Company</option>
-              {companies.map(company => (
-                <option key={company.id} value={company.id}>{company.name}</option>
-              ))}
-            </FormSelect>
-          </FormField>
+        <FormField id="companyId" label="Company" required error={touched.companyId ? errors.companyId : undefined}>
+          <FormSelect
+            id="companyId"
+            value={formData.companyId}
+            onValueChange={handleChange('companyId')}
+            onBlur={handleBlur('companyId')}
+            error={touched.companyId ? errors.companyId : undefined}
+          >
+            <option value="">Select Company</option>
+            {companies.map((company) => (
+              <option key={company.id} value={company.id}>{company.name}</option>
+            ))}
+          </FormSelect>
+        </FormField>
 
+        {formData.role !== 'admin' && (
           <FormField id="departmentId" label="Department" error={touched.departmentId ? errors.departmentId : undefined}>
             <FormSelect
               id="departmentId"
@@ -242,14 +234,16 @@ export function UserForm({ editingId, defaultRole, onCancel, onSaved }: UserForm
               onBlur={handleBlur('departmentId')}
               error={touched.departmentId ? errors.departmentId : undefined}
             >
-              <option value="">Select Department</option>
-              {departments.map(dept => (
+              <option value="">Select Department (Optional)</option>
+              {departments.map((dept) => (
                 <option key={dept.id} value={dept.id}>{dept.name}</option>
               ))}
             </FormSelect>
           </FormField>
+        )}
 
-          <FormField id="supervisorId" label="Supervisor" error={touched.supervisorId ? errors.supervisorId : undefined}>
+        {formData.role === 'trainee' && (
+          <FormField id="supervisorId" label="Supervisor" error={touched.supervisorId ? errors.supervisorId : undefined} className="sm:col-span-2">
             <FormSelect
               id="supervisorId"
               value={formData.supervisorId}
@@ -257,45 +251,37 @@ export function UserForm({ editingId, defaultRole, onCancel, onSaved }: UserForm
               onBlur={handleBlur('supervisorId')}
               error={touched.supervisorId ? errors.supervisorId : undefined}
             >
-              <option value="">Select Supervisor</option>
-              {supervisors.map(sup => (
+              <option value="">Select Supervisor (Optional)</option>
+              {supervisors.map((sup) => (
                 <option key={sup.id} value={sup.id}>{sup.userName || sup.userEmail || sup.id}</option>
               ))}
             </FormSelect>
           </FormField>
+        )}
 
-          {!isEditing && (
-            <FormField id="password" label="Password" required error={touched.password ? errors.password : undefined} className="sm:col-span-2">
-              <FormInput
-                type="password"
-                id="password"
-                value={formData.password}
-                onValueChange={handleChange('password')}
-                onBlur={handleBlur('password')}
-                error={touched.password ? errors.password : undefined}
-                placeholder="At least 6 characters"
-              />
-            </FormField>
-          )}
-        </div>
+        {!isEditing && (
+          <FormField id="password" label="Password" required error={touched.password ? errors.password : undefined} className="sm:col-span-2">
+            <FormInput
+              type="password"
+              id="password"
+              value={formData.password}
+              onValueChange={handleChange('password')}
+              onBlur={handleBlur('password')}
+              error={touched.password ? errors.password : undefined}
+              placeholder="Minimum 8 characters"
+            />
+          </FormField>
+        )}
+      </div>
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#555555] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {saving ? 'Saving...' : (isEditing ? 'Update' : 'Create')}
-          </button>
-        </div>
-      </form>
-    </div>
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+        <Button variant="secondary" type="button" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button variant="primary" type="submit" isLoading={saving}>
+          Save
+        </Button>
+      </div>
+    </form>
   );
 }

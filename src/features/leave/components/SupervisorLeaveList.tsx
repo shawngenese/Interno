@@ -2,7 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { listLeaveRequests, reviewLeaveRequest } from '../services/leaveService';
 import { useSupervisor } from '@/shared/hooks/useSupervisor';
 import { useAuth } from '@/features/auth/AuthProvider';
-import { SkeletonCard } from '@/shared/components/Skeleton';
+import { Skeleton } from '@/shared/components/Skeleton';
+import { EmptyState } from '@/shared/components/EmptyState';
+import { Button } from '@/shared/components/ui/Button';
+import { Modal } from '@/shared/components/Modal';
+import { Calendar, CheckCircle2, XCircle } from 'lucide-react';
 import type { LeaveRequest, LeaveStatus, LeaveType, ListLeaveParams } from '../types';
 
 const STATUS_LABELS: Record<LeaveStatus, string> = {
@@ -13,10 +17,10 @@ const STATUS_LABELS: Record<LeaveStatus, string> = {
 };
 
 const STATUS_STYLES: Record<LeaveStatus, string> = {
-  pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-  approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-  rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-  cancelled: 'bg-[#EFEFEF] text-[#555555] dark:bg-[#3A3A3A] dark:text-[#9E9E9E]',
+  pending: 'bg-warning/10 text-warning border-warning/20',
+  approved: 'bg-success/10 text-success border-success/20',
+  rejected: 'bg-destructive/10 text-destructive border-destructive/20',
+  cancelled: 'bg-muted text-muted-foreground border-border',
 };
 
 const TYPE_LABELS: Record<LeaveType, string> = {
@@ -93,170 +97,179 @@ export function SupervisorLeaveList() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-[#121212] dark:text-white">Leave Requests</h2>
-        <span className="text-sm text-[#757575] dark:text-[#9E9E9E]">{total} total</span>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <select
-          value={filters.status || ''}
-          onChange={(e) => setFilters((f) => ({ ...f, status: (e.target.value || undefined) as LeaveStatus }))}
-          aria-label="Filter by status"
-          className="rounded-lg border border-[#BDBDBD] dark:border-[#555555] bg-white dark:bg-[#1E1E1E] px-3 py-1.5 text-sm dark:text-white"
-        >
-          <option value="">All Status</option>
-          <option value="pending">Pending</option>
-          <option value="approved">Approved</option>
-          <option value="rejected">Rejected</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-        <select
-          value={filters.type || ''}
-          onChange={(e) => setFilters((f) => ({ ...f, type: (e.target.value || undefined) as LeaveType }))}
-          aria-label="Filter by leave type"
-          className="rounded-lg border border-[#BDBDBD] dark:border-[#555555] bg-white dark:bg-[#1E1E1E] px-3 py-1.5 text-sm dark:text-white"
-        >
-          <option value="">All Types</option>
-          <option value="sick">Sick</option>
-          <option value="emergency">Emergency</option>
-          <option value="personal">Personal</option>
-          <option value="school_activity">School Activity</option>
-          <option value="company_holiday">Company Holiday</option>
-          <option value="other">Other</option>
-        </select>
-      </div>
-
-      {/* List */}
-      {loading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
+    <div className="space-y-6">
+      <div className="bg-card rounded-xl shadow-sm border border-border p-4 md:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Leave Requests</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Review and take action on trainee leave applications</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <select
+              value={filters.status || ''}
+              onChange={(e) => setFilters((f) => ({ ...f, status: (e.target.value || undefined) as LeaveStatus }))}
+              aria-label="Filter by status"
+              className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+            <select
+              value={filters.type || ''}
+              onChange={(e) => setFilters((f) => ({ ...f, type: (e.target.value || undefined) as LeaveType }))}
+              aria-label="Filter by leave type"
+              className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">All Types</option>
+              <option value="sick">Sick</option>
+              <option value="emergency">Emergency</option>
+              <option value="personal">Personal</option>
+              <option value="school_activity">School Activity</option>
+              <option value="company_holiday">Company Holiday</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
         </div>
-      ) : leaves.length === 0 ? (
-        <div className="text-center py-8 text-[#757575] dark:text-[#9E9E9E]">No leave requests found</div>
-      ) : (
-        <div className="space-y-3">
-          {leaves.map((leave) => (
-            <div key={leave.id} className="rounded-lg border border-[#D5D5D5] dark:border-[#3A3A3A] bg-white dark:bg-[#1E1E1E] p-4">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-[#121212] dark:text-white">
-                      {TYPE_LABELS[leave.type]}
-                    </span>
-                    <span className={`px-2 py-0.5 text-xs font-medium rounded ${STATUS_STYLES[leave.status]}`}>
-                      {STATUS_LABELS[leave.status]}
-                    </span>
+
+        {/* List */}
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} variant="rectangular" height={90} className="rounded-xl" />
+            ))}
+          </div>
+        ) : leaves.length === 0 ? (
+          <EmptyState
+            title="No leave requests found"
+            description="There are currently no leave requests submitted for your review."
+          />
+        ) : (
+          <div className="space-y-3">
+            {leaves.map((leave) => (
+              <div key={leave.id} className="rounded-xl border border-border bg-card p-4 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                  <div className="space-y-1.5 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-foreground text-sm">
+                        {TYPE_LABELS[leave.type]}
+                      </span>
+                      <span className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full border capitalize ${STATUS_STYLES[leave.status]}`}>
+                        {STATUS_LABELS[leave.status]}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>
+                        {formatDate(leave.startDate)} – {formatDate(leave.endDate)}
+                      </span>
+                      <span className="font-semibold text-foreground">({daysBetween(leave.startDate, leave.endDate)} {daysBetween(leave.startDate, leave.endDate) === 1 ? 'day' : 'days'})</span>
+                    </div>
+                    <p className="text-xs text-foreground bg-muted/30 p-2.5 rounded-lg border border-border">{leave.reason}</p>
+                    {leave.approvalNotes && (
+                      <p className="text-xs text-muted-foreground italic">
+                        Note: {leave.approvalNotes}
+                      </p>
+                    )}
                   </div>
-                  <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">
-                    {formatDate(leave.startDate)} - {formatDate(leave.endDate)}
-                    <span className="ml-2 text-[#9E9E9E]">({daysBetween(leave.startDate, leave.endDate)}d)</span>
-                  </p>
-                  <p className="text-sm text-[#555555] dark:text-[#BDBDBD]">{leave.reason}</p>
-                  {leave.approvalNotes && (
-                    <p className="text-xs text-[#757575] dark:text-[#9E9E9E] italic">
-                      Note: {leave.approvalNotes}
-                    </p>
+                  {leave.status === 'pending' && (role === 'supervisor' || role === 'admin') && (
+                    <div className="flex items-center gap-2 self-end sm:self-start">
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        onClick={() => setActionModal({ leave, action: 'approved' })}
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => setActionModal({ leave, action: 'rejected' })}
+                      >
+                        <XCircle className="w-3.5 h-3.5 mr-1" />
+                        Reject
+                      </Button>
+                    </div>
                   )}
                 </div>
-                {leave.status === 'pending' && (role === 'supervisor' || role === 'admin') && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setActionModal({ leave, action: 'approved' })}
-                      className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      onClick={() => setActionModal({ leave, action: 'rejected' })}
-                      className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
-                    >
-                      Reject
-                    </button>
-                  </div>
-                )}
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
 
-      {/* Pagination */}
-      {total > 20 && (
-        <div className="flex justify-center gap-2">
-          <button
-            onClick={() => setFilters((f) => ({ ...f, page: Math.max(1, (f.page || 1) - 1) }))}
-            disabled={(filters.page || 1) <= 1}
-            className="rounded-lg border border-[#BDBDBD] dark:border-[#555555] px-3 py-1.5 text-sm text-[#121212] dark:text-white hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50"
-          >
-            Previous
-          </button>
-          <span className="px-3 py-1.5 text-sm text-[#555555] dark:text-[#9E9E9E]">
-            Page {filters.page || 1} of {Math.ceil(total / 20)}
-          </span>
-          <button
-            onClick={() => setFilters((f) => ({ ...f, page: (f.page || 1) + 1 }))}
-            disabled={(filters.page || 1) >= Math.ceil(total / 20)}
-            className="rounded-lg border border-[#BDBDBD] dark:border-[#555555] px-3 py-1.5 text-sm text-[#121212] dark:text-white hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A] disabled:opacity-50"
-          >
-            Next
-          </button>
-        </div>
-      )}
+        {/* Pagination */}
+        {total > 20 && (
+          <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground pt-4 border-t border-border">
+            <span>
+              Page {filters.page || 1} of {Math.ceil(total / 20)}
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setFilters((f) => ({ ...f, page: Math.max(1, (f.page || 1) - 1) }))}
+                disabled={(filters.page || 1) <= 1}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setFilters((f) => ({ ...f, page: (f.page || 1) + 1 }))}
+                disabled={(filters.page || 1) >= Math.ceil(total / 20)}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Review Modal */}
       {actionModal && (
-        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="leave-review-modal-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-          onClick={(e) => { if (e.target === e.currentTarget) { setActionModal(null); setReviewNotes(''); } }}
+        <Modal
+          open={actionModal !== null}
+          title={`${actionModal.action === 'approved' ? 'Approve' : 'Reject'} Leave Request`}
+          onClose={() => { setActionModal(null); setReviewNotes(''); }}
         >
-          {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
-          <div
-            className="w-full max-w-md rounded-lg bg-white dark:bg-[#1E1E1E] p-6 space-y-4"
-            onKeyDown={(e) => { if (e.key === 'Escape') { setActionModal(null); setReviewNotes(''); } }}
-          >
-            <h3 id="leave-review-modal-title" className="text-lg font-semibold text-[#121212] dark:text-white">
-              {actionModal.action === 'approved' ? 'Approve' : 'Reject'} Leave Request
-            </h3>
-            <p className="text-sm text-[#555555] dark:text-[#BDBDBD]">
-              {TYPE_LABELS[actionModal.leave.type]} &middot; {formatDate(actionModal.leave.startDate)} - {formatDate(actionModal.leave.endDate)}
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              {TYPE_LABELS[actionModal.leave.type]} &middot; {formatDate(actionModal.leave.startDate)} – {formatDate(actionModal.leave.endDate)}
             </p>
-            <textarea
-              value={reviewNotes}
-              onChange={(e) => setReviewNotes(e.target.value)}
-              rows={3}
-              aria-label="Review notes"
-              className="w-full rounded-lg border border-[#BDBDBD] dark:border-[#555555] bg-white dark:bg-[#1E1E1E] px-3 py-2 text-sm dark:text-white"
-              placeholder="Notes (optional)"
-            />
-            <div className="flex gap-3">
-              <button
-                onClick={handleReview}
-                disabled={!!reviewing}
-                className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50 ${
-                  actionModal.action === 'approved'
-                    ? 'bg-green-600 hover:bg-green-700'
-                    : 'bg-red-600 hover:bg-red-700'
-                }`}
-              >
-                {reviewing ? 'Processing...' : actionModal.action === 'approved' ? 'Confirm Approve' : 'Confirm Reject'}
-              </button>
-              <button
+            <div>
+              <label htmlFor="review-notes" className="block text-xs font-semibold text-foreground mb-1.5">
+                Approval / Rejection Notes (optional)
+              </label>
+              <textarea
+                id="review-notes"
+                value={reviewNotes}
+                onChange={(e) => setReviewNotes(e.target.value)}
+                rows={3}
+                aria-label="Review notes"
+                className="w-full p-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
+                placeholder="Optional notes or feedback for the trainee..."
+              />
+            </div>
+            <div className="flex justify-end gap-2.5 pt-2">
+              <Button
+                variant="secondary"
                 onClick={() => { setActionModal(null); setReviewNotes(''); }}
-                aria-label="Close"
-                className="flex-1 rounded-lg border border-[#BDBDBD] dark:border-[#555555] px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] hover:bg-[#F5F5F5] dark:hover:bg-[#1E1E1E]"
               >
                 Cancel
-              </button>
+              </Button>
+              <Button
+                variant={actionModal.action === 'approved' ? 'primary' : 'destructive'}
+                isLoading={!!reviewing}
+                onClick={handleReview}
+              >
+                {actionModal.action === 'approved' ? 'Confirm Approval' : 'Confirm Rejection'}
+              </Button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

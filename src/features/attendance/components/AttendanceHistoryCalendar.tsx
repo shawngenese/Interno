@@ -3,6 +3,8 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { formatTime12 } from '@/shared/utils/dateUtils';
+import { Skeleton } from '@/shared/components/Skeleton';
+import { ChevronLeft, ChevronRight, Calendar, Clock } from 'lucide-react';
 import type { AttendanceRecord } from '../types';
 
 interface CalendarDay {
@@ -99,49 +101,48 @@ export function AttendanceHistoryCalendar() {
   const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
 
   return (
-    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
+    <div className="bg-card rounded-xl shadow-sm border border-border p-4 md:p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-semibold text-[#121212] dark:text-white">Attendance History</h2>
+        <div className="flex items-center gap-2">
+          <Calendar className="w-5 h-5 text-primary" />
+          <h2 className="text-lg font-bold text-foreground">Attendance History</h2>
+        </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => navigateMonth(-1)}
-            className="p-2 text-[#757575] dark:text-[#9E9E9E] hover:bg-[#EFEFEF] dark:hover:bg-[#3A3A3A] rounded-lg"
+            className="w-11 h-11 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
             aria-label="Previous month"
           >
-            <svg className="h-5 w-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
+            <ChevronLeft className="w-5 h-5" />
           </button>
-          <span className="text-sm font-medium text-[#121212] dark:text-white min-w-[140px] text-center">
+          <span className="text-sm font-semibold text-foreground min-w-[140px] text-center">
             {currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
           </span>
           <button
             onClick={() => navigateMonth(1)}
-            className="p-2 text-[#757575] dark:text-[#9E9E9E] hover:bg-[#EFEFEF] dark:hover:bg-[#3A3A3A] rounded-lg"
+            className="w-11 h-11 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
             aria-label="Next month"
           >
-            <svg className="h-5 w-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
+            <ChevronRight className="w-5 h-5" />
           </button>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+        <div className="space-y-3">
+          <Skeleton variant="rectangular" height={220} className="rounded-xl" />
         </div>
       ) : (
         <>
-          <div role="grid" aria-label={`${currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })} attendance calendar`} className="grid grid-cols-7 gap-px bg-[#D5D5D5] dark:bg-[#3A3A3A] rounded-lg overflow-hidden">
+          <div role="grid" aria-label={`${currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })} attendance calendar`} className="grid grid-cols-7 gap-px bg-border rounded-xl overflow-hidden border border-border">
             {weekdays.map((day) => (
-              <div key={day} className="bg-[#F5F5F5] dark:bg-[#1E1E1E] p-2 text-center text-xs font-medium text-[#757575] dark:text-[#9E9E9E]">
+              <div key={day} className="bg-muted p-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 {day}
               </div>
             ))}
 
             {Array.from({ length: firstDayOfMonth }).map((_, i) => (
-              <div key={`empty-${i}`} className="bg-white dark:bg-[#1E1E1E] p-2 min-h-[60px]" />
+              <div key={`empty-${i}`} className="bg-card/50 p-2 min-h-[60px]" />
             ))}
 
             {calendarDays.map((day, i) => {
@@ -151,73 +152,77 @@ export function AttendanceHistoryCalendar() {
               if (day.hasTimeOut) statusParts.push('Time Out recorded');
               const statusStr = statusParts.length > 0 ? statusParts.join(', ') : 'No attendance';
               const ariaLabel = `${dateStr} - ${statusStr}`;
+              const isSelected = selectedDay?.date.getTime() === day.date.getTime();
+
               return (
-              <button
-                key={i}
-                aria-label={ariaLabel}
-                onClick={() => setSelectedDay(day)}
-                className={`bg-white dark:bg-[#1E1E1E] p-2 min-h-[60px] text-left transition-colors ${
-                  selectedDay?.date.getTime() === day.date.getTime()
-                    ? 'ring-2 ring-inset ring-blue-500'
-                    : 'hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]'
-                }`}
-              >
-                <span className="text-sm font-medium text-[#121212] dark:text-white">
-                  {day.date.getDate()}
-                </span>
-                <div className="flex gap-1 mt-1">
-                  {day.hasTimeIn && (
-                    <span className="w-2 h-2 rounded-full bg-green-500" title="Time In" />
-                  )}
-                  {day.hasTimeOut && (
-                    <span className="w-2 h-2 rounded-full bg-red-500" title="Time Out" />
-                  )}
-                  {!day.hasTimeIn && !day.hasTimeOut && day.date <= new Date() && (
-                    <span className="w-2 h-2 rounded-full bg-[#BDBDBD] dark:bg-[#555555]" title="No attendance" />
-                  )}
-                </div>
-              </button>
+                <button
+                  key={i}
+                  aria-label={ariaLabel}
+                  onClick={() => setSelectedDay(day)}
+                  className={`bg-card p-2 min-h-[60px] text-left transition-colors relative ${
+                    isSelected
+                      ? 'ring-2 ring-inset ring-primary bg-primary/5'
+                      : 'hover:bg-muted/50'
+                  }`}
+                >
+                  <span className="text-xs font-semibold text-foreground">
+                    {day.date.getDate()}
+                  </span>
+                  <div className="flex gap-1 mt-1.5">
+                    {day.hasTimeIn && (
+                      <span className="w-2 h-2 rounded-full bg-success" title="Time In" />
+                    )}
+                    {day.hasTimeOut && (
+                      <span className="w-2 h-2 rounded-full bg-primary" title="Time Out" />
+                    )}
+                    {!day.hasTimeIn && !day.hasTimeOut && day.date <= new Date() && (
+                      <span className="w-2 h-2 rounded-full bg-muted-foreground/30" title="No attendance" />
+                    )}
+                  </div>
+                </button>
               );
             })}
           </div>
 
-          <div className="flex items-center gap-4 mt-4 text-xs text-[#757575] dark:text-[#9E9E9E]">
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-green-500" /> Time In
+          <div className="flex flex-wrap items-center gap-4 mt-4 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-success" /> Time In
             </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-red-500" /> Time Out
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-primary" /> Time Out
             </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-[#BDBDBD] dark:bg-[#555555]" /> No Record
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-muted-foreground/30" /> No Record
             </span>
           </div>
 
           {selectedDay && (
-            <div className="mt-6 p-4 bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 rounded-lg">
-              <h3 className="text-sm font-medium text-[#121212] dark:text-white mb-3">
+            <div className="mt-6 p-4 bg-muted/30 rounded-xl border border-border">
+              <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-primary" />
                 {selectedDay.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
               </h3>
               {selectedDay.records.length === 0 ? (
-                <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">No attendance records for this day.</p>
+                <p className="text-xs text-muted-foreground">No attendance records for this day.</p>
               ) : (
                 <div className="space-y-2">
                   {selectedDay.records.map((record) => (
-                    <div key={record.id} className="flex items-center justify-between p-3 bg-white dark:bg-[#1E1E1E] rounded-lg border border-[#D5D5D5] dark:border-[#555555]">
-                      <div className="flex items-center gap-3">
-                        <span className={`w-2 h-2 rounded-full ${record.type === 'time_in' ? 'bg-green-500' : 'bg-red-500'}`} />
+                    <div key={record.id} className="flex items-center justify-between p-3 bg-card rounded-lg border border-border">
+                      <div className="flex items-center gap-2.5">
+                        <span className={`w-2.5 h-2.5 rounded-full ${record.type === 'time_in' ? 'bg-success' : 'bg-primary'}`} />
                         <div>
-                          <p className="text-sm font-medium text-[#121212] dark:text-white">
+                          <p className="text-sm font-semibold text-foreground">
                             {record.type === 'time_in' ? 'Time In' : 'Time Out'}
                           </p>
-                          <p className="text-xs text-[#757575] dark:text-[#9E9E9E]">
+                          <p className="text-xs text-muted-foreground">
                             Session: {record.qrSessionId.slice(0, 8)}...
                           </p>
                         </div>
                       </div>
-                      <p className="text-sm text-[#555555] dark:text-[#BDBDBD]">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                        <Clock className="w-3.5 h-3.5 text-muted-foreground" />
                         {formatTime12(record.timestamp)}
-                      </p>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -229,3 +234,4 @@ export function AttendanceHistoryCalendar() {
     </div>
   );
 }
+

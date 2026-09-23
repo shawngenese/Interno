@@ -7,6 +7,10 @@ import { COMPANY_TYPES } from '@/config/constants';
 import { useFormValidation } from '@/shared/hooks/useFormValidation';
 import { required, email } from '@/shared/utils/validators';
 import { FormField, FormInput, FormSelect } from '@/shared/components/FormField';
+import { useToast } from '@/shared/components/Toast';
+import { Button } from '@/shared/components/ui/Button';
+import { Skeleton } from '@/shared/components/Skeleton';
+import { CheckCircle2, UserPlus } from 'lucide-react';
 
 interface Company {
   id: string;
@@ -22,7 +26,7 @@ interface SupervisorInviteProps {
 const validationRules = {
   selectedCompanyId: [required('Please select a company')],
   supervisorName: [required('Supervisor name is required')],
-  supervisorEmail: [required('Email is required'), email('Please enter a valid email address')],
+  supervisorEmail: [required('Email is required'), email('Enter a valid email')],
 };
 
 export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
@@ -47,6 +51,8 @@ export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
     validationRules,
   );
 
+  const { addToast } = useToast();
+
   const fetchCompanies = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     try {
@@ -67,7 +73,7 @@ export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
       setCompanies(data);
     } catch (err) {
       if (!signal?.aborted) {
-        setError('Failed to load companies');
+        setError('Failed to load verified companies');
         console.error(err);
       }
     } finally {
@@ -85,7 +91,7 @@ export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
 
   useEffect(() => {
     if (!success) return;
-    const t = setTimeout(() => setSuccess(false), 5000);
+    const t = setTimeout(() => setSuccess(false), 6000);
     return () => clearTimeout(t);
   }, [success]);
 
@@ -95,7 +101,7 @@ export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
 
     try {
       const db = getFirestoreInstancePublic();
-      
+
       const functions = getFunctions();
       const sendInvite = httpsCallable(functions, 'sendSupervisorInvite');
       await sendInvite({
@@ -113,10 +119,11 @@ export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
       });
 
       setSuccess(true);
+      addToast('success', 'Invite sent');
       setFormData({ selectedCompanyId: '', supervisorName: '', supervisorEmail: '' });
       onSuccess?.();
     } catch (err) {
-      setError('Failed to send invitation');
+      setError('Failed to send invitation. Please try again.');
       console.error(err);
     } finally {
       setSubmitting(false);
@@ -125,24 +132,25 @@ export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
 
   if (success) {
     return (
-      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-6">
-        <div className="flex items-center gap-3">
-          <div className="flex-shrink-0">
-            <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+      <div className="bg-card border border-success/30 rounded-xl p-6 shadow-sm">
+        <div className="flex items-start gap-3.5">
+          <div className="w-10 h-10 rounded-full bg-success/15 text-success flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-6 h-6" />
           </div>
-          <div>
-            <h4 className="font-semibold text-green-800 dark:text-green-300">Invitation Sent</h4>
-            <p className="text-sm text-green-700 dark:text-green-400">
-              The supervisor will receive an email with instructions to set up their account.
+          <div className="space-y-1">
+            <h4 className="font-semibold text-foreground text-base">Invite Sent</h4>
+            <p className="text-sm text-muted-foreground">
+              The external supervisor will receive an email invitation with instructions to create their account and manage trainees.
             </p>
-            <button
-              onClick={() => setSuccess(false)}
-              className="mt-2 text-sm font-medium text-green-700 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300"
-            >
-              Send Another Invitation
-            </button>
+            <div className="pt-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setSuccess(false)}
+              >
+                Send Another Invite
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -150,33 +158,38 @@ export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
   }
 
   return (
-    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
-      <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
-        <h3 className="text-lg font-semibold text-[#121212] dark:text-white">
-          Invite External Supervisor
-        </h3>
-        <p className="text-sm text-[#757575] dark:text-[#9E9E9E] mt-1">
-          Send an invitation to a supervisor at an external company
-        </p>
+    <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden max-w-2xl">
+      <div className="p-5 border-b border-border">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+            <UserPlus className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-foreground">
+              Invite External Supervisor
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Send an account setup invite to a supervisor at a verified partner company
+            </p>
+          </div>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="p-4 space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="p-5 space-y-4">
         {error && (
-          <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
+          <div role="alert" className="p-3.5 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
             {error}
           </div>
         )}
 
         <FormField
           id="company-select"
-          label="External Company"
+          label="External Partner Company"
           required
           error={touched.selectedCompanyId ? errors.selectedCompanyId : undefined}
         >
           {loading ? (
-            <div className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-[#F5F5F5] dark:bg-[#3A3A3A] text-[#757575] dark:text-[#9E9E9E]">
-              Loading companies...
-            </div>
+            <Skeleton variant="rectangular" height={40} className="rounded-lg" />
           ) : (
             <FormSelect
               id="company-select"
@@ -185,7 +198,7 @@ export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
               onBlur={handleBlur('selectedCompanyId')}
               error={touched.selectedCompanyId ? errors.selectedCompanyId : undefined}
             >
-              <option value="">Select a company...</option>
+              <option value="">Select a verified company...</option>
               {companies.map((company) => (
                 <option key={company.id} value={company.id}>
                   {company.name}
@@ -208,7 +221,7 @@ export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
             onValueChange={handleChange('supervisorName')}
             onBlur={handleBlur('supervisorName')}
             error={touched.supervisorName ? errors.supervisorName : undefined}
-            placeholder="Supervisor's full name"
+            placeholder="e.g. John Smith"
           />
         </FormField>
 
@@ -229,15 +242,16 @@ export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
           />
         </FormField>
 
-        <div className="flex justify-end pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
+        <div className="flex justify-end pt-4 border-t border-border">
           {(role === 'coordinator' || role === 'admin') && (
-            <button
+            <Button
+              variant="primary"
               type="submit"
-              disabled={submitting || !formData.selectedCompanyId}
-              className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              disabled={!formData.selectedCompanyId}
+              isLoading={submitting}
             >
-              {submitting ? 'Sending...' : 'Send Invitation'}
-            </button>
+              Send Invite
+            </Button>
           )}
         </div>
       </form>

@@ -9,7 +9,7 @@ export const CTASection: React.FC = () => {
           Ready to transform your trainee management experience?
         </p>
         <Button
-          variant="outline"
+          variant="secondary"
           size="lg"
           className="mx-auto"
           onClick={() => window.location.href="/login"}

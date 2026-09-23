@@ -155,8 +155,8 @@ export function CoordinatorAttendanceView() {
             <p className="text-2xl font-bold text-green-600 dark:text-green-400">{timedInCount}</p>
             <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Timed In</p>
           </div>
-          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
-            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{timedOutCount}</p>
+          <div className="p-4 bg-primary-light dark:bg-primary/10 rounded-lg text-center">
+            <p className="text-2xl font-bold text-primary dark:text-primary">{timedOutCount}</p>
             <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Timed Out</p>
           </div>
         </div>
@@ -199,7 +199,7 @@ export function CoordinatorAttendanceView() {
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 text-xs font-medium rounded ${
                         a.hasTimeOut
-                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                          ? 'bg-primary-light text-primary dark:bg-primary/20 dark:text-primary'
                           : a.hasTimeIn
                             ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                             : 'bg-[#EFEFEF] text-[#555555] dark:bg-[#3A3A3A] dark:text-[#9E9E9E]'

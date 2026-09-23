@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { evaluationService } from '../services/evaluationService';
 import { useAuth } from '@/features/auth';
+import { Button } from '@/shared/components/ui/Button';
 import { EVALUATION_CATEGORIES, EVALUATION_TYPE_LABELS, RATING_LABELS } from '../types';
 import type { EvaluationType, EvaluationRating, RatingScale } from '../types';
 
@@ -86,30 +87,31 @@ export function EvaluationForm({
   };
 
   return (
-    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
-      <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
-        <h3 className="text-lg font-semibold text-[#121212] dark:text-white">
+    <div className="bg-card rounded-xl shadow-sm border border-border">
+      <div className="p-4 md:p-6 border-b border-border">
+        <h3 className="text-base font-bold text-foreground">
           New Evaluation for {traineeName}
         </h3>
+        <p className="text-xs text-muted-foreground mt-0.5">Rate key competencies and provide constructive feedback</p>
       </div>
 
-      <div className="p-4 space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
         {error && (
-          <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
+          <div role="alert" className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm">
             {error}
           </div>
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label htmlFor="evaluation-type" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+            <label htmlFor="evaluation-type" className="block text-xs font-semibold text-foreground mb-1.5">
               Evaluation Type
             </label>
             <select
               id="evaluation-type"
               value={type}
               onChange={(e) => setType(e.target.value as EvaluationType)}
-              className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
               {Object.entries(EVALUATION_TYPE_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>{label}</option>
@@ -117,7 +119,7 @@ export function EvaluationForm({
             </select>
           </div>
           <div>
-            <label htmlFor="period-start" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+            <label htmlFor="period-start" className="block text-xs font-semibold text-foreground mb-1.5">
               Period Start
             </label>
             <input
@@ -125,11 +127,11 @@ export function EvaluationForm({
               type="date"
               value={periodStart}
               onChange={(e) => setPeriodStart(e.target.value)}
-              className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
           <div>
-            <label htmlFor="period-end" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+            <label htmlFor="period-end" className="block text-xs font-semibold text-foreground mb-1.5">
               Period End
             </label>
             <input
@@ -137,31 +139,31 @@ export function EvaluationForm({
               type="date"
               value={periodEnd}
               onChange={(e) => setPeriodEnd(e.target.value)}
-              className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
         </div>
 
         <div className="space-y-4">
-          <h4 className="font-medium text-[#121212] dark:text-white">Ratings</h4>
+          <h4 className="font-bold text-foreground text-sm">Competency Ratings</h4>
           {ratings.map((item, index) => (
-            <div key={item.category} className="p-4 bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-medium text-[#121212] dark:text-white">{item.category}</span>
-                <span className="text-sm text-[#757575] dark:text-[#9E9E9E]">
-                  {RATING_LABELS[item.rating]}
+            <div key={item.category} className="p-4 bg-muted/40 rounded-xl border border-border space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                <span className="font-semibold text-foreground text-sm">{item.category}</span>
+                <span className="text-xs text-muted-foreground font-medium">
+                  {item.rating}/5 — {RATING_LABELS[item.rating]}
                 </span>
               </div>
-              <div className="flex gap-2 mb-2">
+              <div className="flex gap-2">
                 {[1, 2, 3, 4, 5].map((value) => (
                   <button
                     key={value}
                     type="button"
                     onClick={() => handleRatingChange(index, value as RatingScale)}
-                    className={`w-10 h-10 rounded-lg font-medium transition-colors ${
+                    className={`min-w-[44px] h-11 rounded-lg text-sm font-bold transition-colors ${
                       item.rating === value
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-white dark:bg-[#555555] text-[#3A3A3A] dark:text-[#BDBDBD] hover:bg-[#EFEFEF] dark:hover:bg-[#757575]'
+                        ? 'bg-primary text-on-primary shadow-sm'
+                        : 'bg-card border border-border text-foreground hover:bg-muted'
                     }`}
                   >
                     {value}
@@ -172,15 +174,15 @@ export function EvaluationForm({
                 type="text"
                 value={item.comments || ''}
                 onChange={(e) => handleCommentsChange(index, e.target.value)}
-                placeholder="Optional comments..."
-                className="w-full px-3 py-2 text-sm border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#1E1E1E] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Optional comments for this category..."
+                className="w-full h-10 px-3 text-xs border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
           ))}
         </div>
 
         <div>
-          <label htmlFor="overall-comments" className="block text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] mb-1">
+          <label htmlFor="overall-comments" className="block text-xs font-semibold text-foreground mb-1.5">
             Overall Comments
           </label>
           <textarea
@@ -188,38 +190,38 @@ export function EvaluationForm({
             value={overallComments}
             onChange={(e) => setOverallComments(e.target.value)}
             rows={4}
-            className="w-full px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white placeholder-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Provide overall comments about the trainee's performance..."
+            className="w-full p-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
+            placeholder="Provide overall comments and recommendations for the trainee..."
           />
         </div>
 
-        <div className="flex items-center justify-between pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
-          <div className="text-sm text-[#757575] dark:text-[#9E9E9E]">
-            Overall Rating: <span className="font-semibold text-[#121212] dark:text-white">{calculateOverallRating()}</span>/5
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-between gap-3 pt-4 border-t border-border">
+          <div className="text-sm text-muted-foreground">
+            Overall Calculated Score: <span className="font-bold text-foreground text-base">{calculateOverallRating()}</span> / 5.0
           </div>
-          <div className="flex gap-3">
+          <div className="flex items-center justify-end gap-2.5">
             {onCancel && (
-              <button
+              <Button
+                variant="secondary"
                 onClick={onCancel}
-                className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#555555] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
               >
                 Cancel
-              </button>
+              </Button>
             )}
-            <button
+            <Button
+              variant="secondary"
+              isLoading={saving}
               onClick={() => handleSave(true)}
-              disabled={saving}
-              className="px-4 py-2 text-sm font-medium text-[#3A3A3A] dark:text-[#BDBDBD] bg-white dark:bg-[#3A3A3A] border border-[#BDBDBD] dark:border-[#555555] rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#555555] focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {saving ? 'Saving...' : 'Save Draft'}
-            </button>
-            <button
+              Save Draft
+            </Button>
+            <Button
+              variant="primary"
+              isLoading={saving}
               onClick={() => handleSave(false)}
-              disabled={saving}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {saving ? 'Submitting...' : 'Submit'}
-            </button>
+              Submit
+            </Button>
           </div>
         </div>
       </div>

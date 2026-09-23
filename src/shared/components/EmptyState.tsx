@@ -1,4 +1,5 @@
 import React, { type ReactNode } from 'react';
+import { Button } from './ui/Button';
 
 interface EmptyStateProps {
   icon?: (props: { className?: string }) => ReactNode;
@@ -11,31 +12,35 @@ interface EmptyStateProps {
   className?: string;
 }
 
-export const EmptyState = React.memo(function EmptyState({ icon: Icon, title, description, action, className = '' }: EmptyStateProps) {
+export const EmptyState = React.memo(function EmptyState({
+  icon: Icon,
+  title,
+  description,
+  action,
+  className = '',
+}: EmptyStateProps) {
   return (
     <div className={`flex flex-col items-center justify-center py-12 px-4 text-center ${className}`}>
       {Icon && (
-        <div className="mb-4 p-4 rounded-full bg-[#EFEFEF] dark:bg-[#1E1E1E]">
-          <Icon className="w-12 h-12 text-[#9E9E9E] dark:text-[#757575]" />
+        <div className="mb-4 p-4 rounded-full bg-muted">
+          <Icon className="w-10 h-10 text-muted-foreground" />
         </div>
       )}
-      <h3 className="text-lg font-medium text-[#121212] dark:text-white mb-1">{title}</h3>
+      <h3 className="text-base font-medium text-foreground mb-1">{title}</h3>
       {description && (
-        <p className="text-sm text-[#757575] dark:text-[#9E9E9E] max-w-sm mb-4">{description}</p>
+        <p className="text-sm text-muted-foreground max-w-sm mb-4">{description}</p>
       )}
       {action && (
-        <button
-          onClick={action.onClick}
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-        >
+        <Button variant="primary" onClick={action.onClick}>
           {action.label}
-        </button>
+        </Button>
       )}
     </div>
   );
 });
 
-// Preset icons
+// ─── Preset icons (Heroicons outline) ─────────────────────────────────────────
+
 export function InboxIcon({ className }: { className?: string }) {
   return (
     <svg className={className} aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>

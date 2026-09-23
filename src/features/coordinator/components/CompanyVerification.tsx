@@ -4,6 +4,10 @@ import { collection, getDocs, doc, updateDoc, query, where, addDoc, serverTimest
 import { useAuth } from '@/features/auth';
 import { COMPANY_TYPES } from '@/config/constants';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
+import { Button } from '@/shared/components/ui/Button';
+import { Skeleton } from '@/shared/components/Skeleton';
+import { EmptyState } from '@/shared/components/EmptyState';
+import { Building2, CheckCircle, XCircle, Mail, Phone, MapPin, User } from 'lucide-react';
 
 interface Company {
   id: string;
@@ -80,8 +84,8 @@ export function CompanyVerification() {
   const handleVerify = async (companyId: string) => {
     if (!user) return;
     setConfirmDialog({
-      title: 'Verify Company',
-      message: 'Verify this company?',
+      title: 'Verify Partner Company',
+      message: 'Verify this external company as an approved OJT partner?',
       onConfirm: async () => {
         setProcessing(companyId);
         try {
@@ -149,97 +153,135 @@ export function CompanyVerification() {
   };
 
   return (
-    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
-      <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-[#121212] dark:text-white">
+    <div className="bg-card rounded-xl border border-border overflow-hidden">
+      <div className="p-4 sm:p-5 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-semibold text-foreground">
             Company Verification
           </h3>
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value as 'all' | 'verified' | 'unverified')}
-            className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-[#121212] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="unverified">Pending Verification</option>
-            <option value="verified">Verified</option>
-            <option value="all">All Companies</option>
-          </select>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Review and verify external companies before trainee placement
+          </p>
         </div>
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value as 'all' | 'verified' | 'unverified')}
+          className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="unverified">Pending Verification</option>
+          <option value="verified">Verified Partners</option>
+          <option value="all">All External Companies</option>
+        </select>
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">
+        <div className="p-4 bg-destructive/10 border-b border-destructive/20 text-destructive text-sm">
           {error}
         </div>
       )}
 
-      <div className="p-4">
+      <div className="p-4 sm:p-5">
         {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <svg className="animate-spin h-6 w-6 text-blue-600" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-            <span className="ml-3 text-[#757575] dark:text-[#9E9E9E]">Loading companies...</span>
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="p-4 border border-border rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <Skeleton variant="text" width="40%" height={20} />
+                  <Skeleton variant="rectangular" width={80} height={24} className="rounded-full" />
+                </div>
+                <Skeleton variant="text" width="60%" height={16} />
+              </div>
+            ))}
           </div>
         ) : companies.length === 0 ? (
-          <div className="text-center py-8">
-            <svg className="w-12 h-12 text-[#9E9E9E] mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-[#757575] dark:text-[#9E9E9E]">
-              {filter === 'unverified' ? 'No companies pending verification' : 'No companies found'}
-            </p>
-          </div>
+          <EmptyState
+            title={filter === 'unverified' ? 'No companies pending verification.' : 'No companies found'}
+            description="External companies submitted by trainees or admins will appear here for verification."
+          />
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4">
             {companies.map((company) => (
               <div
                 key={company.id}
-                className="border border-[#D5D5D5] dark:border-[#3A3A3A] rounded-lg p-4"
+                className="border border-border rounded-xl p-4 sm:p-5 bg-card hover:bg-muted/20 transition-colors"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-semibold text-[#121212] dark:text-white">{company.name}</h4>
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${company.verified ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'}`}>
-                        {company.verified ? 'Verified' : 'Pending'}
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        <Building2 className="w-4 h-4" />
+                      </div>
+                      <h4 className="font-semibold text-foreground text-base">{company.name}</h4>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-medium rounded-full ${
+                          company.verified
+                            ? 'bg-success/15 text-success'
+                            : 'bg-warning/15 text-warning'
+                        }`}
+                      >
+                        {company.verified ? (
+                          <>
+                            <CheckCircle className="w-3 h-3" />
+                            Verified
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="w-3 h-3" />
+                            Pending Verification
+                          </>
+                        )}
                       </span>
                     </div>
+
                     {company.address && (
-                      <p className="text-sm text-[#757575] dark:text-[#9E9E9E] mt-1">{company.address}</p>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <MapPin className="w-3.5 h-3.5 shrink-0" />
+                        <span>{company.address}</span>
+                      </div>
                     )}
-                    <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-xs text-muted-foreground">
                       {company.contactPerson && (
-                        <p className="text-sm text-[#555555] dark:text-[#BDBDBD]">
-                          <span className="font-medium">Contact:</span> {company.contactPerson}
-                        </p>
+                        <div className="flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5 shrink-0" />
+                          <span>Contact: <strong className="text-foreground font-medium">{company.contactPerson}</strong></span>
+                        </div>
                       )}
                       {company.contactEmail && (
-                        <p className="text-sm text-[#555555] dark:text-[#BDBDBD]">
-                          <span className="font-medium">Email:</span> {company.contactEmail}
-                        </p>
+                        <div className="flex items-center gap-1.5">
+                          <Mail className="w-3.5 h-3.5 shrink-0" />
+                          <span>{company.contactEmail}</span>
+                        </div>
+                      )}
+                      {company.contactPhone && (
+                        <div className="flex items-center gap-1.5">
+                          <Phone className="w-3.5 h-3.5 shrink-0" />
+                          <span>{company.contactPhone}</span>
+                        </div>
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+
+                  <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
                     {(role === 'coordinator' || role === 'admin') && (
                       company.verified ? (
-                        <button
+                        <Button
+                          variant="destructive"
+                          size="sm"
                           onClick={() => handleUnverify(company.id)}
-                          disabled={processing === company.id}
-                          className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          isLoading={processing === company.id}
                         >
-                          {processing === company.id ? 'Processing...' : 'Revoke Verification'}
-                        </button>
+                          Revoke
+                        </Button>
                       ) : (
-                        <button
+                        <Button
+                          variant="primary"
+                          size="sm"
                           onClick={() => handleVerify(company.id)}
-                          disabled={processing === company.id}
-                          className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          isLoading={processing === company.id}
                         >
-                          {processing === company.id ? 'Processing...' : 'Verify Company'}
-                        </button>
+                          Verify
+                        </Button>
                       )
                     )}
                   </div>
@@ -249,12 +291,16 @@ export function CompanyVerification() {
           </div>
         )}
       </div>
+
       <ConfirmDialog
         open={confirmDialog !== null}
         title={confirmDialog?.title || ''}
         message={confirmDialog?.message || ''}
         danger={confirmDialog?.danger}
-        onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
+        onConfirm={() => {
+          confirmDialog?.onConfirm();
+          setConfirmDialog(null);
+        }}
         onCancel={() => setConfirmDialog(null)}
       />
     </div>
