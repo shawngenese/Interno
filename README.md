@@ -63,7 +63,8 @@ A quick look at everything Interno can do — attendance, tasks, time records, d
 
 Interno is designed **phone-first** for interns — big buttons, simple screens, easy scanning.
 
-![Mobile view](./public/screenshots/04-mobile-landing.png)
+<img src="./public/screenshots/04-mobile-landing.webp" alt="Alt Text" width="390" height="844">
+<img src="./public/screenshots/05-mobile-login.webp" alt="Alt Text" width="390" height="844">
 
 ## Who Uses Interno?
 
