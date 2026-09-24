@@ -5,25 +5,17 @@ const {
 } = require('@firebase/rules-unit-testing');
 const { readFileSync } = require('fs');
 const { join } = require('path');
-const { initializeApp: initAdminApp, getApps: getAdminApps } = require('firebase-admin/app');
-const { getFirestore: getAdminFirestore } = require('firebase-admin/firestore');
 
 const PROJECT_ID = 'interno-test';
 const RULES_FILE = join(__dirname, '..', 'firestore.rules');
 
 let testEnv;
-let adminDb;
 
 async function setupInitialData() {
-  let adminApp;
-  if (getAdminApps().length === 0) {
-    adminApp = initAdminApp({ projectId: PROJECT_ID });
-  } else {
-    adminApp = getAdminApps()[0];
-  }
-  adminDb = getAdminFirestore(adminApp);
-  
-  await adminDb.collection('users').doc('admin-uid').set({
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const adminDb = context.firestore();
+
+    await adminDb.collection('users').doc('admin-uid').set({
     role: 'admin',
     companyId: 'company-1',
     departmentId: 'dept-1',
@@ -144,6 +136,7 @@ async function setupInitialData() {
     entityType: 'user',
     entityId: 'user-1',
     timestamp: Date.now(),
+  });
   });
 }
 
