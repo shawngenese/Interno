@@ -128,6 +128,7 @@ export const COLLECTIONS = {
   TASK_APPROVALS: 'task_approvals',
   DTR_CORRECTION_REQUESTS: 'dtr_correction_requests',
   PROFILE_IMAGES: 'profile_images',
+  SUPERVISOR_INVITATIONS: 'supervisor_invitations',
 } as const;
 
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];

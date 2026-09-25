@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getFirestoreInstancePublic } from '@/config/firebase';
-import { collection, getDocs, addDoc, serverTimestamp, query, where } from 'firebase/firestore';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { getFirestoreInstancePublic, getFunctionsInstancePublic } from '@/config/firebase';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { useAuth } from '@/features/auth';
 import { COMPANY_TYPES } from '@/config/constants';
 import { useFormValidation } from '@/shared/hooks/useFormValidation';
@@ -100,22 +100,12 @@ export function SupervisorInvite({ onSuccess }: SupervisorInviteProps) {
     setError(null);
 
     try {
-      const db = getFirestoreInstancePublic();
-
-      const functions = getFunctions();
+      const functions = getFunctionsInstancePublic();
       const sendInvite = httpsCallable(functions, 'sendSupervisorInvite');
       await sendInvite({
         companyId: data.selectedCompanyId,
         supervisorName: data.supervisorName,
         supervisorEmail: data.supervisorEmail,
-      });
-
-      await addDoc(collection(db, 'supervisor_invitations'), {
-        companyId: data.selectedCompanyId,
-        supervisorName: data.supervisorName,
-        supervisorEmail: data.supervisorEmail,
-        status: 'pending',
-        createdAt: serverTimestamp(),
       });
 
       setSuccess(true);

@@ -13,21 +13,18 @@ export interface SendEmailResponse {
   id: string;
 }
 
-export async function sendEmailHandler(
-  request: CallableRequest<SendEmailRequest>
+/** Core Brevo (SMTP API v3) send — shared by the sendEmail callable and internal callers. */
+export async function sendEmailMessage(
+  payload: SendEmailRequest
 ): Promise<SendEmailResponse> {
-  if (!request.auth) {
-    throw new HttpsError('unauthenticated', 'User must be authenticated');
-  }
-
-  const apiKey = process.env.RESEND_API_KEY;
+  const apiKey = process.env.BREVO_API_KEY;
   const fromEmail = process.env.EMAIL_FROM;
 
   if (!apiKey || !fromEmail) {
-    throw new HttpsError('failed-precondition', 'Email not configured (RESEND_API_KEY or EMAIL_FROM missing)');
+    throw new HttpsError('failed-precondition', 'Email not configured (BREVO_API_KEY or EMAIL_FROM missing)');
   }
 
-  const { to, subject, html, text, replyTo } = request.data;
+  const { to, subject, html, text, replyTo } = payload;
 
   if (!to || !subject || !html) {
     throw new HttpsError('invalid-argument', 'Missing required fields: to, subject, html');
@@ -36,20 +33,21 @@ export async function sendEmailHandler(
   const recipients = Array.isArray(to) ? to : [to];
 
   const emailPayload: Record<string, unknown> = {
-    from: fromEmail,
-    to: recipients,
+    sender: { email: fromEmail, name: process.env.EMAIL_FROM_NAME || 'Interno' },
+    to: recipients.map((email) => ({ email })),
     subject,
-    html,
+    htmlContent: html,
   };
 
-  if (text) emailPayload.text = text;
-  if (replyTo) emailPayload.reply_to = replyTo;
+  if (text) emailPayload.textContent = text;
+  if (replyTo) emailPayload.replyTo = { email: replyTo };
 
-  const response = await fetch('https://api.resend.com/emails', {
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${apiKey}`,
+      'accept': 'application/json',
       'Content-Type': 'application/json',
+      'api-key': apiKey,
     },
     body: JSON.stringify(emailPayload),
   });
@@ -57,12 +55,22 @@ export async function sendEmailHandler(
   const result = await response.json() as Record<string, unknown>;
 
   if (!response.ok) {
-    console.error('Resend API error:', result);
+    console.error('Brevo API error:', result);
     throw new HttpsError('internal', (result.message as string) || 'Email send failed');
   }
 
   return {
     success: true,
-    id: result.id as string,
+    id: String(result.messageId ?? result.id ?? ''),
   };
+}
+
+export async function sendEmailHandler(
+  request: CallableRequest<SendEmailRequest>
+): Promise<SendEmailResponse> {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  return sendEmailMessage(request.data);
 }

@@ -12,6 +12,7 @@ import { reviewCorrectionRequestHandler } from './dtr/reviewCorrectionRequest';
 import { validateUploadHandler } from './storage/validateUpload';
 import { sendFCMNotificationHandler } from './notifications/sendFCM';
 import { sendEmailHandler } from './notifications/sendEmail';
+import { sendSupervisorInviteHandler } from './notifications/sendSupervisorInvite';
 import { Timestamp } from 'firebase-admin/firestore';
 
 const REGION = 'asia-southeast1';
@@ -192,6 +193,11 @@ export const sendEmail = onCall<{ to: string | string[]; subject: string; html: 
     }
     return sendEmailHandler(request);
   }
+);
+
+export const sendSupervisorInvite = onCall<{ companyId: string; supervisorName: string; supervisorEmail: string }>(
+  { region: REGION },
+  sendSupervisorInviteHandler
 );
 
 export const deleteUserAccount = onCall<{ uid: string }>({ region: REGION }, async (request) => {
