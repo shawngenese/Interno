@@ -21,6 +21,7 @@ import {
 import { AdminOverview } from './AdminOverview';
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { NotFoundPage } from '@/features/auth';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import { Modal } from '@/shared/components/Modal';
 import { Button } from '@/shared/components/ui/Button';
@@ -42,10 +43,11 @@ const TAB_FROM_PATH: Record<string, Tab> = {
   '/admin/ojt-schedules': 'ojt-schedules',
 };
 
-function getTabFromPathname(pathname: string): Tab {
+function getTabFromPathname(pathname: string): Tab | null {
   if (TAB_FROM_PATH[pathname]) return TAB_FROM_PATH[pathname];
-  const base = '/admin/' + pathname.split('/')[2];
-  return TAB_FROM_PATH[base] || 'users';
+  const segment = pathname.split('/')[2];
+  if (!segment) return 'dashboard';
+  return TAB_FROM_PATH['/admin/' + segment] ?? null;
 }
 
 const FORM_TITLES: Record<Tab, { create: string; edit: string }> = {
@@ -62,7 +64,7 @@ const FORM_TITLES: Record<Tab, { create: string; edit: string }> = {
 
 export function AdminDashboard() {
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<Tab>(() => getTabFromPathname(location.pathname));
+  const [activeTab, setActiveTab] = useState<Tab | null>(() => getTabFromPathname(location.pathname));
   const [view, setView] = useState<'list' | 'create' | 'edit' | 'assign' | 'documents'>('list');
   const [viewOnly, setViewOnly] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
@@ -308,6 +310,14 @@ export function AdminDashboard() {
     setAssigningSupervisor(null);
     setView('list');
   };
+
+  if (activeTab === null) {
+    return (
+      <PageTransition>
+        <NotFoundPage height="content" />
+      </PageTransition>
+    );
+  }
 
   return (
     <PageTransition>

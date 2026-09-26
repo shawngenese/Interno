@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { useLocation, NavLink } from 'react-router-dom';
+import { useLocation, NavLink, Link } from 'react-router-dom';
 import { LogoutButton } from '@/features/auth';
 import { ThemeToggle } from '@/shared/components/ThemeToggle';
 import { BottomNav } from '@/shared/components/BottomNav';
@@ -71,6 +71,13 @@ export function CoordinatorLayout({ children }: { children: ReactNode }) {
           <h1 className="text-base font-bold text-foreground">Interno Coordinator</h1>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            to="/coordinator/notifications"
+            aria-label="Notifications"
+            className="min-w-11 min-h-11 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors touch-target flex items-center justify-center"
+          >
+            <Bell className="w-5 h-5" />
+          </Link>
           <ThemeToggle />
           <LogoutButton />
         </div>
@@ -177,6 +184,13 @@ export function CoordinatorLayout({ children }: { children: ReactNode }) {
             {currentPageTitle}
           </h2>
           <div className="flex items-center gap-3">
+            <Link
+              to="/coordinator/notifications"
+              aria-label="Notifications"
+              className="min-w-11 min-h-11 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors touch-target flex items-center justify-center"
+            >
+              <Bell className="w-5 h-5" />
+            </Link>
             <span className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary font-medium">
               Coordinator
             </span>

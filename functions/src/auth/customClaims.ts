@@ -45,10 +45,29 @@ export async function setUserRoleHandler(
     }
   }
 
-  // Allow admins to assign any role. Coordinators can only assign the 'trainee' role.
+  // Allow admins to assign any role. Coordinators can only assign the 'trainee' role,
+  // and only within their own company (cross-tenant escalation guard).
   if (callerRole !== 'admin') {
     if (callerRole === 'coordinator' && role === 'trainee') {
-      console.info('Coordinator assigning trainee role for uid', uid);
+      let callerCompanyId = callerClaims.companyId as string | undefined;
+      if (!callerCompanyId) {
+        try {
+          const callerDoc = await getAdminDb().collection(COLLECTIONS.USERS).doc(request.auth.uid).get();
+          if (callerDoc.exists) {
+            callerCompanyId = callerDoc.data()?.companyId as string | undefined;
+          }
+        } catch (e) {
+          console.warn('Failed to fetch caller companyId from Firestore:', e);
+        }
+      }
+      if (!callerCompanyId) {
+        throw new HttpsError('permission-denied', 'Coordinator caller has no company assignment');
+      }
+      if (companyId !== callerCompanyId) {
+        console.warn('Permission denied: coordinator', request.auth.uid, 'attempted to assign companyId', companyId, 'but belongs to', callerCompanyId);
+        throw new HttpsError('permission-denied', 'Coordinators can only assign trainees within their own company');
+      }
+      console.info('Coordinator assigning trainee role for uid', uid, 'to company', callerCompanyId);
     } else {
       console.warn('Permission denied: caller role', callerRole, 'attempted to assign', role);
       throw new HttpsError('permission-denied', `Only admins can assign roles (caller role: ${callerRole || 'none'})`);

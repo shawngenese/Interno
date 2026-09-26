@@ -11,7 +11,7 @@ import { rejectDTRHandler } from './dtr/rejectDTR';
 import { reviewCorrectionRequestHandler } from './dtr/reviewCorrectionRequest';
 import { validateUploadHandler } from './storage/validateUpload';
 import { sendFCMNotificationHandler } from './notifications/sendFCM';
-import { sendEmailHandler } from './notifications/sendEmail';
+import { sendEmailHandler, assertCanSendEmail } from './notifications/sendEmail';
 import { sendSupervisorInviteHandler } from './notifications/sendSupervisorInvite';
 import { Timestamp } from 'firebase-admin/firestore';
 
@@ -188,9 +188,7 @@ export const sendEmail = onCall<{ to: string | string[]; subject: string; html: 
       throw new HttpsError('unauthenticated', 'User must be authenticated');
     }
     const role = request.auth.token?.role as string | undefined;
-    if (!role || !['admin', 'supervisor'].includes(role)) {
-      throw new HttpsError('permission-denied', 'Required role: admin or supervisor');
-    }
+    assertCanSendEmail(role);
     return sendEmailHandler(request);
   }
 );

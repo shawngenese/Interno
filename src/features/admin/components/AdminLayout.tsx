@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { useLocation, NavLink } from 'react-router-dom';
+import { useLocation, NavLink, Link } from 'react-router-dom';
 import { LogoutButton } from '@/features/auth';
 import { ThemeToggle } from '@/shared/components/ThemeToggle';
 import { BottomNav } from '@/shared/components/BottomNav';
@@ -16,6 +16,7 @@ import {
   Clock,
   ClipboardList,
   Bell,
+  BarChart3,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -30,6 +31,7 @@ const navigation = [
   { name: 'Trainees', href: '/admin/trainees', icon: GraduationCap },
   { name: 'Work Schedules', href: '/admin/work-schedules', icon: Calendar },
   { name: 'OJT Schedules', href: '/admin/ojt-schedules', icon: Clock },
+  { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
   { name: 'Audit Logs', href: '/admin/audit-logs', icon: ClipboardList },
   { name: 'Announcements', href: '/admin/announcements', icon: Bell },
 ];
@@ -63,7 +65,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
       ?.name || 'Admin';
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col">
       {/* Mobile Top Header */}
       <header className="h-14 bg-card border-b border-border sticky top-0 z-40 flex items-center justify-between px-4 lg:hidden">
         <div className="flex items-center gap-2">
@@ -71,6 +73,13 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           <h1 className="text-base font-bold text-foreground">Interno Admin</h1>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            to="/admin/notifications"
+            aria-label="Notifications"
+            className="min-w-11 min-h-11 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors touch-target flex items-center justify-center"
+          >
+            <Bell className="w-5 h-5" />
+          </Link>
           <ThemeToggle />
           <LogoutButton />
         </div>
@@ -177,6 +186,13 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             {currentPageTitle}
           </h2>
           <div className="flex items-center gap-3">
+            <Link
+              to="/admin/notifications"
+              aria-label="Notifications"
+              className="min-w-11 min-h-11 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors touch-target flex items-center justify-center"
+            >
+              <Bell className="w-5 h-5" />
+            </Link>
             <span className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary font-medium">
               Administrator
             </span>
@@ -184,7 +200,10 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         </header>
 
         {/* Content */}
-        <main id="main-content" className="p-4 md:p-6 min-h-[calc(100dvh-4rem)]">
+        <main
+          id="main-content"
+          className="p-4 md:p-6 min-h-[calc(100dvh-152px)] lg:min-h-[calc(100dvh-96px)]"
+        >
           {children}
         </main>
       </div>

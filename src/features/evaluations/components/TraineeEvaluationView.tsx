@@ -2,34 +2,67 @@ import { useState, useEffect } from 'react';
 import { evaluationService } from '../services/evaluationService';
 import { EVALUATION_TYPE_LABELS, RATING_LABELS } from '../types';
 import type { Evaluation } from '../types';
+import { useAuth } from '@/features/auth/AuthProvider';
+import { getFirestoreInstancePublic } from '@/config/firebase';
 import { Skeleton } from '@/shared/components/Skeleton';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { Star, ChevronDown, ChevronUp } from 'lucide-react';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 
 interface TraineeEvaluationViewProps {
-  traineeId: string;
+  traineeId?: string;
 }
 
-export function TraineeEvaluationView({ traineeId }: TraineeEvaluationViewProps) {
+export function TraineeEvaluationView({ traineeId: propTraineeId }: TraineeEvaluationViewProps) {
+  const { user } = useAuth();
+  const [resolvedTraineeId, setResolvedTraineeId] = useState<string | undefined>(undefined);
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvaluation, setSelectedEvaluation] = useState<Evaluation | null>(null);
 
-  const loadEvaluations = async () => {
-    try {
-      const data = await evaluationService.getTraineeEvaluations(traineeId);
-      setEvaluations(data);
-    } catch (error) {
-      console.error('Failed to load evaluations:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const traineeId = propTraineeId ?? resolvedTraineeId;
 
   useEffect(() => {
-    loadEvaluations();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [traineeId]);
+    if (propTraineeId || !user?.uid) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const db = getFirestoreInstancePublic();
+        const snap = await getDocs(
+          query(collection(db, 'trainees'), where('userId', '==', user.uid), limit(1)),
+        );
+        if (!cancelled) setResolvedTraineeId(snap.empty ? '' : snap.docs[0].id);
+      } catch (error) {
+        console.error('Failed to resolve trainee ID:', error);
+        if (!cancelled) setResolvedTraineeId('');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [propTraineeId, user?.uid]);
+
+  useEffect(() => {
+    if (!traineeId) {
+      if (resolvedTraineeId === '') setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      try {
+        const data = await evaluationService.getTraineeEvaluations(traineeId);
+        if (!cancelled) setEvaluations(data);
+      } catch (error) {
+        console.error('Failed to load evaluations:', error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [traineeId, resolvedTraineeId]);
 
   const getStatusBadge = (status: string) => {
     const badges: Record<string, string> = {
@@ -47,6 +80,17 @@ export function TraineeEvaluationView({ traineeId }: TraineeEvaluationViewProps)
         {[1, 2, 3].map((i) => (
           <Skeleton key={i} variant="rectangular" height={80} className="rounded-xl" />
         ))}
+      </div>
+    );
+  }
+
+  if (!loading && !traineeId) {
+    return (
+      <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+        <EmptyState
+          title="Trainee profile not found"
+          description="We couldn't find your trainee profile. Please contact your coordinator."
+        />
       </div>
     );
   }

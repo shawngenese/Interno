@@ -6,6 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from 'recharts';
+import { DashboardCharts } from '@/features/reports/components/DashboardCharts';
 
 const COLORS = ['var(--color-success)', 'var(--color-warning)', 'var(--color-destructive)', 'var(--color-primary)', 'var(--color-info)', 'var(--color-muted-foreground)'];
 
@@ -21,6 +22,7 @@ interface OverviewStats {
   totalSupervisors: number;
   traineesByCompany: { name: string; count: number }[];
   traineesByStatus: { status: string; count: number }[];
+  trainees: { id: string; name: string }[];
   recentActivity: { id: string; action: string; timestamp: number; details: string }[];
 }
 
@@ -28,6 +30,11 @@ export function AdminReportDashboard() {
   const [stats, setStats] = useState<OverviewStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTraineeId, setSelectedTraineeId] = useState('');
+  const [analyticsRange] = useState(() => ({
+    startDate: Date.now() - 30 * 24 * 60 * 60 * 1000,
+    endDate: Date.now(),
+  }));
 
   useEffect(() => {
     async function fetchStats() {
@@ -46,7 +53,10 @@ export function AdminReportDashboard() {
           )).catch(() => ({ docs: [] })),
         ]);
 
-        const trainees = traineesSnap.docs.map(d => d.data());
+        const trainees = traineesSnap.docs.map(d => {
+          const data = d.data() as { status?: string; ojtStatus?: string; companyId?: string; name?: string };
+          return { id: d.id, ...data };
+        });
         const tasks = tasksSnap.docs.map(d => d.data());
 
         const activeTrainees = trainees.filter(t => t.status === 'active').length;
@@ -104,6 +114,7 @@ export function AdminReportDashboard() {
           totalSupervisors: supervisorsSnap.size,
           traineesByCompany,
           traineesByStatus,
+          trainees: trainees.map(t => ({ id: t.id, name: t.name || t.id })),
           recentActivity,
         });
       } catch (err) {
@@ -142,6 +153,8 @@ export function AdminReportDashboard() {
   }
 
   if (!stats) return null;
+
+  const effectiveTraineeId = selectedTraineeId || stats.trainees[0]?.id || '';
 
   return (
     <div className="space-y-6">
@@ -269,6 +282,36 @@ export function AdminReportDashboard() {
             <p className="text-center py-8 text-muted-foreground">No data available</p>
           )}
         </div>
+      </div>
+
+      <div className="bg-card rounded-xl shadow-sm border border-border p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div>
+            <h3 className="text-sm font-medium text-foreground">Trainee Analytics</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Attendance, tasks and hours for the last 30 days</p>
+          </div>
+          <select
+            value={effectiveTraineeId}
+            onChange={(e) => setSelectedTraineeId(e.target.value)}
+            aria-label="Select trainee for analytics"
+            className="h-11 px-3 rounded-lg border border-border bg-background text-sm text-foreground min-w-[12rem]"
+          >
+            {stats.trainees.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        {effectiveTraineeId ? (
+          <DashboardCharts
+            traineeId={effectiveTraineeId}
+            startDate={analyticsRange.startDate}
+            endDate={analyticsRange.endDate}
+          />
+        ) : (
+          <p className="text-center py-8 text-muted-foreground">No trainees to display</p>
+        )}
       </div>
 
       <div className="bg-card rounded-xl shadow-sm border border-border p-5">

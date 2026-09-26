@@ -67,16 +67,38 @@ service firebase.storage {
       return request.resource.size <= 10 * 1024 * 1024; // 10MB
     }
     
+    // Path segment {documentId} in /documents/{companyId}/{documentId}/... is the traineeId.
+    function isAssignedSupervisorOfPath(companyId, traineeId) {
+      return isSupervisor() && sameCompany(companyId) &&
+        firestore.exists(/databases/(default)/documents/supervisors/$(request.auth.uid)/assignedTrainees/$(traineeId));
+    }
+    
+    // Owner check for existing objects (resource is available on read/delete).
+    function ownsTraineePath(companyId, traineeId) {
+      return isTrainee() && sameCompany(companyId) && (
+        (('owner' in resource.metadata) && resource.metadata.owner == request.auth.uid) ||
+        getUserTraineeId() == traineeId
+      );
+    }
+    
+    function canReadTraineeFile(companyId, traineeId) {
+      return isAdmin() ||
+        (isCoordinator() && sameCompany(companyId)) ||
+        isAssignedSupervisorOfPath(companyId, traineeId) ||
+        ownsTraineePath(companyId, traineeId);
+    }
+    
+    function taskAssignedToMe(taskId) {
+      return firestore.exists(/databases/(default)/documents/tasks/$(taskId)) &&
+        (firestore.get(/databases/(default)/documents/tasks/$(taskId)).data.traineeId == request.auth.uid ||
+         firestore.get(/databases/(default)/documents/tasks/$(taskId)).data.traineeId == getUserTraineeId());
+    }
+    
     // ============================================
     // Documents Storage
     // ============================================
     match /documents/{companyId}/{documentId}/{fileName} {
-      allow read: if isSignedIn() && (
-        isAdmin() ||
-        (isTrainee() && getUserCompanyId() == companyId) ||
-        (isSupervisor() && getUserCompanyId() == companyId) ||
-        (isCoordinator() && getUserCompanyId() == companyId)
-      );
+      allow read: if isSignedIn() && canReadTraineeFile(companyId, documentId);
       
       allow write: if isSignedIn() && (
         (isTrainee() && getUserCompanyId() == companyId) ||
@@ -84,12 +106,7 @@ service firebase.storage {
         isAdmin()
       ) && isValidMimeType() && isValidFileSize();
       
-      allow delete: if isSignedIn() && (
-        isAdmin() ||
-        (isTrainee() && getUserCompanyId() == companyId && request.resource.metadata.owner == request.auth.uid) ||
-        (isCoordinator() && getUserCompanyId() == companyId) ||
-        (isSupervisor() && getUserCompanyId() == companyId)
-      );
+      allow delete: if isSignedIn() && canReadTraineeFile(companyId, documentId);
     }
     
     // ============================================
@@ -98,8 +115,8 @@ service firebase.storage {
     match /tasks/{companyId}/{taskId}/{allPaths=**} {
       allow read: if isSignedIn() && (
         isAdmin() ||
-        (isTrainee() && getUserCompanyId() == companyId) ||
-        (isSupervisor() && getUserCompanyId() == companyId)
+        (isSupervisor() && sameCompany(companyId)) ||
+        (isTrainee() && sameCompany(companyId) && taskAssignedToMe(taskId))
       );
       
       allow write: if isSignedIn() && (

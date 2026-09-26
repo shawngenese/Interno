@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, Link } from 'react-router-dom';
+import { Bell } from 'lucide-react';
 import { AuthProvider } from '@/features/auth';
 import { LoginPage, UnauthorizedPage } from '@/features/auth';
 import { NotFoundPage } from '@/features/auth';
@@ -7,6 +8,8 @@ import { LogoutButton } from '@/features/auth';
 import { LandingPage } from '@/features/landing';
 import { AdminLayout } from '@/features/admin/components/AdminLayout';
 import { AdminDashboard } from '@/features/admin/components/AdminDashboard';
+import { AdminReportDashboard } from '@/features/admin/components/AdminReportDashboard';
+import { ReportGenerator } from '@/features/reports/components/ReportGenerator';
 import { SupervisorLayout, SupervisorDashboard, SupervisorTraineeList } from '@/features/supervisor';
 import { TraineeDashboard } from '@/features/trainee/components/TraineeDashboard';
 
@@ -32,6 +35,8 @@ import { CoordinatorAttendanceView } from '@/features/coordinator/components/Coo
 import { CoordinatorTaskView } from '@/features/coordinator/components/CoordinatorTaskView';
 import { AuditLogViewer } from '@/features/admin/components/AuditLogViewer';
 import { EvaluationList } from '@/features/evaluations/components/EvaluationList';
+import { TraineeEvaluationView } from '@/features/evaluations/components/TraineeEvaluationView';
+import { NotificationCenter } from '@/features/notifications/components/NotificationCenter';
 import { AnnouncementList } from '@/features/announcements/components/AnnouncementList';
 import { AnnouncementForm } from '@/features/announcements/components/AnnouncementForm';
 import { CompanyBrowser } from '@/features/trainee/components/CompanyBrowser';
@@ -90,6 +95,36 @@ function App() {
               <AdminLayout>
                 <PageTransition>
                   <AnnouncementForm />
+                </PageTransition>
+              </AdminLayout>
+            </AdminRoute>
+          } />
+
+          <Route path="/admin/reports" element={
+            <AdminRoute>
+              <AdminLayout>
+                <PageTransition>
+                  <AdminReportDashboard />
+                </PageTransition>
+              </AdminLayout>
+            </AdminRoute>
+          } />
+
+          <Route path="/admin/reports/generate" element={
+            <AdminRoute>
+              <AdminLayout>
+                <PageTransition>
+                  <ReportGenerator />
+                </PageTransition>
+              </AdminLayout>
+            </AdminRoute>
+          } />
+
+          <Route path="/admin/notifications" element={
+            <AdminRoute>
+              <AdminLayout>
+                <PageTransition>
+                  <NotificationCenter />
                 </PageTransition>
               </AdminLayout>
             </AdminRoute>
@@ -190,6 +225,16 @@ function App() {
               <SupervisorLayout>
                 <PageTransition>
                   <AnnouncementList viewerRole="supervisor" />
+                </PageTransition>
+              </SupervisorLayout>
+            </SupervisorRoute>
+          } />
+
+          <Route path="/supervisor/notifications" element={
+            <SupervisorRoute>
+              <SupervisorLayout>
+                <PageTransition>
+                  <NotificationCenter />
                 </PageTransition>
               </SupervisorLayout>
             </SupervisorRoute>
@@ -315,6 +360,16 @@ function App() {
             </CoordinatorRoute>
           } />
 
+          <Route path="/coordinator/notifications" element={
+            <CoordinatorRoute>
+              <CoordinatorLayout>
+                <PageTransition>
+                  <NotificationCenter />
+                </PageTransition>
+              </CoordinatorLayout>
+            </CoordinatorRoute>
+          } />
+
           <Route path="/coordinator/*" element={
             <CoordinatorRoute>
               <CoordinatorLayout>
@@ -381,6 +436,22 @@ function App() {
             </TraineeRoute>
           } />
 
+          <Route path="/trainee/evaluations" element={
+            <TraineeRoute>
+              <PrivateLayout>
+                <TraineeEvaluationView />
+              </PrivateLayout>
+            </TraineeRoute>
+          } />
+
+          <Route path="/trainee/notifications" element={
+            <TraineeRoute>
+              <PrivateLayout>
+                <NotificationCenter />
+              </PrivateLayout>
+            </TraineeRoute>
+          } />
+
           <Route path="/trainee/companies" element={
             <TraineeRoute>
               <PrivateLayout>
@@ -411,6 +482,8 @@ const PAGE_NAMES: Record<string, string> = {
   '/trainee/dtr': 'DTR',
   '/trainee/documents': 'Documents',
   '/trainee/announcements': 'Announcements',
+  '/trainee/evaluations': 'Evaluations',
+  '/trainee/notifications': 'Notifications',
   '/trainee/leave': 'Leave',
   '/trainee/companies': 'Companies',
   '/trainee/placement': 'Placement',
@@ -434,6 +507,13 @@ function PrivateLayout({ children }: { children: React.ReactNode }) {
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:inline bg-muted px-2.5 py-1 rounded-md">
                 {pageName}
               </span>
+              <Link
+                to="/trainee/notifications"
+                aria-label="Notifications"
+                className="min-w-11 min-h-11 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors touch-target flex items-center justify-center"
+              >
+                <Bell className="w-5 h-5" />
+              </Link>
               <ThemeToggle />
               <LogoutButton />
             </div>

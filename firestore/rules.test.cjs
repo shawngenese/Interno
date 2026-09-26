@@ -639,4 +639,109 @@ describe('Firestore Security Rules', () => {
       await assertFails(db.collection('settings').doc('general').get());
     });
   });
+
+  describe('Create rules use request.resource (resource is null on create)', () => {
+    test('trainee can create own task comment', async () => {
+      const db = getTraineeAuth('trainee-1').firestore();
+      await assertSucceeds(db.collection('task_comments').add({
+        taskId: 'task-1',
+        userId: 'trainee-1',
+        content: 'Looks good',
+      }));
+    });
+
+    test('trainee cannot create task comment on behalf of another user', async () => {
+      const db = getTraineeAuth('trainee-1').firestore();
+      await assertFails(db.collection('task_comments').add({
+        taskId: 'task-1',
+        userId: 'supervisor-1',
+        content: 'Spoofed',
+      }));
+    });
+
+    test('trainee can create task document for own traineeId', async () => {
+      const db = getTraineeAuth('trainee-1').firestore();
+      await assertSucceeds(db.collection('task_documents').add({
+        traineeId: 'trainee-1',
+        taskId: 'task-1',
+        fileName: 'output.pdf',
+        fileUrl: 'https://example.com/output.pdf',
+        fileSize: 1024,
+        mimeType: 'application/pdf',
+      }));
+    });
+
+    test('trainee cannot create task document for another trainee', async () => {
+      const db = getTraineeAuth('trainee-1').firestore();
+      await assertFails(db.collection('task_documents').add({
+        traineeId: 'other-trainee',
+        taskId: 'task-1',
+        fileName: 'output.pdf',
+        fileUrl: 'https://example.com/output.pdf',
+        fileSize: 1024,
+        mimeType: 'application/pdf',
+      }));
+    });
+
+    test('supervisor can create task approval for assigned trainee', async () => {
+      const db = getSupervisorAuth('supervisor-1').firestore();
+      await assertSucceeds(db.collection('task_approvals').add({
+        taskId: 'task-1',
+        traineeId: 'trainee-1',
+        status: 'approved',
+      }));
+    });
+
+    test('trainee cannot create task approval', async () => {
+      const db = getTraineeAuth('trainee-1').firestore();
+      await assertFails(db.collection('task_approvals').add({
+        taskId: 'task-1',
+        traineeId: 'trainee-1',
+        status: 'approved',
+      }));
+    });
+
+    test('trainee can create own profile image record', async () => {
+      const db = getTraineeAuth('trainee-1').firestore();
+      await assertSucceeds(db.collection('profile_images').add({
+        userId: 'trainee-1',
+        url: 'https://example.com/pic.jpg',
+      }));
+    });
+
+    test('trainee cannot create profile image record for another user', async () => {
+      const db = getTraineeAuth('trainee-1').firestore();
+      await assertFails(db.collection('profile_images').add({
+        userId: 'supervisor-1',
+        url: 'https://example.com/pic.jpg',
+      }));
+    });
+  });
+
+  describe('Supervisor status updates scoped to assigned trainees', () => {
+    test('supervisor cannot update status of a non-trainee user', async () => {
+      const db = getSupervisorAuth('supervisor-1').firestore();
+      await assertFails(db.collection('users').doc('coordinator-1').update({ status: 'inactive' }));
+    });
+
+    test('supervisor cannot update status of a supervisor user', async () => {
+      const db = getSupervisorAuth('supervisor-1').firestore();
+      await assertFails(db.collection('users').doc('supervisor-1').update({ status: 'inactive' }));
+    });
+
+    test('supervisor cannot update status of an unassigned trainee', async () => {
+      const db = getSupervisorAuth('supervisor-2').firestore();
+      await assertFails(db.collection('users').doc('trainee-1').update({ status: 'inactive' }));
+    });
+
+    test('supervisor cannot update status of a trainee in another company', async () => {
+      const db = getSupervisorAuth('supervisor-1').firestore();
+      await assertFails(db.collection('users').doc('other-company-user').update({ status: 'inactive' }));
+    });
+
+    test('supervisor cannot update fields other than status on assigned trainee', async () => {
+      const db = getSupervisorAuth('supervisor-1').firestore();
+      await assertFails(db.collection('users').doc('trainee-1').update({ displayName: 'Renamed' }));
+    });
+  });
 });

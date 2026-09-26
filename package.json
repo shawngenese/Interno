@@ -15,7 +15,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:rules": "firebase emulators:exec --only firestore \"npx jest firestore/rules.test.cjs\"",
+    "test:rules": "firebase emulators:exec --only firestore,storage \"npx jest --runInBand firestore/rules.test.cjs storage.rules.test.cjs\"",
+    "test:functions": "firebase emulators:exec --only firestore \"npm --prefix functions run test\"",
     "preview": "vite preview"
   },
   "dependencies": {

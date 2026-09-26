@@ -15,6 +15,8 @@ import {
   Bell,
   Timer,
   FolderOpen,
+  Star,
+  BarChart3,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -29,6 +31,7 @@ const traineeItems: BottomNavItem[] = [
   { label: 'Tasks',         href: '/trainee/tasks',         icon: CheckCircle },
   { label: 'DTR',           href: '/trainee/dtr',           icon: Timer },
   { label: 'Documents',     href: '/trainee/documents',     icon: FolderOpen },
+  { label: 'Evaluations',   href: '/trainee/evaluations',   icon: Star },
   { label: 'Announcements', href: '/trainee/announcements', icon: Bell },
 ];
 
@@ -36,8 +39,9 @@ const adminItems: BottomNavItem[] = [
   { label: 'Dashboard',   href: '/admin',                icon: LayoutDashboard },
   { label: 'Trainees',    href: '/admin/trainees',       icon: GraduationCap },
   { label: 'Companies',   href: '/admin/companies',      icon: Building2 },
-  { label: 'Schedules',   href: '/admin/work-schedules', icon: Calendar },
-  { label: 'Audit Logs',  href: '/admin/audit-logs',     icon: ClipboardList },
+  { label: 'Schedules',    href: '/admin/work-schedules', icon: Calendar },
+  { label: 'Reports',      href: '/admin/reports',        icon: BarChart3 },
+  { label: 'Audit Logs',   href: '/admin/audit-logs',     icon: ClipboardList },
 ];
 
 const supervisorItems: BottomNavItem[] = [

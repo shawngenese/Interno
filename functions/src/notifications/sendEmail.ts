@@ -13,6 +13,16 @@ export interface SendEmailResponse {
   id: string;
 }
 
+/** Roles allowed to send email through the `sendEmail` callable. */
+export const EMAIL_SENDER_ROLES = ['admin', 'supervisor', 'coordinator'] as const;
+
+/** Guard for the `sendEmail` callable: coordinators must be able to trigger emails (document reviews, invites). */
+export function assertCanSendEmail(role: string | undefined): void {
+  if (!role || !(EMAIL_SENDER_ROLES as readonly string[]).includes(role)) {
+    throw new HttpsError('permission-denied', 'Required role: admin, supervisor, or coordinator');
+  }
+}
+
 /** Core Brevo (SMTP API v3) send — shared by the sendEmail callable and internal callers. */
 export async function sendEmailMessage(
   payload: SendEmailRequest

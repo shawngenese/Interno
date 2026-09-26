@@ -106,7 +106,11 @@ service cloud.firestore {
       allow update: if isSignedIn() && (
         isAdmin() ||
         (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL', 'preferences'])) ||
-        (isSupervisor() && sameCompany(resource.data.companyId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
+        (isSupervisor() && sameCompany(resource.data.companyId) &&
+          'traineeId' in resource.data &&
+          resource.data.role == 'trainee' &&
+          isSupervisorOf(resource.data.traineeId) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
       );
       
       allow delete: if isSignedIn() && isAdmin();
@@ -379,8 +383,8 @@ service cloud.firestore {
       allow create: if isSignedIn() && (
         isAdmin() ||
         isSupervisor() ||
-        isSupervisorOf(resource.data.traineeId) ||
-        isSupervisorOfByField(resource.data.traineeId)
+        isSupervisorOf(request.resource.data.traineeId) ||
+        isSupervisorOfByField(request.resource.data.traineeId)
       ) && request.resource.data.keys().hasAll(['taskId', 'traineeId', 'status']);
       
       allow update: if isSignedIn() && (
@@ -588,7 +592,7 @@ service cloud.firestore {
         isTrainee()
       );
       
-      allow create: if isSignedIn() && isOwner(resource.data.userId) &&
+      allow create: if isSignedIn() && isOwner(request.resource.data.userId) &&
         request.resource.data.keys().hasAll(['taskId', 'userId', 'content']);
       
       allow update: if isSignedIn() && isOwner(resource.data.userId) &&
@@ -613,7 +617,7 @@ service cloud.firestore {
       );
       
       allow create: if isSignedIn() && (
-        isAssignedTrainee(resource.data.traineeId) ||
+        isAssignedTrainee(request.resource.data.traineeId) ||
         isSupervisorOrAdmin()
       ) && request.resource.data.keys().hasAll(['traineeId', 'taskId', 'fileName', 'fileUrl', 'fileSize', 'mimeType']);
       
@@ -628,7 +632,7 @@ service cloud.firestore {
     // ============================================
     match /profile_images/{imageId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && isOwner(resource.data.userId);
+      allow create: if isSignedIn() && isOwner(request.resource.data.userId);
       allow update: if isSignedIn() && isOwner(resource.data.userId);
       allow delete: if isSignedIn() && isOwner(resource.data.userId);
     }
