@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, query, getDocs, orderBy, limit } from 'firebase/firestore';
@@ -36,97 +36,99 @@ export function AdminReportDashboard() {
     endDate: Date.now(),
   }));
 
-  useEffect(() => {
-    async function fetchStats() {
-      try {
-        const db = getFirestoreInstancePublic();
+  const fetchStats = useCallback(async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const db = getFirestoreInstancePublic();
 
-        const [traineesSnap, tasksSnap, companiesSnap, supervisorsSnap, auditSnap] = await Promise.all([
-          getDocs(query(collection(db, 'trainees'))),
-          getDocs(query(collection(db, 'tasks'))),
-          getDocs(query(collection(db, 'companies'))),
-          getDocs(query(collection(db, 'supervisors'))),
-          getDocs(query(
-            collection(db, 'audit_logs'),
-            orderBy('timestamp', 'desc'),
-            limit(20),
-          )).catch(() => ({ docs: [] })),
-        ]);
+      const [traineesSnap, tasksSnap, companiesSnap, supervisorsSnap, auditSnap] = await Promise.all([
+        getDocs(query(collection(db, 'trainees'))),
+        getDocs(query(collection(db, 'tasks'))),
+        getDocs(query(collection(db, 'companies'))),
+        getDocs(query(collection(db, 'supervisors'))),
+        getDocs(query(
+          collection(db, 'audit_logs'),
+          orderBy('timestamp', 'desc'),
+          limit(20),
+        )).catch(() => ({ docs: [] })),
+      ]);
 
-        const trainees = traineesSnap.docs.map(d => {
-          const data = d.data() as { status?: string; ojtStatus?: string; companyId?: string; name?: string };
-          return { id: d.id, ...data };
-        });
-        const tasks = tasksSnap.docs.map(d => d.data());
+      const trainees = traineesSnap.docs.map(d => {
+        const data = d.data() as { status?: string; ojtStatus?: string; companyId?: string; name?: string };
+        return { id: d.id, ...data };
+      });
+      const tasks = tasksSnap.docs.map(d => d.data());
 
-        const activeTrainees = trainees.filter(t => t.status === 'active').length;
-        const pendingTrainees = trainees.filter(t => t.status === 'pending').length;
-        const completedTrainees = trainees.filter(t => t.ojtStatus === 'completed').length;
+      const activeTrainees = trainees.filter(t => t.status === 'active').length;
+      const pendingTrainees = trainees.filter(t => t.status === 'pending').length;
+      const completedTrainees = trainees.filter(t => t.ojtStatus === 'completed').length;
 
-        const completedTasks = tasks.filter(t => t.status === 'approved').length;
-        const pendingTasks = tasks.filter(t => t.status !== 'approved').length;
+      const completedTasks = tasks.filter(t => t.status === 'approved').length;
+      const pendingTasks = tasks.filter(t => t.status !== 'approved').length;
 
-        const companiesSnap2 = await getDocs(collection(db, 'companies'));
-        const companyNameMap: Record<string, string> = {};
-        companiesSnap2.docs.forEach(d => {
-          companyNameMap[d.id] = d.data().name || d.id;
-        });
+      const companiesSnap2 = await getDocs(collection(db, 'companies'));
+      const companyNameMap: Record<string, string> = {};
+      companiesSnap2.docs.forEach(d => {
+        companyNameMap[d.id] = d.data().name || d.id;
+      });
 
-        const companyCount: Record<string, number> = {};
-        trainees.forEach(t => {
-          const cid = t.companyId || 'Unassigned';
-          companyCount[cid] = (companyCount[cid] || 0) + 1;
-        });
-        const traineesByCompany = Object.entries(companyCount).map(([cid, count]) => ({
-          name: companyNameMap[cid] || cid,
-          count,
-        }));
+      const companyCount: Record<string, number> = {};
+      trainees.forEach(t => {
+        const cid = t.companyId || 'Unassigned';
+        companyCount[cid] = (companyCount[cid] || 0) + 1;
+      });
+      const traineesByCompany = Object.entries(companyCount).map(([cid, count]) => ({
+        name: companyNameMap[cid] || cid,
+        count,
+      }));
 
-        const statusCount: Record<string, number> = {};
-        trainees.forEach(t => {
-          const status = t.ojtStatus || 'pending';
-          statusCount[status] = (statusCount[status] || 0) + 1;
-        });
-        const traineesByStatus = Object.entries(statusCount).map(([status, count]) => ({
-          status,
-          count,
-        }));
+      const statusCount: Record<string, number> = {};
+      trainees.forEach(t => {
+        const status = t.ojtStatus || 'pending';
+        statusCount[status] = (statusCount[status] || 0) + 1;
+      });
+      const traineesByStatus = Object.entries(statusCount).map(([status, count]) => ({
+        status,
+        count,
+      }));
 
-        const recentActivity = auditSnap.docs.map(d => {
-          const data = d.data();
-          return {
-            id: d.id,
-            action: data.action || 'Unknown',
-            timestamp: data.timestamp?.seconds ? data.timestamp.seconds * 1000 : data.timestamp || 0,
-            details: data.details || data.description || '',
-          };
-        }).filter(a => a.timestamp > 0);
+      const recentActivity = auditSnap.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          action: data.action || 'Unknown',
+          timestamp: data.timestamp?.seconds ? data.timestamp.seconds * 1000 : data.timestamp || 0,
+          details: data.details || data.description || '',
+        };
+      }).filter(a => a.timestamp > 0);
 
-        setStats({
-          totalTrainees: trainees.length,
-          activeTrainees,
-          pendingTrainees,
-          completedTrainees,
-          totalTasks: tasks.length,
-          completedTasks,
-          pendingTasks,
-          totalCompanies: companiesSnap.size,
-          totalSupervisors: supervisorsSnap.size,
-          traineesByCompany,
-          traineesByStatus,
-          trainees: trainees.map(t => ({ id: t.id, name: t.name || t.id })),
-          recentActivity,
-        });
-      } catch (err) {
-        console.error('Failed to load report stats:', err);
-        setError('Failed to load report data. Please try again.');
-      } finally {
-        setLoading(false);
-      }
+      setStats({
+        totalTrainees: trainees.length,
+        activeTrainees,
+        pendingTrainees,
+        completedTrainees,
+        totalTasks: tasks.length,
+        completedTasks,
+        pendingTasks,
+        totalCompanies: companiesSnap.size,
+        totalSupervisors: supervisorsSnap.size,
+        traineesByCompany,
+        traineesByStatus,
+        trainees: trainees.map(t => ({ id: t.id, name: t.name || t.id })),
+        recentActivity,
+      });
+    } catch (err) {
+      console.error('Failed to load report stats:', err);
+      setError('Failed to load report data. Please try again.');
+    } finally {
+      setLoading(false);
     }
-
-    fetchStats();
   }, []);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
 
   if (loading) {
     return (
@@ -146,7 +148,7 @@ export function AdminReportDashboard() {
       <div className="bg-card rounded-xl shadow-sm border border-border p-6">
         <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm flex items-center justify-between">
           <span>{error}</span>
-          <button onClick={() => window.location.reload()} className="text-sm font-medium text-destructive hover:underline min-h-[44px] px-2">Retry</button>
+          <button onClick={() => fetchStats()} className="text-sm font-medium text-destructive hover:underline min-h-[44px] px-2">Retry</button>
         </div>
       </div>
     );

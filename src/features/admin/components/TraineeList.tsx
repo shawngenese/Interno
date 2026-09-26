@@ -14,7 +14,6 @@ interface TraineeListProps {
   onEdit?: (trainee: Trainee) => void;
   onView?: (trainee: Trainee) => void;
   onViewDocuments?: (trainee: Trainee) => void;
-  onStatusChange?: (trainee: Trainee) => void;
 }
 
 interface ResolvedTrainee extends Trainee {
@@ -35,9 +34,8 @@ const ojtStatusBadgeClasses: Record<string, string> = {
   archived: 'bg-muted text-muted-foreground',
 };
 
-export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }: TraineeListProps) {
+export function TraineeList({ onEdit, onView, onViewDocuments }: TraineeListProps) {
   const [trainees, setTrainees] = useState<ResolvedTrainee[]>([]);
-  const traineesRef = useRef(trainees);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ListTraineesParams>({ page: 1, limit: 10 });
@@ -46,10 +44,6 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [searchValue, setSearchValue] = useState('');
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    traineesRef.current = trainees;
-  }, [trainees]);
 
   useEffect(() => {
     return () => {
@@ -195,10 +189,6 @@ export function TraineeList({ onEdit, onView, onViewDocuments, onStatusChange }:
         prev.map((t) => (t.id === traineeId ? { ...t, ojtStatus: newStatus } : t)),
       );
       setStatusDropdownId(null);
-      if (onStatusChange) {
-        const updated = traineesRef.current.find((t) => t.id === traineeId);
-        if (updated) onStatusChange({ ...updated, ojtStatus: newStatus });
-      }
     } catch (err) {
       console.error('Failed to update OJT status:', err);
       setError('Failed to update status');

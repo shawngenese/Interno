@@ -1,6 +1,6 @@
 import { useAuth } from '@/features/auth';
 import { useNavigate } from 'react-router-dom';
-import { QrCode, CheckSquare, Clock, FileText, Building2, UserCheck } from 'lucide-react';
+import { QrCode, CheckSquare, Clock, FileText, Building2, UserCheck, Calendar, Bell, Star } from 'lucide-react';
 
 export function TraineeDashboard() {
   const { user } = useAuth();
@@ -34,6 +34,27 @@ export function TraineeDashboard() {
       route: '/trainee/documents',
       icon: <FileText className="h-5 w-5 text-primary" />,
       badge: 'Files',
+    },
+    {
+      title: 'Leave',
+      description: 'Request time off and track approvals',
+      route: '/trainee/leave',
+      icon: <Calendar className="h-5 w-5 text-info" />,
+      badge: 'Time Off',
+    },
+    {
+      title: 'Announcements',
+      description: 'Read updates from your coordinators',
+      route: '/trainee/announcements',
+      icon: <Bell className="h-5 w-5 text-primary" />,
+      badge: 'News',
+    },
+    {
+      title: 'Evaluations',
+      description: 'View supervisor feedback and ratings',
+      route: '/trainee/evaluations',
+      icon: <Star className="h-5 w-5 text-warning" />,
+      badge: 'Reviews',
     },
     {
       title: 'Browse Companies',

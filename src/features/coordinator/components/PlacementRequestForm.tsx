@@ -97,21 +97,21 @@ export function PlacementRequestForm({ onSuccess }: PlacementRequestFormProps) {
 
   if (success) {
     return (
-      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-6">
+      <div className="bg-success/10 border border-success/20 rounded-xl p-6">
         <div className="flex items-center gap-3">
           <div className="flex-shrink-0">
-            <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-8 h-8 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
           <div>
-            <h4 className="font-semibold text-green-800 dark:text-green-300">Request Submitted</h4>
-            <p className="text-sm text-green-700 dark:text-green-400">
+            <h4 className="font-semibold text-success">Request Submitted</h4>
+            <p className="text-sm text-success">
               Your external placement request has been submitted for coordinator review.
             </p>
             <button
               onClick={() => setSuccess(false)}
-              className="mt-2 text-sm font-medium text-green-700 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300"
+              className="mt-2 text-sm font-medium text-success hover:underline"
             >
               Submit Another Request
             </button>
@@ -122,26 +122,26 @@ export function PlacementRequestForm({ onSuccess }: PlacementRequestFormProps) {
   }
 
   return (
-    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
-      <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
-        <h3 className="text-lg font-semibold text-[#121212] dark:text-white">
+    <div className="bg-card rounded-xl shadow-sm border border-border">
+      <div className="p-4 border-b border-border">
+        <h3 className="text-lg font-semibold text-foreground">
           Request External Placement
         </h3>
-        <p className="text-sm text-[#757575] dark:text-[#9E9E9E] mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Submit a request to be placed at an external company
         </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="p-4 space-y-4">
         {error && (
-          <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
+          <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
             {error}
           </div>
         )}
 
         <FormField id="external-company" label="Select External Company" required error={touched.selectedCompanyId ? errors.selectedCompanyId : undefined}>
           {loading ? (
-            <div className="w-full px-4 py-3 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-[#F5F5F5] dark:bg-[#3A3A3A] text-[#757575] dark:text-[#9E9E9E]">
+            <div className="w-full px-4 py-3 border border-input rounded-lg bg-muted text-muted-foreground">
               Loading companies...
             </div>
           ) : (
@@ -173,7 +173,7 @@ export function PlacementRequestForm({ onSuccess }: PlacementRequestFormProps) {
           />
         </FormField>
 
-        <div className="flex justify-end pt-4 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
+        <div className="flex justify-end pt-4 border-t border-border">
           <button
             type="submit"
             disabled={submitting}

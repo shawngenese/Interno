@@ -18,6 +18,8 @@ import {
   QrCode,
   GraduationCap,
   RefreshCw,
+  Star,
+  Calendar,
 } from 'lucide-react';
 import type { Trainee } from '@/features/admin/types';
 import type { DTREntry } from '@/features/dtr/types';
@@ -280,6 +282,42 @@ export function SupervisorDashboard() {
                 </span>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">See assigned trainee roster</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => navigate('/supervisor/evaluations')}
+            className="flex items-start gap-4 p-5 bg-muted/30 border border-border rounded-xl hover:border-primary/50 hover:bg-muted/60 transition-all text-left cursor-pointer group"
+          >
+            <div className="p-3 bg-card border border-border rounded-xl group-hover:border-primary/30 transition-colors">
+              <Star className="h-5 w-5 text-warning" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <span className="font-bold text-foreground text-sm">Evaluations</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-card border border-border px-2 py-0.5 rounded-md">
+                  Reviews
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">Submit trainee performance reviews</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => navigate('/supervisor/leave')}
+            className="flex items-start gap-4 p-5 bg-muted/30 border border-border rounded-xl hover:border-primary/50 hover:bg-muted/60 transition-all text-left cursor-pointer group"
+          >
+            <div className="p-3 bg-card border border-border rounded-xl group-hover:border-primary/30 transition-colors">
+              <Calendar className="h-5 w-5 text-info" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <span className="font-bold text-foreground text-sm">Leave Requests</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-card border border-border px-2 py-0.5 rounded-md">
+                  Requests
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">Review and approve trainee leave</p>
             </div>
           </button>
         </div>

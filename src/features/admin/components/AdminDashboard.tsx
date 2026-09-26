@@ -528,7 +528,6 @@ export function AdminDashboard() {
                   onEdit={handleEditTrainee} 
                   onView={handleViewTrainee}
                   onViewDocuments={handleViewTraineeDocuments}
-                  onStatusChange={() => window.location.reload()} 
                 />
               </>
             )}

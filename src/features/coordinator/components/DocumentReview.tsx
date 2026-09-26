@@ -223,13 +223,13 @@ export function DocumentReview() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+        return 'bg-warning/15 text-warning';
       case 'approved':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+        return 'bg-success/15 text-success';
       case 'rejected':
-        return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+        return 'bg-destructive/15 text-destructive';
       default:
-        return 'bg-[#EFEFEF] text-[#1E1E1E] dark:bg-[#3A3A3A] dark:text-[#9E9E9E]';
+        return 'bg-muted text-muted-foreground';
     }
   };
 
@@ -244,18 +244,18 @@ export function DocumentReview() {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
+        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive">
           {error}
         </div>
       )}
 
-      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A]">
-        <div className="p-4 border-b border-[#D5D5D5] dark:border-[#3A3A3A]">
+      <div className="bg-card rounded-xl shadow-sm border border-border">
+        <div className="p-4 border-b border-border">
           <div className="flex items-center gap-4">
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+              className="px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
             >
               <option value="">All Statuses</option>
               <option value="pending">Pending</option>
@@ -265,7 +265,7 @@ export function DocumentReview() {
             <select
               value={filterTrainee}
               onChange={(e) => setFilterTrainee(e.target.value)}
-              className="px-3 py-2 border border-[#BDBDBD] dark:border-[#555555] rounded-lg bg-white dark:bg-[#3A3A3A] text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+              className="px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
             >
               <option value="">All Trainees</option>
               {trainees.map((t) => (
@@ -277,7 +277,7 @@ export function DocumentReview() {
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
+            <thead className="bg-muted/50">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Trainee</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Document Type</th>
@@ -287,7 +287,7 @@ export function DocumentReview() {
                 <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
+            <tbody className="divide-y divide-border">
               {loading ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
@@ -308,7 +308,7 @@ export function DocumentReview() {
                 </tr>
               ) : (
                 documents.map((doc) => (
-                  <tr key={doc.id} className="hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50">
+                  <tr key={doc.id} className="hover:bg-muted/50">
                     <td className="px-4 py-4">
                       <div className="font-medium text-foreground">{doc.traineeName || 'Unknown'}</div>
                     </td>

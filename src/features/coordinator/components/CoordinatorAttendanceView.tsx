@@ -141,28 +141,28 @@ export function CoordinatorAttendanceView() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
-        <h2 className="text-lg font-semibold text-[#121212] dark:text-white mb-4">
+      <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+        <h2 className="text-lg font-semibold text-foreground mb-4">
           Today&apos;s Attendance — {new Date().toLocaleDateString('en-PH', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
         </h2>
 
         <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="p-4 bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 rounded-lg text-center">
-            <p className="text-2xl font-bold text-[#121212] dark:text-white">{attendance.length}</p>
-            <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Total Trainees</p>
+          <div className="p-4 bg-muted/50 rounded-lg text-center">
+            <p className="text-2xl font-bold text-foreground">{attendance.length}</p>
+            <p className="text-sm text-muted-foreground">Total Trainees</p>
           </div>
-          <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg text-center">
-            <p className="text-2xl font-bold text-green-600 dark:text-green-400">{timedInCount}</p>
-            <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Timed In</p>
+          <div className="p-4 bg-success/10 rounded-lg text-center">
+            <p className="text-2xl font-bold text-success">{timedInCount}</p>
+            <p className="text-sm text-muted-foreground">Timed In</p>
           </div>
           <div className="p-4 bg-primary-light dark:bg-primary/10 rounded-lg text-center">
             <p className="text-2xl font-bold text-primary dark:text-primary">{timedOutCount}</p>
-            <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Timed Out</p>
+            <p className="text-sm text-muted-foreground">Timed Out</p>
           </div>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
+          <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
             {error}
           </div>
         )}
@@ -170,30 +170,30 @@ export function CoordinatorAttendanceView() {
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-12 bg-[#EFEFEF] dark:bg-[#3A3A3A] rounded-lg animate-pulse" />
+              <div key={i} className="h-12 bg-muted rounded-lg animate-pulse" />
             ))}
           </div>
         ) : attendance.length === 0 ? (
-          <p className="text-center text-[#757575] dark:text-[#9E9E9E] py-8">No trainees found</p>
+          <p className="text-center text-muted-foreground py-8">No trainees found</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
+              <thead className="bg-muted/50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Trainee</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Time In</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Time Out</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Trainee</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Time In</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Time Out</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
+              <tbody className="divide-y divide-border">
                 {attendance.map((a) => (
-                  <tr key={a.traineeId} className="hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50">
-                    <td className="px-4 py-3 text-sm font-medium text-[#121212] dark:text-white">{a.traineeName}</td>
-                    <td className="px-4 py-3 text-sm text-[#757575] dark:text-[#9E9E9E]">
+                  <tr key={a.traineeId} className="hover:bg-muted/50">
+                    <td className="px-4 py-3 text-sm font-medium text-foreground">{a.traineeName}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
                       {a.timeInTime ? formatTime12(a.timeInTime) : '—'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-[#757575] dark:text-[#9E9E9E]">
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
                       {a.timeOutTime ? formatTime12(a.timeOutTime) : '—'}
                     </td>
                     <td className="px-4 py-3">
@@ -201,8 +201,8 @@ export function CoordinatorAttendanceView() {
                         a.hasTimeOut
                           ? 'bg-primary-light text-primary dark:bg-primary/20 dark:text-primary'
                           : a.hasTimeIn
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                            : 'bg-[#EFEFEF] text-[#555555] dark:bg-[#3A3A3A] dark:text-[#9E9E9E]'
+                            ? 'bg-success/15 text-success'
+                            : 'bg-muted text-muted-foreground'
                       }`}>
                         {a.hasTimeOut ? 'Timed Out' : a.hasTimeIn ? 'Timed In' : 'Absent'}
                       </span>

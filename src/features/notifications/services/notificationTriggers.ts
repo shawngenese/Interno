@@ -1,6 +1,6 @@
 import { getFunctionsInstancePublic, getFirestoreInstancePublic } from '@/config/firebase';
 import { httpsCallable } from 'firebase/functions';
-import { collection, query, where, getDocs, doc, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import type { NotificationType, NotificationPriority } from '../types';
 
 interface TriggerNotificationParams {
@@ -12,95 +12,16 @@ interface TriggerNotificationParams {
   priority?: NotificationPriority;
 }
 
-/**
- * Send a notification (FCM + in-app) to a user.
- * Falls back to in-app only if FCM fails.
- */
 export async function triggerNotification(params: TriggerNotificationParams): Promise<void> {
   const { type, title, body, targetUserId, data, priority = 'normal' } = params;
 
   try {
-    const db = getFirestoreInstancePublic();
-
-    // Check user notification preferences
-    const prefsSnap = await getDocs(
-      query(collection(db, 'notification_preferences'), where('userId', '==', targetUserId))
+    const functions = getFunctionsInstancePublic();
+    const sendNotification = httpsCallable<TriggerNotificationParams, { inAppCreated: boolean }>(
+      functions,
+      'sendNotification'
     );
-
-    let sendFCM = true;
-    let sendInApp = true;
-
-    if (!prefsSnap.empty) {
-      const prefs = prefsSnap.docs[0].data();
-      sendFCM = prefs.fcmEnabled && prefs.types?.[type]?.fcm !== false;
-      sendInApp = prefs.inAppEnabled && prefs.types?.[type]?.inApp !== false;
-
-      // Check quiet hours
-      if (prefs.quietHoursStart && prefs.quietHoursEnd) {
-        const now = new Date();
-        const hours = now.getHours();
-        const minutes = now.getMinutes();
-        const currentTime = hours * 60 + minutes;
-
-        const [startH, startM] = prefs.quietHoursStart.split(':').map(Number);
-        const [endH, endM] = prefs.quietHoursEnd.split(':').map(Number);
-        const startTime = startH * 60 + startM;
-        const endTime = endH * 60 + endM;
-
-        const inQuietHours = startTime > endTime
-          ? currentTime >= startTime || currentTime < endTime
-          : currentTime >= startTime && currentTime < endTime;
-
-        if (inQuietHours && priority !== 'urgent') {
-          sendFCM = false;
-        }
-      }
-    }
-
-    // Write in-app notification
-    if (sendInApp) {
-      await addDoc(collection(db, 'notifications'), {
-        userId: targetUserId,
-        type,
-        title,
-        body,
-        data: data || {},
-        priority,
-        read: false,
-        sentVia: sendFCM ? 'both' : 'in_app',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-    }
-
-    // Send FCM
-    if (sendFCM) {
-      try {
-        const tokensSnap = await getDocs(
-          query(
-            collection(db, 'fcm_tokens'),
-            where('userId', '==', targetUserId),
-            where('active', '==', true),
-          )
-        );
-
-        if (!tokensSnap.empty) {
-          const tokens = tokensSnap.docs.map((d) => d.data().token);
-
-          const functions = getFunctionsInstancePublic();
-          const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
-          await sendFCMNotification({
-            tokens,
-            title,
-            body,
-            data,
-            priority: priority === 'urgent' ? 'high' : 'normal',
-          });
-        }
-      } catch (err) {
-        console.error('FCM send failed (in-app saved):', err);
-      }
-    }
+    await sendNotification({ type, title, body, targetUserId, data, priority });
   } catch (err) {
     console.error('Notification trigger failed:', err);
   }

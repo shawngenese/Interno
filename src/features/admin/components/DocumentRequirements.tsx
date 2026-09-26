@@ -50,10 +50,10 @@ export function DocumentRequirements({ traineeId, companyId }: DocumentRequireme
 
   const getStatusColor = (status: Document['status']) => {
     switch (status) {
-      case 'approved': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
-      case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
-      case 'rejected': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
-      default: return 'bg-[#EFEFEF] text-[#1E1E1E] dark:bg-[#3A3A3A] dark:text-[#BDBDBD]';
+      case 'approved': return 'bg-success/15 text-success';
+      case 'pending': return 'bg-warning/15 text-warning';
+      case 'rejected': return 'bg-destructive/15 text-destructive';
+      default: return 'bg-muted text-muted-foreground';
     }
   };
 
@@ -78,16 +78,16 @@ export function DocumentRequirements({ traineeId, companyId }: DocumentRequireme
   }
 
   return (
-    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-4">
+    <div className="bg-card rounded-xl shadow-sm border border-border p-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-[#121212] dark:text-white">Document Requirements</h3>
-        <div className="text-xs text-[#757575] dark:text-[#9E9E9E]">
+        <h3 className="text-sm font-semibold text-foreground">Document Requirements</h3>
+        <div className="text-xs text-muted-foreground">
           {uploadedCount}/{REQUIRED_DOCUMENTS.length} uploaded ({completedCount} approved)
         </div>
       </div>
 
       {error && (
-        <div className="mb-3 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-red-700 dark:text-red-400 text-xs">
+        <div className="mb-3 p-2 bg-destructive/10 border border-destructive/20 rounded text-destructive text-xs">
           {error}
         </div>
       )}
@@ -98,41 +98,41 @@ export function DocumentRequirements({ traineeId, companyId }: DocumentRequireme
           return (
             <div
               key={required.type}
-              className="flex items-center justify-between p-2 rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50"
+              className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50"
             >
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${
                   doc?.status === 'approved'
-                    ? 'bg-green-500'
+                    ? 'bg-success'
                     : doc?.status === 'pending'
-                    ? 'bg-yellow-500'
+                    ? 'bg-warning'
                     : doc?.status === 'rejected'
-                    ? 'bg-red-500'
-                    : 'bg-[#BDBDBD] dark:bg-[#555555]'
+                    ? 'bg-destructive'
+                    : 'bg-muted'
                 }`} />
-                <span className="text-sm text-[#3A3A3A] dark:text-[#BDBDBD]">{required.label}</span>
+                <span className="text-sm text-foreground/80">{required.label}</span>
               </div>
               {doc ? (
                 <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${getStatusColor(doc.status)}`}>
                   {doc.status}
                 </span>
               ) : (
-                <span className="text-xs text-[#9E9E9E] dark:text-[#757575]">Not uploaded</span>
+                <span className="text-xs text-muted-foreground">Not uploaded</span>
               )}
             </div>
           );
         })}
       </div>
 
-      <div className="mt-4 pt-3 border-t border-[#D5D5D5] dark:border-[#3A3A3A]">
+      <div className="mt-4 pt-3 border-t border-border">
         <div className="flex items-center gap-2">
-          <div className="flex-1 bg-[#D5D5D5] dark:bg-[#3A3A3A] rounded-full h-2">
+          <div className="flex-1 bg-muted rounded-full h-2">
             <div
               className="bg-primary h-2 rounded-full transition-all duration-300"
               style={{ width: `${(uploadedCount / REQUIRED_DOCUMENTS.length) * 100}%` }}
             />
           </div>
-          <span className="text-xs text-[#757575] dark:text-[#9E9E9E]">
+          <span className="text-xs text-muted-foreground">
             {Math.round((uploadedCount / REQUIRED_DOCUMENTS.length) * 100)}%
           </span>
         </div>

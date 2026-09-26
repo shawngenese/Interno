@@ -138,26 +138,26 @@ export function CoordinatorTaskView() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-[#D5D5D5] dark:border-[#3A3A3A] p-6">
-        <h2 className="text-lg font-semibold text-[#121212] dark:text-white mb-4">Task Overview</h2>
+      <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+        <h2 className="text-lg font-semibold text-foreground mb-4">Task Overview</h2>
 
         <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="p-4 bg-[#F5F5F5] dark:bg-[#3A3A3A]/50 rounded-lg text-center">
-            <p className="text-2xl font-bold text-[#121212] dark:text-white">{totalTasks}</p>
-            <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Total Tasks</p>
+          <div className="p-4 bg-muted/50 rounded-lg text-center">
+            <p className="text-2xl font-bold text-foreground">{totalTasks}</p>
+            <p className="text-sm text-muted-foreground">Total Tasks</p>
           </div>
-          <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg text-center">
-            <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{totalPending}</p>
-            <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">In Progress</p>
+          <div className="p-4 bg-warning/10 rounded-lg text-center">
+            <p className="text-2xl font-bold text-warning">{totalPending}</p>
+            <p className="text-sm text-muted-foreground">In Progress</p>
           </div>
           <div className="p-4 bg-primary-light dark:bg-primary/10 rounded-lg text-center">
             <p className="text-2xl font-bold text-primary dark:text-primary">{totalSubmitted}</p>
-            <p className="text-sm text-[#757575] dark:text-[#9E9E9E]">Awaiting Review</p>
+            <p className="text-sm text-muted-foreground">Awaiting Review</p>
           </div>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
+          <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
             {error}
           </div>
         )}
@@ -165,35 +165,35 @@ export function CoordinatorTaskView() {
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-12 bg-[#EFEFEF] dark:bg-[#3A3A3A] rounded-lg animate-pulse" />
+              <div key={i} className="h-12 bg-muted rounded-lg animate-pulse" />
             ))}
           </div>
         ) : summaries.length === 0 ? (
-          <p className="text-center text-[#757575] dark:text-[#9E9E9E] py-8">No trainees found</p>
+          <p className="text-center text-muted-foreground py-8">No trainees found</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-[#F5F5F5] dark:bg-[#3A3A3A]/50">
+              <thead className="bg-muted/50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Trainee</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Total</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Pending</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">In Progress</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Submitted</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Approved</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-[#757575] dark:text-[#9E9E9E] uppercase">Returned</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Trainee</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">Total</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">Pending</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">In Progress</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">Submitted</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">Approved</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">Returned</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#D5D5D5] dark:divide-[#3A3A3A]">
+              <tbody className="divide-y divide-border">
                 {summaries.map((s) => (
-                  <tr key={s.traineeId} className="hover:bg-[#F5F5F5] dark:hover:bg-[#3A3A3A]/50">
-                    <td className="px-4 py-3 text-sm font-medium text-[#121212] dark:text-white">{s.traineeName}</td>
-                    <td className="px-4 py-3 text-sm text-center text-[#121212] dark:text-white">{s.total}</td>
-                    <td className="px-4 py-3 text-sm text-center text-yellow-600 dark:text-yellow-400">{s.pending}</td>
+                  <tr key={s.traineeId} className="hover:bg-muted/50">
+                    <td className="px-4 py-3 text-sm font-medium text-foreground">{s.traineeName}</td>
+                    <td className="px-4 py-3 text-sm text-center text-foreground">{s.total}</td>
+                    <td className="px-4 py-3 text-sm text-center text-warning">{s.pending}</td>
                     <td className="px-4 py-3 text-sm text-center text-orange-600 dark:text-orange-400">{s.inProgress}</td>
                     <td className="px-4 py-3 text-sm text-center text-primary dark:text-primary">{s.submitted}</td>
-                    <td className="px-4 py-3 text-sm text-center text-green-600 dark:text-green-400">{s.approved}</td>
-                    <td className="px-4 py-3 text-sm text-center text-red-600 dark:text-red-400">{s.returned}</td>
+                    <td className="px-4 py-3 text-sm text-center text-success">{s.approved}</td>
+                    <td className="px-4 py-3 text-sm text-center text-destructive">{s.returned}</td>
                   </tr>
                 ))}
               </tbody>
