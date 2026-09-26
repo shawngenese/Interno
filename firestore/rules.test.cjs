@@ -744,4 +744,106 @@ describe('Firestore Security Rules', () => {
       await assertFails(db.collection('users').doc('trainee-1').update({ displayName: 'Renamed' }));
     });
   });
+
+  describe('Notification Preferences', () => {
+    async function seedPrefs(docId, userId) {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection('notification_preferences').doc(docId).set({
+          userId,
+          fcmEnabled: true,
+          inAppEnabled: true,
+          emailEnabled: false,
+          updatedAt: 1,
+        });
+      });
+    }
+
+    test('reading a never-saved prefs doc succeeds and reports not-exists', async () => {
+      const db = getTraineeAuth().firestore();
+      const snap = await db.collection('notification_preferences').doc('trainee-1').get();
+      expect(snap.exists).toBe(false);
+    });
+
+    test('unauthenticated read of a never-saved prefs doc fails', async () => {
+      const db = getUnauthenticated().firestore();
+      await assertFails(db.collection('notification_preferences').doc('some-uid').get());
+    });
+
+    test('owner can read their existing prefs doc', async () => {
+      await seedPrefs('trainee-1', 'trainee-1');
+      const db = getTraineeAuth().firestore();
+      const snap = await db.collection('notification_preferences').doc('trainee-1').get();
+      expect(snap.exists).toBe(true);
+    });
+
+    test('other users cannot read someone else’s prefs doc', async () => {
+      await seedPrefs('trainee-1', 'trainee-1');
+      const db = getSupervisorAuth().firestore();
+      await assertFails(db.collection('notification_preferences').doc('trainee-1').get());
+    });
+
+    test('owner can create their own prefs doc', async () => {
+      const db = getTraineeAuth().firestore();
+      await assertSucceeds(
+        db.collection('notification_preferences').doc('trainee-1').set({
+          userId: 'trainee-1',
+          fcmEnabled: true,
+          inAppEnabled: true,
+          emailEnabled: false,
+          updatedAt: 2,
+        })
+      );
+    });
+
+    test('cannot create prefs doc with a spoofed userId', async () => {
+      const db = getTraineeAuth().firestore();
+      await assertFails(
+        db.collection('notification_preferences').doc('trainee-1').set({
+          userId: 'supervisor-1',
+          fcmEnabled: true,
+          inAppEnabled: true,
+          emailEnabled: false,
+          updatedAt: 2,
+        })
+      );
+    });
+
+    test('cannot create a prefs doc at another user’s doc id', async () => {
+      const db = getTraineeAuth().firestore();
+      await assertFails(
+        db.collection('notification_preferences').doc('supervisor-1').set({
+          userId: 'trainee-1',
+          fcmEnabled: true,
+          inAppEnabled: true,
+          emailEnabled: false,
+          updatedAt: 2,
+        })
+      );
+    });
+
+    test('owner can update their prefs doc', async () => {
+      await seedPrefs('trainee-1', 'trainee-1');
+      const db = getTraineeAuth().firestore();
+      await assertSucceeds(
+        db.collection('notification_preferences').doc('trainee-1').update({ fcmEnabled: false })
+      );
+    });
+
+    test('other users cannot update someone else’s prefs doc', async () => {
+      await seedPrefs('trainee-1', 'trainee-1');
+      const db = getSupervisorAuth().firestore();
+      await assertFails(
+        db.collection('notification_preferences').doc('trainee-1').update({ fcmEnabled: false })
+      );
+    });
+
+    test('owner can delete their prefs doc, others cannot', async () => {
+      await seedPrefs('trainee-1', 'trainee-1');
+      const owner = getTraineeAuth().firestore();
+      await assertFails(
+        getSupervisorAuth().firestore().collection('notification_preferences').doc('trainee-1').delete()
+      );
+      await assertSucceeds(owner.collection('notification_preferences').doc('trainee-1').delete());
+    });
+  });
 });

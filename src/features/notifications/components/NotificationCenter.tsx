@@ -91,8 +91,13 @@ export function NotificationCenter() {
   }, [filters]);
 
   const fetchPreferences = useCallback(async () => {
-    const prefs = await getNotificationPreferences();
-    setPreferences(prefs || getDefaultPreferences());
+    try {
+      const prefs = await getNotificationPreferences();
+      setPreferences(prefs || getDefaultPreferences());
+    } catch (err) {
+      console.error('Failed to load notification preferences:', err);
+      setPreferences(getDefaultPreferences());
+    }
   }, []);
 
   useEffect(() => {

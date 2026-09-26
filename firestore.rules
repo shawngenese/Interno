@@ -577,8 +577,12 @@ service cloud.firestore {
     // NOTIFICATION_PREFERENCES Collection
     // ============================================
     match /notification_preferences/{prefId} {
-      allow read: if isSignedIn() && isOwner(resource.data.userId);
-      allow write: if isSignedIn() && isOwner(resource.data.userId);
+      // resource == null: get of a never-saved prefs doc must not deref resource.data
+      allow read: if isSignedIn() && (resource == null || isOwner(resource.data.userId));
+      // prefId must equal the uid so nobody can squat another user's prefs doc id
+      allow create: if isSignedIn() && request.auth.uid == prefId && isOwner(request.resource.data.userId);
+      allow update: if isSignedIn() && isOwner(resource.data.userId);
+      allow delete: if isSignedIn() && isOwner(resource.data.userId);
     }
     
     // ============================================
