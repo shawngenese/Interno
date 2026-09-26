@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { generateAttendanceReport, generateDTRReport, generateTaskReport, generateDocumentReport, generateComprehensiveReport, downloadBlob, type ReportFilters } from '../services/reportService';
 import { getFirestoreInstancePublic } from '@/config/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { formatDateTime12 } from '@/shared/utils/dateUtils';
 import { useFormValidation } from '@/shared/hooks/useFormValidation';
 import { required } from '@/shared/utils/validators';
@@ -50,7 +50,7 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
     async function loadCompanies() {
       try {
         const db = getFirestoreInstancePublic();
-        const snap = await getDocs(query(collection(db, 'companies'), where('status', '==', 'active')));
+        const snap = await getDocs(query(collection(db, 'companies'), orderBy('name')));
         setCompanies(snap.docs.map((d) => ({ id: d.id, name: d.data().name || d.id })));
       } catch (err) {
         console.error('Failed to load companies:', err);

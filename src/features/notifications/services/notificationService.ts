@@ -1,10 +1,7 @@
-import { getFunctionsInstancePublic, initializeFirebase } from '@/config/firebase';
-import { httpsCallable } from 'firebase/functions';
+import { initializeFirebase } from '@/config/firebase';
 import type {
   Notification,
   NotificationPreferences,
-  SendFCMParams,
-  SendFCMResult,
   ListNotificationsParams,
   PaginatedNotificationsResponse,
 } from '../types';
@@ -115,105 +112,6 @@ const db = getFirestoreInstancePublic();
     active: true,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
-  });
-}
-
-/** Get user's FCM tokens. */
-export async function getUserFCMTokens(userId: string): Promise<string[]> {
-  const { getFirestoreInstancePublic } = await import('@/config/firebase');
-  const { collection, query, where, getDocs } = await import('firebase/firestore');
-  const db = getFirestoreInstancePublic();
-
-  const snap = await getDocs(query(collection(db, 'fcm_tokens'), where('userId', '==', userId), where('active', '==', true)));
-  return snap.docs.map(d => d.id);
-}
-
-/** Send FCM notification via Cloud Function. */
-export async function sendFCM(params: SendFCMParams): Promise<SendFCMResult> {
-  const functions = getFunctionsInstancePublic();
-  const sendFCMNotification = httpsCallable<SendFCMParams, SendFCMResult>(functions, 'sendFCMNotification');
-  const result = await sendFCMNotification(params);
-  return result.data;
-}
-
-/** Send notification to specific user (creates in-app + optionally FCM). */
-export async function sendUserNotification(
-  userId: string,
-  type: Notification['type'],
-  title: string,
-  body: string,
-  options: {
-    data?: Record<string, string>;
-    image?: string;
-    priority?: Notification['priority'];
-    sendFCM?: boolean;
-  } = {},
-): Promise<void> {
-  const { getFirestoreInstancePublic } = await import('@/config/firebase');
-  const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
-  const db = getFirestoreInstancePublic();
-
-  // Create in-app notification
-  const notificationRef = await addDoc(collection(db, 'notifications'), {
-    userId,
-    type,
-    title,
-    body,
-    data: options.data,
-    image: options.image,
-    priority: options.priority || 'normal',
-    read: false,
-    sentVia: options.sendFCM ? 'both' : 'in_app',
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-
-  // Optionally send FCM
-  if (options.sendFCM) {
-    const tokens = await getUserFCMTokens(userId);
-    if (tokens.length > 0) {
-      try {
-await sendFCM({
-            tokens,
-            title,
-            body,
-            data: { ...options.data, notificationId: notificationRef.id },
-            image: options.image,
-            priority: options.priority === 'urgent' ? 'high' : 'normal',
-          });
-          // Update notification with FCM status
-          const { getFirestoreInstancePublic } = await import('@/config/firebase');
-          const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
-          const db = getFirestoreInstancePublic();
-          await updateDoc(doc(db, 'notifications', notificationRef.id), {
-            sentVia: 'both',
-            updatedAt: serverTimestamp(),
-          });
-      } catch (err) {
-        console.error('FCM send failed, in-app notification still created:', err);
-      }
-    }
-  }
-}
-
-/** Send notification to multiple users (e.g., all trainees in a company). */
-export async function sendTopicNotification(
-  topic: string,
-  title: string,
-  body: string,
-  options: {
-    data?: Record<string, string>;
-    image?: string;
-    priority?: Notification['priority'];
-  } = {},
-): Promise<void> {
-  await sendFCM({
-    topic,
-    title,
-    body,
-    data: options.data,
-    image: options.image,
-    priority: options.priority === 'urgent' ? 'high' : 'normal',
   });
 }
 

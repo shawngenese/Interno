@@ -846,4 +846,82 @@ describe('Firestore Security Rules', () => {
       await assertSucceeds(owner.collection('notification_preferences').doc('trainee-1').delete());
     });
   });
+
+  describe('Notifications Collection', () => {
+    async function seedNotification(docId, userId) {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection('notifications').doc(docId).set({
+          userId,
+          type: 'task_created',
+          title: 'New Task Assigned',
+          body: 'You have a new task: Demo',
+          data: {},
+          priority: 'normal',
+          read: false,
+          sentVia: 'in_app',
+          createdAt: 1,
+          updatedAt: 1,
+        });
+      });
+    }
+
+    const clientCreate = (db, userId) =>
+      db.collection('notifications').add({
+        userId,
+        type: 'task_created',
+        title: 'Spoofed',
+        body: 'Client-side create must be denied',
+        data: {},
+        priority: 'normal',
+        read: false,
+        sentVia: 'in_app',
+        createdAt: 2,
+        updatedAt: 2,
+      });
+
+    test('unauthenticated create is denied', async () => {
+      await assertFails(clientCreate(getUnauthenticated().firestore(), 'trainee-1'));
+    });
+
+    test('trainee client create is denied', async () => {
+      await assertFails(clientCreate(getTraineeAuth().firestore(), 'trainee-1'));
+    });
+
+    test('supervisor client create is denied (CF owns creates now)', async () => {
+      await assertFails(clientCreate(getSupervisorAuth().firestore(), 'trainee-1'));
+    });
+
+    test('admin client create is denied (CF owns creates now)', async () => {
+      await assertFails(clientCreate(getAdminAuth().firestore(), 'admin-uid'));
+    });
+
+    test('owner can read their notification, others cannot', async () => {
+      await seedNotification('notif-1', 'trainee-1');
+      const owner = await getTraineeAuth().firestore().collection('notifications').doc('notif-1').get();
+      expect(owner.exists).toBe(true);
+      await assertFails(getSupervisorAuth().firestore().collection('notifications').doc('notif-1').get());
+    });
+
+    test('owner can mark read (read/readAt only)', async () => {
+      await seedNotification('notif-1', 'trainee-1');
+      const db = getTraineeAuth().firestore();
+      await assertSucceeds(
+        db.collection('notifications').doc('notif-1').update({ read: true, readAt: 2, updatedAt: 2 })
+      );
+    });
+
+    test('owner cannot update fields beyond read/readAt/updatedAt', async () => {
+      await seedNotification('notif-1', 'trainee-1');
+      const db = getTraineeAuth().firestore();
+      await assertFails(db.collection('notifications').doc('notif-1').update({ title: 'Hijacked' }));
+      await assertFails(db.collection('notifications').doc('notif-1').update({ userId: 'supervisor-1' }));
+    });
+
+    test('non-owner cannot mark read or delete', async () => {
+      await seedNotification('notif-1', 'trainee-1');
+      const other = getSupervisorAuth().firestore().collection('notifications').doc('notif-1');
+      await assertFails(other.update({ read: true, readAt: 2 }));
+      await assertFails(other.delete());
+    });
+  });
 });
