@@ -1,4 +1,4 @@
-const {
+﻿const {
   initializeTestEnvironment,
   assertFails,
   assertSucceeds,
@@ -61,6 +61,7 @@ async function setupInitialData() {
     status: 'active',
     ojtStatus: 'active',
     scheduleId: 'sched-1',
+    supervisorId: 'supervisor-1',
   });
   
   await adminDb.collection('supervisors').doc('supervisor-1').set({
@@ -82,6 +83,7 @@ async function setupInitialData() {
   
   await adminDb.collection('tasks').doc('task-1').set({
     traineeId: 'trainee-1',
+    companyId: 'company-1',
     title: 'Test Task',
     description: 'Description',
     status: 'pending',
@@ -112,8 +114,18 @@ async function setupInitialData() {
   
   await adminDb.collection('dtrs').doc('dtr-1').set({
     traineeId: 'trainee-1',
+    companyId: 'company-1',
     totalHours: 8,
   });
+
+  await adminDb.collection('attendance_records').doc('att-1')
+    .collection('correction_requests').doc('corr-1').set({
+      requestedBy: 'trainee-1',
+      reason: 'Forgot time out',
+      originalValue: '17:00',
+      proposedValue: '17:30',
+      status: 'pending',
+    });
   
   await adminDb.collection('leave_requests').doc('leave-1').set({
     traineeId: 'trainee-1',
@@ -136,6 +148,94 @@ async function setupInitialData() {
     entityType: 'user',
     entityId: 'user-1',
     timestamp: Date.now(),
+  });
+
+  await adminDb.collection('trainees').doc('other-trainee').set({
+    traineeId: 'other-trainee',
+    userId: 'other-company-user',
+    companyId: 'company-2',
+    departmentId: 'dept-2',
+    status: 'active',
+    ojtStatus: 'active',
+    scheduleId: 'sched-2',
+  });
+
+  await adminDb.collection('attendance_records').doc('att-1').set({
+    traineeId: 'trainee-1',
+    type: 'time_in',
+    timestamp: Date.now(),
+    qrSessionId: 'qr-session-1',
+    deviceInfo: { platform: 'mobile' },
+  });
+
+  await adminDb.collection('attendance_records').doc('att-other').set({
+    traineeId: 'other-trainee',
+    type: 'time_in',
+    timestamp: Date.now(),
+    qrSessionId: 'qr-other',
+    deviceInfo: { platform: 'mobile' },
+  });
+
+  await adminDb.collection('leave_requests').doc('leave-2').set({
+    traineeId: 'other-trainee',
+    companyId: 'company-2',
+    type: 'sick',
+    startDate: Date.now(),
+    endDate: Date.now() + 86400000,
+    reason: 'Other company leave',
+    status: 'pending',
+  });
+
+  await adminDb.collection('dtrs').doc('dtr-other').set({
+    traineeId: 'other-trainee',
+    companyId: 'company-2',
+    totalHours: 8,
+  });
+
+  await adminDb.collection('documents').doc('doc-other').set({
+    traineeId: 'other-trainee',
+    companyId: 'company-2',
+    type: 'medical',
+    fileName: 'other.pdf',
+    fileUrl: 'https://storage.example.com/other.pdf',
+    fileSize: 1024,
+    mimeType: 'application/pdf',
+    status: 'pending',
+  });
+
+  await adminDb.collection('tasks').doc('task-other').set({
+    traineeId: 'other-trainee',
+    companyId: 'company-2',
+    title: 'Other Company Task',
+    description: 'Description',
+    status: 'pending',
+    priority: 'high',
+    dueDate: Date.now() + 86400000,
+    createdBy: 'supervisor-2',
+  });
+
+  await adminDb.collection('task_approvals').doc('approval-1').set({
+    taskId: 'task-1',
+    traineeId: 'trainee-1',
+    status: 'approved',
+  });
+
+  await adminDb.collection('task_approvals').doc('approval-other').set({
+    taskId: 'task-other',
+    traineeId: 'other-trainee',
+    status: 'approved',
+  });
+
+  await adminDb.collection('task_comments').doc('comment-1').set({
+    taskId: 'task-1',
+    userId: 'supervisor-1',
+    content: 'Assigned comment',
+  });
+
+  await adminDb.collection('task_comments').doc('comment-other').set({
+    taskId: 'task-other',
+    userId: 'supervisor-2',
+    content: 'Other company comment',
   });
   });
 }
@@ -196,6 +296,23 @@ function getOtherCompanyUser() {
     companyId: 'company-2',
     departmentId: 'dept-2',
     traineeId: 'other-trainee',
+  });
+}
+
+function getOtherCompanySupervisor() {
+  return testEnv.authenticatedContext('supervisor-2', {
+    role: 'supervisor',
+    companyId: 'company-2',
+    departmentId: 'dept-2',
+    supervisorId: 'supervisor-2',
+  });
+}
+
+function getOtherCompanyCoordinator() {
+  return testEnv.authenticatedContext('coordinator-2', {
+    role: 'coordinator',
+    companyId: 'company-2',
+    departmentId: 'dept-2',
   });
 }
 
@@ -404,10 +521,10 @@ describe('Firestore Security Rules', () => {
   });
 
   describe('Attendance Records', () => {
-    test('trainee can create time_in record', async () => {
+    test('trainee cannot create attendance (CF validateQRScan owns writes - QR forgery prevention)', async () => {
       const trainee = getTraineeAuth('trainee-1');
       const db = trainee.firestore();
-      await assertSucceeds(db.collection('attendance_records').add({
+      await assertFails(db.collection('attendance_records').add({
         traineeId: 'trainee-1',
         type: 'time_in',
         timestamp: Date.now(),
@@ -416,12 +533,12 @@ describe('Firestore Security Rules', () => {
       }));
     });
 
-    test('trainee cannot create time_out without time_in', async () => {
-      const trainee = getTraineeAuth('trainee-1');
-      const db = trainee.firestore();
+    test('admin cannot create attendance from the client either (Admin SDK bypasses rules)', async () => {
+      const admin = getAdminAuth();
+      const db = admin.firestore();
       await assertFails(db.collection('attendance_records').add({
         traineeId: 'trainee-1',
-        type: 'time_out',
+        type: 'time_in',
         timestamp: Date.now(),
         qrSessionId: 'qr-123',
         deviceInfo: { platform: 'mobile' },
@@ -431,27 +548,24 @@ describe('Firestore Security Rules', () => {
     test('attendance records are immutable', async () => {
       const admin = getAdminAuth();
       const db = admin.firestore();
-      const docRef = await db.collection('attendance_records').add({
-        traineeId: 'trainee-1',
-        type: 'time_in',
-        timestamp: Date.now(),
-        qrSessionId: 'qr-123',
-        deviceInfo: { platform: 'mobile' },
-      });
-      await assertFails(docRef.update({ type: 'time_out' }));
+      await assertFails(db.collection('attendance_records').doc('att-1').update({ type: 'time_out' }));
     });
 
     test('trainee can read own attendance', async () => {
       const trainee = getTraineeAuth('trainee-1');
       const db = trainee.firestore();
-      const docRef = await db.collection('attendance_records').add({
-        traineeId: 'trainee-1',
-        type: 'time_in',
-        timestamp: Date.now(),
-        qrSessionId: 'qr-123',
-        deviceInfo: { platform: 'mobile' },
-      });
-      await assertSucceeds(docRef.get());
+      await assertSucceeds(db.collection('attendance_records').doc('att-1').get());
+    });
+
+    test('trainee cannot read another trainee attendance', async () => {
+      const trainee = getTraineeAuth('trainee-1');
+      const db = trainee.firestore();
+      await assertFails(db.collection('attendance_records').doc('att-other').get());
+    });
+
+    test('supervisor of another company cannot read attendance', async () => {
+      const db = getOtherCompanySupervisor().firestore();
+      await assertFails(db.collection('attendance_records').doc('att-1').get());
     });
   });
 
@@ -689,6 +803,9 @@ describe('Firestore Security Rules', () => {
         taskId: 'task-1',
         traineeId: 'trainee-1',
         status: 'approved',
+        action: 'approved',
+        performedBy: 'supervisor-1',
+        timestamp: Date.now(),
       }));
     });
 
@@ -698,6 +815,9 @@ describe('Firestore Security Rules', () => {
         taskId: 'task-1',
         traineeId: 'trainee-1',
         status: 'approved',
+        action: 'approved',
+        performedBy: 'trainee-1',
+        timestamp: Date.now(),
       }));
     });
 
@@ -776,7 +896,7 @@ describe('Firestore Security Rules', () => {
       expect(snap.exists).toBe(true);
     });
 
-    test('other users cannot read someone else’s prefs doc', async () => {
+    test('other users cannot read someone elseâ€™s prefs doc', async () => {
       await seedPrefs('trainee-1', 'trainee-1');
       const db = getSupervisorAuth().firestore();
       await assertFails(db.collection('notification_preferences').doc('trainee-1').get());
@@ -808,7 +928,7 @@ describe('Firestore Security Rules', () => {
       );
     });
 
-    test('cannot create a prefs doc at another user’s doc id', async () => {
+    test('cannot create a prefs doc at another userâ€™s doc id', async () => {
       const db = getTraineeAuth().firestore();
       await assertFails(
         db.collection('notification_preferences').doc('supervisor-1').set({
@@ -829,7 +949,7 @@ describe('Firestore Security Rules', () => {
       );
     });
 
-    test('other users cannot update someone else’s prefs doc', async () => {
+    test('other users cannot update someone elseâ€™s prefs doc', async () => {
       await seedPrefs('trainee-1', 'trainee-1');
       const db = getSupervisorAuth().firestore();
       await assertFails(
@@ -922,6 +1042,330 @@ describe('Firestore Security Rules', () => {
       const other = getSupervisorAuth().firestore().collection('notifications').doc('notif-1');
       await assertFails(other.update({ read: true, readAt: 2 }));
       await assertFails(other.delete());
+    });
+  });
+
+  describe('FIX-21: cross-tenant read scoping', () => {
+    test('other-company supervisor cannot read a user profile', async () => {
+      const db = getOtherCompanySupervisor().firestore();
+      await assertFails(db.collection('users').doc('trainee-1').get());
+    });
+
+    test('trainee cannot read another trainee user profile', async () => {
+      const db = getTraineeAuth('trainee-1').firestore();
+      await assertFails(db.collection('users').doc('other-company-user').get());
+    });
+
+    test('other-company coordinator cannot read a trainee profile', async () => {
+      const db = getOtherCompanyCoordinator().firestore();
+      await assertFails(db.collection('trainees').doc('trainee-1').get());
+    });
+
+    test('other-company supervisor cannot read a trainee profile', async () => {
+      const db = getOtherCompanySupervisor().firestore();
+      await assertFails(db.collection('trainees').doc('trainee-1').get());
+    });
+
+    test('trainee cannot read another trainees task, DTR, leave, or document', async () => {
+      const db = getTraineeAuth('trainee-1').firestore();
+      await assertFails(db.collection('tasks').doc('task-other').get());
+      await assertFails(db.collection('dtrs').doc('dtr-other').get());
+      await assertFails(db.collection('leave_requests').doc('leave-2').get());
+      await assertFails(db.collection('documents').doc('doc-other').get());
+    });
+
+    test('other-company supervisor cannot read a task or leave request', async () => {
+      const db = getOtherCompanySupervisor().firestore();
+      await assertFails(db.collection('tasks').doc('task-1').get());
+      await assertFails(db.collection('leave_requests').doc('leave-1').get());
+    });
+
+    test('trainee can read own task comment but not another trainees', async () => {
+      const db = getTraineeAuth('trainee-1').firestore();
+      await assertSucceeds(db.collection('task_comments').doc('comment-1').get());
+      await assertFails(db.collection('task_comments').doc('comment-other').get());
+    });
+
+    test('other-company supervisor cannot read a task comment', async () => {
+      const db = getOtherCompanySupervisor().firestore();
+      await assertFails(db.collection('task_comments').doc('comment-1').get());
+    });
+
+    test('trainee can read own approval but not another trainees', async () => {
+      const db = getTraineeAuth('trainee-1').firestore();
+      await assertSucceeds(db.collection('task_approvals').doc('approval-1').get());
+      await assertFails(db.collection('task_approvals').doc('approval-other').get());
+    });
+
+    test('other-company coordinator cannot read a task approval', async () => {
+      const db = getOtherCompanyCoordinator().firestore();
+      await assertFails(db.collection('task_approvals').doc('approval-1').get());
+    });
+  });
+
+  describe('FIX-22: cross-tenant write scoping', () => {
+    test('coordinator can still update an own-company trainee', async () => {
+      const db = getCoordinatorAuth().firestore();
+      await assertSucceeds(db.collection('trainees').doc('trainee-1').update({ status: 'active' }));
+    });
+
+    test('other-company coordinator cannot update a trainee (tenant takeover blocked)', async () => {
+      const db = getOtherCompanyCoordinator().firestore();
+      await assertFails(db.collection('trainees').doc('trainee-1').update({ companyId: 'company-2' }));
+      await assertFails(db.collection('trainees').doc('trainee-1').update({ status: 'suspended' }));
+    });
+
+    test('other-company supervisor cannot approve another companys leave request', async () => {
+      const db = getSupervisorAuth('supervisor-1').firestore();
+      await assertFails(db.collection('leave_requests').doc('leave-2').update({
+        status: 'approved',
+        approvedBy: 'supervisor-1',
+        approvedAt: Date.now(),
+      }));
+    });
+
+    test('other-company coordinator cannot approve another companys leave request', async () => {
+      const db = getCoordinatorAuth().firestore();
+      await assertFails(db.collection('leave_requests').doc('leave-2').update({
+        status: 'approved',
+        approvedBy: 'coordinator-1',
+        approvedAt: Date.now(),
+      }));
+    });
+
+    test('own-company supervisor can approve own-company leave request', async () => {
+      const db = getOtherCompanySupervisor().firestore();
+      await assertSucceeds(db.collection('leave_requests').doc('leave-2').update({
+        status: 'approved',
+        approvedBy: 'supervisor-2',
+        approvedAt: Date.now(),
+      }));
+    });
+
+    test('assigned supervisor can update own task approval', async () => {
+      const db = getSupervisorAuth('supervisor-1').firestore();
+      await assertSucceeds(db.collection('task_approvals').doc('approval-1').update({ status: 'returned' }));
+    });
+
+    test('other-company supervisor cannot update a task approval', async () => {
+      const db = getOtherCompanySupervisor().firestore();
+      await assertFails(db.collection('task_approvals').doc('approval-1').update({ status: 'returned' }));
+    });
+
+    test('assigned supervisor can create a bulk-style approval (no traineeId)', async () => {
+      const db = getSupervisorAuth('supervisor-1').firestore();
+      await assertSucceeds(db.collection('task_approvals').add({
+        taskId: 'task-1',
+        action: 'approved',
+        performedBy: 'supervisor-1',
+        timestamp: Date.now(),
+      }));
+    });
+
+    test('other-company supervisor cannot create an approval for another companys task', async () => {
+      const db = getOtherCompanySupervisor().firestore();
+      await assertFails(db.collection('task_approvals').add({
+        taskId: 'task-1',
+        action: 'approved',
+        performedBy: 'supervisor-2',
+        timestamp: Date.now(),
+      }));
+    });
+
+    test('trainee can create a correction request for own attendance', async () => {
+      const db = getTraineeAuth('trainee-1').firestore();
+      await assertSucceeds(
+        db.collection('attendance_records').doc('att-1').collection('correction_requests').add({
+          requestedBy: 'trainee-1',
+          reason: 'Missed scan',
+          originalValue: 'missing',
+          proposedValue: '08:00',
+          status: 'pending',
+        })
+      );
+    });
+
+    test('trainee cannot create a correction request for another trainee attendance', async () => {
+      const db = getTraineeAuth('trainee-1').firestore();
+      await assertFails(
+        db.collection('attendance_records').doc('att-other').collection('correction_requests').add({
+          requestedBy: 'trainee-1',
+          reason: 'Spoofed',
+          originalValue: 'x',
+          proposedValue: 'y',
+          status: 'pending',
+        })
+      );
+    });
+
+    test('other-company supervisor cannot review an attendance correction', async () => {
+      const db = getOtherCompanySupervisor().firestore();
+      await assertFails(
+        db.collection('attendance_records').doc('att-1').collection('correction_requests').doc('corr-1')
+          .update({ status: 'rejected', reviewedBy: 'supervisor-2', reviewedAt: Date.now() })
+      );
+    });
+
+    test('own-company assigned supervisor can review an attendance correction', async () => {
+      const db = getSupervisorAuth('supervisor-1').firestore();
+      await assertSucceeds(
+        db.collection('attendance_records').doc('att-1').collection('correction_requests').doc('corr-1')
+          .update({ status: 'approved', reviewedBy: 'supervisor-1', reviewedAt: Date.now() })
+      );
+    });
+
+    test('trainee cannot update another trainees correction request', async () => {
+      const db = getOtherCompanyUser().firestore();
+      await assertFails(
+        db.collection('attendance_records').doc('att-1').collection('correction_requests').doc('corr-1')
+          .update({ status: 'approved', reviewedBy: 'other-trainee', reviewedAt: Date.now() })
+      );
+    });
+  });
+
+  describe('FIX-23: input validation', () => {
+    test('task create with a non-string title is denied', async () => {
+      const db = getSupervisorAuth('supervisor-1').firestore();
+      await assertFails(db.collection('tasks').add({
+        traineeId: 'trainee-1',
+        title: 12345,
+        description: 'Description',
+        status: 'pending',
+        priority: 'high',
+        dueDate: Date.now() + 86400000,
+        createdBy: 'supervisor-1',
+      }));
+    });
+
+    test('leave create with an oversized reason is denied', async () => {
+      const db = getTraineeAuth('trainee-1').firestore();
+      await assertFails(db.collection('leave_requests').add({
+        traineeId: 'trainee-1',
+        type: 'sick',
+        startDate: Date.now(),
+        endDate: Date.now() + 86400000,
+        reason: 'x'.repeat(2001),
+        status: 'pending',
+      }));
+    });
+
+    test('task comment create with an oversized body is denied', async () => {
+      const db = getTraineeAuth('trainee-1').firestore();
+      await assertFails(db.collection('task_comments').add({
+        taskId: 'task-1',
+        userId: 'trainee-1',
+        content: 'x'.repeat(5001),
+      }));
+    });
+
+    test('document create with an oversized fileUrl is denied', async () => {
+      const db = getTraineeAuth('trainee-1').firestore();
+      await assertFails(db.collection('documents').add({
+        traineeId: 'trainee-1',
+        type: 'medical',
+        fileName: 'medical.pdf',
+        fileUrl: 'https://example.com/' + 'x'.repeat(2049),
+        fileSize: 1024,
+        mimeType: 'application/pdf',
+        status: 'pending',
+      }));
+    });
+  });
+
+  describe('Real client query patterns remain provable', () => {
+    test('supervisor can list own-company users by documentId in (attendance monitor)', async () => {
+      const db = getSupervisorAuth('supervisor-1').firestore();
+      await assertSucceeds(db.collection('users')
+        .where('__name__', 'in', ['trainee-1', 'supervisor-1']).get());
+    });
+
+    test('supervisor can fetch a leave request by documentId query (leave detail)', async () => {
+      const db = getSupervisorAuth('supervisor-1').firestore();
+      await assertSucceeds(db.collection('leave_requests')
+        .where('__name__', '==', 'leave-1').get());
+    });
+
+    test('trainee can fetch own leave request by documentId query', async () => {
+      const db = getTraineeAuth('trainee-1').firestore();
+      await assertSucceeds(db.collection('leave_requests')
+        .where('__name__', '==', 'leave-1').get());
+    });
+
+    test('supervisor can list own-company leave requests by companyId', async () => {
+      const db = getSupervisorAuth('supervisor-1').firestore();
+      await assertSucceeds(db.collection('leave_requests').where('companyId', '==', 'company-1').get());
+    });
+
+    test('coordinator can list tasks for a traineeId in batch', async () => {
+      const db = getCoordinatorAuth().firestore();
+      await assertSucceeds(db.collection('tasks').where('traineeId', 'in', ['trainee-1']).get());
+    });
+
+    test('supervisor can list attendance by qrSessionId (QR display)', async () => {
+      const db = getSupervisorAuth('supervisor-1').firestore();
+      await assertSucceeds(db.collection('attendance_records')
+        .where('qrSessionId', '==', 'qr-session-1').get());
+    });
+
+    test('supervisor can list attendance by traineeId', async () => {
+      const db = getSupervisorAuth('supervisor-1').firestore();
+      await assertSucceeds(db.collection('attendance_records').where('traineeId', '==', 'trainee-1').get());
+    });
+
+    test('supervisor can list tasks by traineeId', async () => {
+      const db = getSupervisorAuth('supervisor-1').firestore();
+      await assertSucceeds(db.collection('tasks').where('traineeId', '==', 'trainee-1').get());
+    });
+
+    test('supervisor can list own tasks by createdBy', async () => {
+      const db = getSupervisorAuth('supervisor-1').firestore();
+      await assertSucceeds(db.collection('tasks').where('createdBy', '==', 'supervisor-1').get());
+    });
+
+    test('coordinator can list documents by traineeId', async () => {
+      const db = getCoordinatorAuth().firestore();
+      await assertSucceeds(db.collection('documents').where('traineeId', '==', 'trainee-1').get());
+    });
+
+    test('trainee can list own tasks by traineeId', async () => {
+      const db = getTraineeAuth('trainee-1').firestore();
+      await assertSucceeds(db.collection('tasks').where('traineeId', '==', 'trainee-1').get());
+    });
+
+    test('supervisor can query trainees by supervisorId (task form picker)', async () => {
+      const db = getSupervisorAuth('supervisor-1').firestore();
+      await assertSucceeds(db.collection('trainees')
+        .where('status', '==', 'active').where('supervisorId', '==', 'supervisor-1').get());
+    });
+
+    test('coordinator can list trainees by companyId', async () => {
+      const db = getCoordinatorAuth().firestore();
+      await assertSucceeds(db.collection('trainees').where('companyId', '==', 'company-1').get());
+    });
+
+    test('supervisor can list DTRs by companyId (SupervisorDTRList)', async () => {
+      const db = getSupervisorAuth('supervisor-1').firestore();
+      await assertSucceeds(db.collection('dtrs').where('companyId', '==', 'company-1').get());
+    });
+
+    test('supervisor can list task comments by taskId', async () => {
+      const db = getSupervisorAuth('supervisor-1').firestore();
+      await assertSucceeds(db.collection('task_comments').where('taskId', '==', 'task-1').get());
+    });
+
+    test('supervisor can list task approvals by taskId', async () => {
+      const db = getSupervisorAuth('supervisor-1').firestore();
+      await assertSucceeds(db.collection('task_approvals').where('taskId', '==', 'task-1').get());
+    });
+
+    test('admin can list tasks unfiltered (report dashboard)', async () => {
+      const db = getAdminAuth().firestore();
+      await assertSucceeds(db.collection('tasks').limit(50).get());
+    });
+
+    test('supervisor unfiltered task list is denied (no cross-tenant bleed)', async () => {
+      const db = getSupervisorAuth('supervisor-1').firestore();
+      await assertFails(db.collection('tasks').get());
     });
   });
 });

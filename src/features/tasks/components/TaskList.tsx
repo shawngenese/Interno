@@ -68,6 +68,13 @@ export function TaskList() {
         ? [filters.traineeId]
         : trainees.map((t) => t.id);
 
+      if (traineeIds.length === 0 && role !== 'admin') {
+        setTasks([]);
+        setError(null);
+        setLoading(false);
+        return;
+      }
+
       const result = await listTasks({
         status: filters.status ? [filters.status] : undefined,
         priority: filters.priority ? [filters.priority] : undefined,

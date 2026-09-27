@@ -84,6 +84,17 @@ service cloud.firestore {
       return getUserDepartmentId() == entityDepartmentId;
     }
     
+    // Company match against a document's own fields (missing-key safe: 'in' check first)
+    function companyFieldMatches(data) {
+      return 'companyId' in data && data.companyId == getUserCompanyId();
+    }
+    
+    // Company match via the document's traineeId -> trainees/{id}.companyId (one get())
+    function traineeCompanyMatches(data) {
+      return 'traineeId' in data &&
+        get(/databases/$(database)/documents/trainees/$(data.traineeId)).data.companyId == getUserCompanyId();
+    }
+    
     function isValidRole(role) {
       return role == 'admin' || role == 'supervisor' || role == 'coordinator' || role == 'trainee';
     }
@@ -95,8 +106,11 @@ service cloud.firestore {
       allow read: if isSignedIn() && (
         isOwner(userId) ||
         isAdmin() ||
-        (isCoordinator() && sameCompany(resource.data.companyId)) ||
-        isSupervisor()
+        (isCoordinator() && companyFieldMatches(resource.data)) ||
+        (isSupervisor() && (
+          companyFieldMatches(resource.data) ||
+          ('traineeId' in resource.data && isSupervisorOf(resource.data.traineeId))
+        ))
       );
       
       allow create: if isSignedIn() && isAdmin() && 
@@ -122,8 +136,12 @@ service cloud.firestore {
     match /trainees/{traineeId} {
       allow read: if isSignedIn() && (
         isAdmin() ||
-        isCoordinator() ||
-        isSupervisor() ||
+        (isCoordinator() && companyFieldMatches(resource.data)) ||
+        (isSupervisor() && (
+          companyFieldMatches(resource.data) ||
+          ('supervisorId' in resource.data && resource.data.supervisorId == request.auth.uid) ||
+          ('externalCompanyId' in resource.data && resource.data.externalCompanyId == getUserCompanyId())
+        )) ||
         isAssignedTrainee(traineeId) ||
         (isTrainee() && resource.data.userId == request.auth.uid)
       );
@@ -133,7 +151,7 @@ service cloud.firestore {
       
       allow update: if isSignedIn() && (
         isAdmin() ||
-        (isCoordinator() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        (isCoordinator() && companyFieldMatches(resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'supervisorId', 'companyId', 'placementType', 'externalCompanyId', 'externalCompanyName', 'status', 'updatedAt'
         ])) ||
         (isSupervisorOf(traineeId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'ojtStatus', 'supervisorId', 'scheduleId'])) ||
@@ -249,20 +267,22 @@ service cloud.firestore {
     match /attendance_records/{recordId} {
       allow read: if isSignedIn() && (
         isAdmin() ||
-        isSupervisor() ||
-        isCoordinator() ||
+        (isCoordinator() && traineeCompanyMatches(resource.data)) ||
+        (isSupervisor() && (
+          traineeCompanyMatches(resource.data) ||
+          ('qrSessionId' in resource.data &&
+            get(/databases/$(database)/documents/qr_sessions/$(resource.data.qrSessionId)).data.createdBy == request.auth.uid)
+        )) ||
         isAssignedTrainee(resource.data.traineeId) ||
         (isTrainee() && resource.data.traineeId == getUserTraineeId()) ||
         (isTrainee() && resource.data.traineeId == request.auth.uid) ||
         isSupervisorOf(resource.data.traineeId) ||
-        isSupervisorOfByField(resource.data.traineeId) ||
-        sameCompany(resource.data.companyId)
+        isSupervisorOfByField(resource.data.traineeId)
       );
       
-      allow create: if isSignedIn() && (
-        (isAssignedTrainee(request.resource.data.traineeId) && request.resource.data.type == 'time_in') ||
-        isSupervisorOrAdmin()
-      ) && request.resource.data.keys().hasAll(['traineeId', 'type', 'timestamp', 'qrSessionId', 'deviceInfo']);
+      // Written only by the validateQRScan Cloud Function (Admin SDK bypasses rules);
+      // a client-writable branch would allow forged qrSessionId attendance.
+      allow create: if false;
       
       // Attendance records are immutable - no updates allowed
       // Corrections are handled via correction_requests subcollection
@@ -283,17 +303,20 @@ service cloud.firestore {
         );
         
         allow create: if isSignedIn() && (
-          isTrainee() ||
+          isAdmin() ||
+          ((isSupervisor() || isCoordinator()) &&
+            traineeCompanyMatches(get(/databases/$(database)/documents/attendance_records/$(recordId)).data)) ||
           isAssignedTrainee(get(/databases/$(database)/documents/attendance_records/$(recordId)).data.traineeId) ||
+          (isTrainee() && get(/databases/$(database)/documents/attendance_records/$(recordId)).data.traineeId == getUserTraineeId()) ||
+          (isTrainee() && get(/databases/$(database)/documents/attendance_records/$(recordId)).data.traineeId == request.auth.uid) ||
           isSupervisorOf(get(/databases/$(database)/documents/attendance_records/$(recordId)).data.traineeId) ||
-          isSupervisorOfByField(get(/databases/$(database)/documents/attendance_records/$(recordId)).data.traineeId) ||
-          isSupervisorOrAdmin()
+          isSupervisorOfByField(get(/databases/$(database)/documents/attendance_records/$(recordId)).data.traineeId)
         ) && request.resource.data.keys().hasAll(['requestedBy', 'reason', 'originalValue', 'proposedValue', 'status']);
         
         allow update: if isSignedIn() && (
           isAdmin() ||
-          isSupervisor() ||
-          isCoordinator() ||
+          ((isSupervisor() || isCoordinator()) &&
+            traineeCompanyMatches(get(/databases/$(database)/documents/attendance_records/$(recordId)).data)) ||
           isSupervisorOf(get(/databases/$(database)/documents/attendance_records/$(recordId)).data.traineeId) ||
           isSupervisorOfByField(get(/databases/$(database)/documents/attendance_records/$(recordId)).data.traineeId)
         ) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedBy', 'reviewedAt', 'reviewNotes']);
@@ -324,19 +347,22 @@ service cloud.firestore {
     match /tasks/{taskId} {
       allow read: if isSignedIn() && (
         isAdmin() ||
-        isSupervisor() ||
-        isCoordinator() ||
+        ((isSupervisor() || isCoordinator()) && (
+          companyFieldMatches(resource.data) ||
+          traineeCompanyMatches(resource.data)
+        )) ||
         isAssignedTrainee(resource.data.traineeId) ||
         (isTrainee() && resource.data.traineeId == getUserTraineeId()) ||
         (isTrainee() && resource.data.traineeId == request.auth.uid) ||
         isSupervisorOf(resource.data.traineeId) ||
         isSupervisorOfByField(resource.data.traineeId) ||
-        sameCompany(resource.data.companyId) ||
         (isSupervisor() && resource.data.createdBy == request.auth.uid)
       );
       
       allow create: if isSignedIn() && isSupervisorOrAdmin() &&
-        request.resource.data.keys().hasAll(['traineeId', 'title', 'description', 'status', 'priority', 'dueDate', 'createdBy']);
+        request.resource.data.keys().hasAll(['traineeId', 'title', 'description', 'status', 'priority', 'dueDate', 'createdBy']) &&
+        request.resource.data.title is string && request.resource.data.title.size() <= 300 &&
+        request.resource.data.description is string && request.resource.data.description.size() <= 5000;
       
       allow update: if isSignedIn() && (
         (isAssignedTrainee(resource.data.traineeId) && 
@@ -375,22 +401,25 @@ service cloud.firestore {
     match /task_approvals/{approvalId} {
       allow read: if isSignedIn() && (
         isAdmin() ||
-        isSupervisor() ||
-        isCoordinator() ||
-        isTrainee()
+        ((isSupervisor() || isCoordinator()) &&
+          companyFieldMatches(get(/databases/$(database)/documents/tasks/$(resource.data.taskId)).data)) ||
+        (isTrainee() &&
+          get(/databases/$(database)/documents/tasks/$(resource.data.taskId)).data.traineeId == getUserTraineeId())
       );
       
-      allow create: if isSignedIn() && (
-        isAdmin() ||
-        isSupervisor() ||
-        isSupervisorOf(request.resource.data.traineeId) ||
-        isSupervisorOfByField(request.resource.data.traineeId)
-      ) && request.resource.data.keys().hasAll(['taskId', 'traineeId', 'status']);
+      allow create: if isSignedIn() &&
+        request.resource.data.keys().hasAll(['taskId', 'action', 'timestamp']) &&
+        (
+          isAdmin() ||
+          ((isSupervisor() || isCoordinator()) &&
+            companyFieldMatches(get(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)).data))
+        );
       
       allow update: if isSignedIn() && (
         isAdmin() ||
-        isSupervisor() ||
-        isCoordinator()
+        ((isSupervisor() || isCoordinator()) && traineeCompanyMatches(resource.data)) ||
+        isSupervisorOf(resource.data.traineeId) ||
+        isSupervisorOfByField(resource.data.traineeId)
       );
       
       allow delete: if isSignedIn() && isAdmin();
@@ -402,19 +431,22 @@ service cloud.firestore {
     match /documents/{documentId} {
       allow read: if isSignedIn() && (
         isAdmin() ||
-        isSupervisor() ||
-        isCoordinator() ||
+        ((isSupervisor() || isCoordinator()) && (
+          companyFieldMatches(resource.data) ||
+          traineeCompanyMatches(resource.data)
+        )) ||
         isAssignedTrainee(resource.data.traineeId) ||
         (isTrainee() && resource.data.traineeId == getUserTraineeId()) ||
         (isTrainee() && resource.data.traineeId == request.auth.uid) ||
         isSupervisorOf(resource.data.traineeId) ||
-        isSupervisorOfByField(resource.data.traineeId) ||
-        sameCompany(resource.data.companyId)
+        isSupervisorOfByField(resource.data.traineeId)
       );
       
       allow create: if isSignedIn() && (
         (isAssignedTrainee(request.resource.data.traineeId) || isSupervisorOrAdmin()) &&
-        request.resource.data.keys().hasAll(['traineeId', 'type', 'fileName', 'fileUrl', 'fileSize', 'mimeType', 'status'])
+        request.resource.data.keys().hasAll(['traineeId', 'type', 'fileName', 'fileUrl', 'fileSize', 'mimeType', 'status']) &&
+        request.resource.data.fileName is string && request.resource.data.fileName.size() <= 255 &&
+        request.resource.data.fileUrl is string && request.resource.data.fileUrl.size() <= 2048
       );
       
       allow update: if isSignedIn() && (
@@ -441,14 +473,15 @@ service cloud.firestore {
     match /dtrs/{dtrId} {
       allow read: if isSignedIn() && (
         isAdmin() ||
-        isSupervisor() ||
-        isCoordinator() ||
+        ((isSupervisor() || isCoordinator()) && (
+          companyFieldMatches(resource.data) ||
+          traineeCompanyMatches(resource.data)
+        )) ||
         isAssignedTrainee(resource.data.traineeId) ||
         (isTrainee() && resource.data.traineeId == getUserTraineeId()) ||
         (isTrainee() && resource.data.traineeId == request.auth.uid) ||
         isSupervisorOf(resource.data.traineeId) ||
-        isSupervisorOfByField(resource.data.traineeId) ||
-        sameCompany(resource.data.companyId)
+        isSupervisorOfByField(resource.data.traineeId)
       );
       
       // Only Cloud Functions can create/update DTRs (via calculateDTR)
@@ -478,16 +511,20 @@ service cloud.firestore {
         );
         
         allow create: if isSignedIn() && (
-          isTrainee() ||
+          isAdmin() ||
+          ((isSupervisor() || isCoordinator()) &&
+            traineeCompanyMatches(get(/databases/$(database)/documents/dtrs/$(dtrId)).data)) ||
           isAssignedTrainee(get(/databases/$(database)/documents/dtrs/$(dtrId)).data.traineeId) ||
+          (isTrainee() && get(/databases/$(database)/documents/dtrs/$(dtrId)).data.traineeId == getUserTraineeId()) ||
+          (isTrainee() && get(/databases/$(database)/documents/dtrs/$(dtrId)).data.traineeId == request.auth.uid) ||
           isSupervisorOf(get(/databases/$(database)/documents/dtrs/$(dtrId)).data.traineeId) ||
           isSupervisorOfByField(get(/databases/$(database)/documents/dtrs/$(dtrId)).data.traineeId)
         );
         
         allow update: if isSignedIn() && (
           isAdmin() ||
-          isSupervisor() ||
-          isCoordinator() ||
+          ((isSupervisor() || isCoordinator()) &&
+            traineeCompanyMatches(get(/databases/$(database)/documents/dtrs/$(dtrId)).data)) ||
           isSupervisorOf(get(/databases/$(database)/documents/dtrs/$(dtrId)).data.traineeId) ||
           isSupervisorOfByField(get(/databases/$(database)/documents/dtrs/$(dtrId)).data.traineeId)
         );
@@ -500,28 +537,33 @@ service cloud.firestore {
     match /leave_requests/{leaveId} {
       allow read: if isSignedIn() && (
         isAdmin() ||
-        isSupervisor() ||
-        isCoordinator() ||
+        ((isSupervisor() || isCoordinator()) && (
+          companyFieldMatches(resource.data) ||
+          traineeCompanyMatches(resource.data)
+        )) ||
         isAssignedTrainee(resource.data.traineeId) ||
         (isTrainee() && resource.data.traineeId == getUserTraineeId()) ||
         (isTrainee() && resource.data.traineeId == request.auth.uid) ||
         isSupervisorOf(resource.data.traineeId) ||
-        isSupervisorOfByField(resource.data.traineeId) ||
-        sameCompany(resource.data.companyId)
+        isSupervisorOfByField(resource.data.traineeId)
       );
       
       allow create: if isSignedIn() && (
         isAssignedTrainee(request.resource.data.traineeId) ||
         (isTrainee() && request.resource.data.traineeId == getUserTraineeId()) ||
         (isTrainee() && request.resource.data.traineeId == request.auth.uid)
-      ) && request.resource.data.keys().hasAll(['traineeId', 'type', 'startDate', 'endDate', 'reason', 'status']);
+      ) && request.resource.data.keys().hasAll(['traineeId', 'type', 'startDate', 'endDate', 'reason', 'status']) &&
+        request.resource.data.reason is string && request.resource.data.reason.size() <= 2000;
       
       allow update: if isSignedIn() && (
         (isAssignedTrainee(resource.data.traineeId) &&
          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'cancelledAt']) &&
          resource.data.status == 'pending' &&
          request.resource.data.status == 'cancelled') ||
-        ((isSupervisor() || isCoordinator() || isSupervisorOf(resource.data.traineeId) || isSupervisorOfByField(resource.data.traineeId)) &&
+        (((isSupervisor() || isCoordinator()) &&
+          (companyFieldMatches(resource.data) || traineeCompanyMatches(resource.data)) ||
+          isSupervisorOf(resource.data.traineeId) ||
+          isSupervisorOfByField(resource.data.traineeId)) &&
          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'approvedBy', 'approvedAt', 'approvalNotes']) &&
          request.resource.data.status in ['approved', 'rejected']) ||
         isAdmin()
@@ -590,18 +632,26 @@ service cloud.firestore {
     // TASK_COMMENTS Collection (subcollection of tasks)
     // ============================================
     match /task_comments/{commentId} {
-      allow read: if isSignedIn() && (
+      allow read: if isSignedIn() && 'taskId' in resource.data && (
         isAdmin() ||
-        isSupervisor() ||
-        isCoordinator() ||
-        isTrainee()
+        (isSupervisor() && (
+          companyFieldMatches(get(/databases/$(database)/documents/tasks/$(resource.data.taskId)).data) ||
+          get(/databases/$(database)/documents/tasks/$(resource.data.taskId)).data.createdBy == request.auth.uid ||
+          isSupervisorOfByField(get(/databases/$(database)/documents/tasks/$(resource.data.taskId)).data.traineeId)
+        )) ||
+        (isCoordinator() &&
+          companyFieldMatches(get(/databases/$(database)/documents/tasks/$(resource.data.taskId)).data)) ||
+        (isTrainee() &&
+          get(/databases/$(database)/documents/tasks/$(resource.data.taskId)).data.traineeId == getUserTraineeId())
       );
       
       allow create: if isSignedIn() && isOwner(request.resource.data.userId) &&
-        request.resource.data.keys().hasAll(['taskId', 'userId', 'content']);
+        request.resource.data.keys().hasAll(['taskId', 'userId', 'content']) &&
+        request.resource.data.content is string && request.resource.data.content.size() <= 5000;
       
       allow update: if isSignedIn() && isOwner(resource.data.userId) &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content']);
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content']) &&
+        request.resource.data.content is string && request.resource.data.content.size() <= 5000;
       
       allow delete: if isSignedIn() && (
         isAdmin() ||
@@ -751,7 +801,9 @@ service cloud.firestore {
       ) && request.resource.data.keys().hasAll([
           'title', 'content', 'authorId', 'authorName', 'companyId',
           'priority', 'status', 'targetRoles', 'pinned'
-        ]);
+        ]) &&
+        request.resource.data.title is string && request.resource.data.title.size() <= 300 &&
+        request.resource.data.content is string && request.resource.data.content.size() <= 10000;
       
       allow update: if isSignedIn() && (
         isAdmin() ||
