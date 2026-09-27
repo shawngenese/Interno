@@ -60,7 +60,7 @@ export function SupervisorAttendanceMonitor() {
           const usersSnap = await getDocs(usersQuery);
           usersSnap.forEach((docSnap) => {
             const data = docSnap.data();
-            const name = data.displayName || `${data.firstName || ''} ${data.lastName || ''}`.trim() || docSnap.id;
+            const name = data.displayName || `${data.firstName || ''} ${data.lastName || ''}`.trim() || data.name || data.email || 'Trainee';
             const matched = trainees.find((t) => t.userId === docSnap.id);
             if (matched) {
               traineeNames[matched.id] = name;
@@ -70,7 +70,7 @@ export function SupervisorAttendanceMonitor() {
 
         for (const t of trainees) {
           if (!(t.id in traineeNames)) {
-            traineeNames[t.id] = t.id;
+            traineeNames[t.id] = t.name || 'Trainee';
           }
         }
 

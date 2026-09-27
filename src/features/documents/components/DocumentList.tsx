@@ -116,17 +116,11 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
       const uniqueTraineeIds = [...new Set(result.data.map(d => d.traineeId).filter(Boolean))];
       const nameEntries = await Promise.all(
         uniqueTraineeIds.map(async (id) => {
-          const { getFirestoreInstancePublic } = await import('@/config/firebase');
-          const { doc, getDoc } = await import('firebase/firestore');
-          const db = getFirestoreInstancePublic();
-          const traineeSnap = await getDoc(doc(db, 'trainees', id));
-          if (!traineeSnap.exists()) return { id, name: id.slice(0, 8) + '...' };
-          const userId = traineeSnap.data()?.userId;
-          if (!userId) return { id, name: id.slice(0, 8) + '...' };
-          const name = await resolveDocName('users', userId, 'displayName');
-          if (name) return { id, name };
-          const email = await resolveDocName('users', userId, 'email');
-          return { id, name: email || id.slice(0, 8) + '...' };
+          let name = await resolveDocName('trainees', id);
+          if (!name) {
+            name = await resolveDocName('users', id);
+          }
+          return { id, name: name || 'Trainee' };
         }),
       );
       setTraineeNameMap(new Map(nameEntries.map(e => [e.id, e.name])));
@@ -281,7 +275,7 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
                         <FileText className="w-4 h-4 text-primary" />
                         <div>
                           <p className="font-semibold text-foreground text-sm">{typeLabel(doc.type)}</p>
-                          <p className="text-xs text-muted-foreground">{traineeNameMap.get(doc.traineeId) || doc.traineeId.slice(0, 8) + '...'}</p>
+                          <p className="text-xs text-muted-foreground">{traineeNameMap.get(doc.traineeId) || 'Trainee'}</p>
                         </div>
                       </div>
                       {statusBadge(doc.status)}
@@ -352,7 +346,7 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
                   <tbody className="divide-y divide-border">
                     {documents.map((doc) => (
                       <tr key={doc.id} className="h-[44px] hover:bg-muted/50 transition-colors">
-                        <td className="px-4 py-3 font-medium text-foreground">{traineeNameMap.get(doc.traineeId) || doc.traineeId.slice(0, 8) + '...'}</td>
+                        <td className="px-4 py-3 font-medium text-foreground">{traineeNameMap.get(doc.traineeId) || 'Trainee'}</td>
                         <td className="px-4 py-3 text-muted-foreground">{typeLabel(doc.type)}</td>
                         <td className="px-4 py-3 text-foreground font-medium truncate max-w-xs">{doc.fileName}</td>
                         <td className="px-4 py-3 text-muted-foreground">{formatSize(doc.fileSize)}</td>

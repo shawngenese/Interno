@@ -3,6 +3,7 @@ import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, getDocs, query, where, limit } from 'firebase/firestore';
 import { useAuth } from '@/features/auth';
 import { PlacementRequestForm } from '@/features/coordinator/components/PlacementRequestForm';
+import { Modal } from '@/shared/components/Modal';
 
 interface Company {
   id: string;
@@ -69,35 +70,6 @@ export function CompanyBrowser() {
     setSelectedCompany(company);
     setShowRequestForm(true);
   };
-
-  if (showRequestForm && selectedCompany) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              setShowRequestForm(false);
-              setSelectedCompany(null);
-            }}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <h2 className="text-xl font-bold text-foreground">
-            Request Placement at {selectedCompany.name}
-          </h2>
-        </div>
-        <PlacementRequestForm
-          onSuccess={() => {
-            setShowRequestForm(false);
-            setSelectedCompany(null);
-          }}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className="bg-card rounded-xl shadow-sm border border-border">
@@ -182,6 +154,30 @@ export function CompanyBrowser() {
           </div>
         )}
       </div>
+
+      <Modal
+        open={showRequestForm && Boolean(selectedCompany)}
+        onClose={() => {
+          setShowRequestForm(false);
+          setSelectedCompany(null);
+        }}
+        title={`Request Placement - ${selectedCompany?.name || ''}`}
+        size="lg"
+      >
+        {selectedCompany && (
+          <PlacementRequestForm
+            initialCompanyId={selectedCompany.id}
+            onSuccess={() => {
+              setShowRequestForm(false);
+              setSelectedCompany(null);
+            }}
+            onCancel={() => {
+              setShowRequestForm(false);
+              setSelectedCompany(null);
+            }}
+          />
+        )}
+      </Modal>
     </div>
   );
 }

@@ -1,7 +1,15 @@
 import { useState, useCallback, useEffect } from 'react';
-import { generateAttendanceReport, generateDTRReport, generateTaskReport, generateDocumentReport, generateComprehensiveReport, downloadBlob, type ReportFilters } from '../services/reportService';
+import {
+  generateAttendanceReport,
+  generateDTRReport,
+  generateTaskReport,
+  generateDocumentReport,
+  generateComprehensiveReport,
+  downloadBlob,
+  type ReportFilters,
+} from '../services/reportService';
 import { getFirestoreInstancePublic } from '@/config/firebase';
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, documentId } from 'firebase/firestore';
 import { formatDateTime12 } from '@/shared/utils/dateUtils';
 import { useFormValidation } from '@/shared/hooks/useFormValidation';
 import { required } from '@/shared/utils/validators';
@@ -15,6 +23,31 @@ interface ReportGeneratorProps {
   defaultCompanyId?: string;
 }
 
+function toDateInputValue(timestamp: number): string {
+  if (!timestamp) return '';
+  const d = new Date(timestamp);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function startOfDay(dateStr: string): number {
+  if (!dateStr) return 0;
+  const parts = dateStr.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return 0;
+  const [y, m, d] = parts;
+  return new Date(y, m - 1, d, 0, 0, 0, 0).getTime();
+}
+
+function endOfDay(dateStr: string): number {
+  if (!dateStr) return 0;
+  const parts = dateStr.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return 0;
+  const [y, m, d] = parts;
+  return new Date(y, m - 1, d, 23, 59, 59, 999).getTime();
+}
+
 export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
   const [reportType, setReportType] = useState<ReportType>('attendance');
   const [generating, setGenerating] = useState(false);
@@ -23,6 +56,10 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
   const [lastGenerated, setLastGenerated] = useState<string | null>(null);
   const [companies, setCompanies] = useState<{ id: string; name: string }[]>([]);
   const [trainees, setTrainees] = useState<{ id: string; name: string }[]>([]);
+
+  const now = new Date();
+  const initialStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0).getTime();
+  const initialEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
 
   const {
     formData: filters,
@@ -35,8 +72,8 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
   } = useFormValidation<ReportFilters>(
     {
       companyId: defaultCompanyId || '',
-      startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime(),
-      endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getTime(),
+      startDate: initialStart,
+      endDate: initialEnd,
     },
     {
       companyId: [required('Company is required')],
@@ -47,20 +84,27 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
 
   // Load companies
   useEffect(() => {
+    let cancelled = false;
     async function loadCompanies() {
       try {
         const db = getFirestoreInstancePublic();
         const snap = await getDocs(query(collection(db, 'companies'), orderBy('name')));
-        setCompanies(snap.docs.map((d) => ({ id: d.id, name: d.data().name || d.id })));
+        if (!cancelled) {
+          setCompanies(snap.docs.map((d) => ({ id: d.id, name: (d.data().name as string) || d.id })));
+        }
       } catch (err) {
         console.error('Failed to load companies:', err);
       }
     }
     loadCompanies();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // Load trainees when company changes
+  // Load trainees with display names when company changes
   useEffect(() => {
+    let cancelled = false;
     async function loadTrainees() {
       if (!filters.companyId) {
         setTrainees([]);
@@ -71,24 +115,59 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
         const snap = await getDocs(
           query(collection(db, 'trainees'), where('companyId', '==', filters.companyId), where('status', '==', 'active')),
         );
-        setTrainees(snap.docs.map((d) => ({ id: d.id, name: d.data().name || d.id })));
+        if (cancelled) return;
+
+        const traineeList = snap.docs.map((d) => ({
+          id: d.id,
+          name: (d.data().name as string) || '',
+          userId: (d.data().userId as string) || '',
+        }));
+
+        const userIds = [...new Set(traineeList.filter((t) => !t.name && t.userId).map((t) => t.userId))];
+        const userNames: Record<string, string> = {};
+
+        if (userIds.length > 0) {
+          const CHUNK = 30;
+          for (let i = 0; i < userIds.length; i += CHUNK) {
+            const chunk = userIds.slice(i, i + CHUNK);
+            const userSnap = await getDocs(query(collection(db, 'users'), where(documentId(), 'in', chunk)));
+            userSnap.docs.forEach((ud) => {
+              const u = ud.data();
+              userNames[ud.id] = (u.displayName as string) || (u.name as string) || (u.email as string) || ud.id;
+            });
+          }
+        }
+
+        if (!cancelled) {
+          setTrainees(
+            traineeList.map((t) => ({
+              id: t.id,
+              name: t.name || userNames[t.userId] || 'Trainee',
+            })),
+          );
+        }
       } catch (err) {
         console.error('Failed to load trainees:', err);
       }
     }
     loadTrainees();
+    return () => {
+      cancelled = true;
+    };
   }, [filters.companyId]);
 
   const handleDateChange = (field: 'startDate' | 'endDate', value: string) => {
-    setFilters((prev) => ({ ...prev, [field]: value ? new Date(value).getTime() : 0 }));
+    const ts = field === 'startDate' ? startOfDay(value) : endOfDay(value);
+    setFilters((prev) => ({ ...prev, [field]: ts }));
     handleBlur(field)();
   };
 
   const handleCompanyChange = useCallback(
     (value: string) => {
       handleChange('companyId')(value);
+      setFilters((prev) => ({ ...prev, traineeId: '' }));
     },
-    [handleChange],
+    [handleChange, setFilters],
   );
 
   const handleTraineeChange = useCallback(
@@ -98,65 +177,69 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
     [setFilters],
   );
 
-  const doGenerate = useCallback(async (data: ReportFilters) => {
-    setGenerating(true);
-    setError(null);
+  const doGenerate = useCallback(
+    async (data: ReportFilters) => {
+      setGenerating(true);
+      setError(null);
 
-    try {
-      let pdfBlob: Blob | null = null;
-      let excelBlob: Blob | null = null;
+      try {
+        let pdfBlob: Blob | null = null;
+        let excelBlob: Blob | null = null;
 
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      const baseFilename = `${reportType}_report_${timestamp}`;
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        const baseFilename = `${reportType}_report_${timestamp}`;
 
-      switch (reportType) {
-        case 'attendance': {
-          const { pdf, excel } = await generateAttendanceReport(data);
-          pdfBlob = pdf;
-          excelBlob = excel;
-          break;
+        switch (reportType) {
+          case 'attendance': {
+            const { pdf, excel } = await generateAttendanceReport(data);
+            pdfBlob = pdf;
+            excelBlob = excel;
+            break;
+          }
+          case 'dtr': {
+            const { pdf, excel } = await generateDTRReport(data);
+            pdfBlob = pdf;
+            excelBlob = excel;
+            break;
+          }
+          case 'tasks': {
+            const { pdf, excel } = await generateTaskReport(data);
+            pdfBlob = pdf;
+            excelBlob = excel;
+            break;
+          }
+          case 'documents': {
+            const { pdf, excel } = await generateDocumentReport(data);
+            pdfBlob = pdf;
+            excelBlob = excel;
+            break;
+          }
+          case 'comprehensive': {
+            const { pdf, excel } = await generateComprehensiveReport(data);
+            pdfBlob = pdf;
+            excelBlob = excel;
+            break;
+          }
         }
-        case 'dtr': {
-          const { pdf, excel } = await generateDTRReport(data);
-          pdfBlob = pdf;
-          excelBlob = excel;
-          break;
+
+        if (format === 'pdf' || format === 'both') {
+          if (pdfBlob) downloadBlob(pdfBlob, `${baseFilename}.pdf`);
         }
-        case 'tasks': {
-          const { pdf, excel } = await generateTaskReport(data);
-          pdfBlob = pdf;
-          excelBlob = excel;
-          break;
+        if (format === 'excel' || format === 'both') {
+          if (excelBlob) downloadBlob(excelBlob, `${baseFilename}.xlsx`);
         }
-        case 'documents': {
-          const { pdf, excel } = await generateDocumentReport(data);
-          pdfBlob = pdf;
-          excelBlob = excel;
-          break;
-        }
-        case 'comprehensive': {
-          const { pdf, excel } = await generateComprehensiveReport(data);
-          pdfBlob = pdf;
-          excelBlob = excel;
-          break;
-        }
+
+        setLastGenerated(formatDateTime12(Date.now()));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Report generation failed';
+        console.error('Report error:', err);
+        setError(message);
+      } finally {
+        setGenerating(false);
       }
-
-      if (format === 'pdf' || format === 'both') {
-        if (pdfBlob) downloadBlob(pdfBlob, `${baseFilename}.pdf`);
-      }
-      if (format === 'excel' || format === 'both') {
-        if (excelBlob) downloadBlob(excelBlob, `${baseFilename}.xlsx`);
-      }
-
-      setLastGenerated(formatDateTime12(Date.now()));
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Report generation failed';
-      setError(message);
-    } finally {
-      setGenerating(false);
-    }
-  }, [reportType, format]);
+    },
+    [reportType, format],
+  );
 
   const reportTypes: { value: ReportType; label: string; description: string }[] = [
     { value: 'attendance', label: 'Attendance', description: 'Time in/out records with late/undertime' },
@@ -166,8 +249,8 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
     { value: 'comprehensive', label: 'Comprehensive', description: 'All modules combined (Excel multi-sheet + PDF)' },
   ];
 
-  const startDateValue = filters.startDate ? new Date(filters.startDate).toISOString().split('T')[0] : '';
-  const endDateValue = filters.endDate ? new Date(filters.endDate).toISOString().split('T')[0] : '';
+  const startDateValue = toDateInputValue(filters.startDate);
+  const endDateValue = toDateInputValue(filters.endDate);
 
   return (
     <div className="space-y-6">
@@ -177,10 +260,7 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
           <p className="text-xs text-muted-foreground mt-0.5">Export structured PDF and Excel analytical reports</p>
         </div>
 
-        <form
-          onSubmit={handleSubmit(doGenerate)}
-          className="space-y-6"
-        >
+        <form onSubmit={handleSubmit(doGenerate)} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label htmlFor="report-type" className="block text-xs font-semibold text-foreground mb-1.5">
@@ -192,21 +272,21 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
                 onChange={(e) => setReportType(e.target.value as ReportType)}
                 className="w-full h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
-                {reportTypes.map(t => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
+                {reportTypes.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
                 ))}
               </select>
               <p className="mt-1.5 text-xs text-muted-foreground">
-                {reportTypes.find(t => t.value === reportType)?.description}
+                {reportTypes.find((t) => t.value === reportType)?.description}
               </p>
             </div>
 
             <div>
-              <span className="block text-xs font-semibold text-foreground mb-1.5">
-                Output Format
-              </span>
+              <span className="block text-xs font-semibold text-foreground mb-1.5">Output Format</span>
               <div className="flex gap-4 pt-2">
-                {(['pdf', 'excel', 'both'] as const).map(f => (
+                {(['pdf', 'excel', 'both'] as const).map((f) => (
                   <label key={f} className="flex items-center gap-2 cursor-pointer">
                     <input
                       id={`format-${f}`}
@@ -238,7 +318,9 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
               >
                 <option value="">Select Company</option>
                 {companies.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
                 ))}
               </FormSelect>
             </FormField>
@@ -287,7 +369,9 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
               >
                 <option value="">All Trainees in Company</option>
                 {trainees.map((t) => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
                 ))}
               </FormSelect>
             </FormField>
@@ -304,37 +388,28 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
           </div>
 
           {error && (
-            <div role="alert" className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm flex items-center gap-2">
+            <div
+              role="alert"
+              className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm flex items-center gap-2"
+            >
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
           <div className="flex flex-wrap items-center gap-3 pt-2">
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              isLoading={generating}
-            >
+            <Button type="submit" variant="primary" size="lg" isLoading={generating}>
               <Download className="w-4 h-4 mr-2" />
               Generate Report ({format.toUpperCase()})
             </Button>
 
-            <Button
-              type="button"
-              variant="secondary"
-              size="lg"
-              onClick={() => window.print()}
-            >
+            <Button type="button" variant="secondary" size="lg" onClick={() => window.print()}>
               <Printer className="w-4 h-4 mr-2" />
               Print View
             </Button>
 
             {lastGenerated && (
-              <span className="text-xs text-muted-foreground ml-auto">
-                Last generated: {lastGenerated}
-              </span>
+              <span className="text-xs text-muted-foreground ml-auto">Last generated: {lastGenerated}</span>
             )}
           </div>
         </form>
@@ -342,11 +417,21 @@ export function ReportGenerator({ defaultCompanyId }: ReportGeneratorProps) {
         <div className="mt-8 p-4 bg-muted/30 rounded-xl border border-border text-xs text-muted-foreground space-y-2">
           <h4 className="font-bold text-foreground text-sm">Report Capabilities</h4>
           <ul className="list-disc list-inside space-y-1">
-            <li><strong className="text-foreground">Attendance:</strong> Full punch logs with late/undertime calculations and locations</li>
-            <li><strong className="text-foreground">DTR:</strong> Official Daily Time Records with regular, OT, tardiness, and night differential</li>
-            <li><strong className="text-foreground">Tasks:</strong> Assignments, progress, completion status, due dates, and supervisor review notes</li>
-            <li><strong className="text-foreground">Documents:</strong> Compliance records, checklist approvals, upload dates, and review state</li>
-            <li><strong className="text-foreground">Comprehensive:</strong> All modules bundled into a multi-sheet Excel workbook and summary PDF</li>
+            <li>
+              <strong className="text-foreground">Attendance:</strong> Full punch logs with late/undertime calculations and locations
+            </li>
+            <li>
+              <strong className="text-foreground">DTR:</strong> Official Daily Time Records with regular, OT, tardiness, and night differential
+            </li>
+            <li>
+              <strong className="text-foreground">Tasks:</strong> Assignments, progress, completion status, due dates, and supervisor review notes
+            </li>
+            <li>
+              <strong className="text-foreground">Documents:</strong> Compliance records, checklist approvals, upload dates, and review state
+            </li>
+            <li>
+              <strong className="text-foreground">Comprehensive:</strong> All modules bundled into a multi-sheet Excel workbook and summary PDF
+            </li>
           </ul>
         </div>
       </div>

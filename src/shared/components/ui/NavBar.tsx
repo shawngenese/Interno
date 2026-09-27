@@ -7,7 +7,7 @@ export const NavBar: React.FC = () => {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-3">
             <svg
-              className="w-6 h-6 text-[var(--labelPrimary)]"
+              className="w-6 h-6 text-foreground"
               viewBox="0 0 24 24"
               fill="currentColor"
             >
@@ -17,13 +17,13 @@ export const NavBar: React.FC = () => {
           </div>
           <div className="flex items-center gap-4">
             <svg
-              className="w-5 h-5 text-[var(--labelSecondary)]"
+              className="w-5 h-5 text-muted-foreground"
               viewBox="0 0 24 24"
               fill="currentColor"
             >
               <path d="M13 2L3 14h9l-1 8 12-4v4h2V8h-4v4h2V4Z" />
             </svg>
-            <span className="text-sm text-[var(--labelSecondary)]">Admin</span>
+            <span className="text-sm text-muted-foreground">Admin</span>
           </div>
         </div>
       </div>

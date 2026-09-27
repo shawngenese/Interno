@@ -10,7 +10,7 @@ import { Modal } from '@/shared/components/Modal';
 import { Button } from '@/shared/components/ui/Button';
 import { Skeleton } from '@/shared/components/Skeleton';
 import { EmptyState } from '@/shared/components/EmptyState';
-import { Plus } from 'lucide-react';
+import { Plus, Megaphone } from 'lucide-react';
 import { doc, getDoc } from 'firebase/firestore';
 import type { Announcement, AnnouncementStatus, AnnouncementPriority } from '../types';
 
@@ -213,6 +213,7 @@ export function AnnouncementList({ companyId: companyIdProp, viewerRole }: Annou
           </div>
         ) : announcements.length === 0 ? (
           <EmptyState
+            icon={Megaphone}
             title="No announcements found"
             description="There are currently no active announcements or updates posted."
           />

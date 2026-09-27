@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { listDTRs, listCorrectionRequests, approveDTR, rejectDTR, reviewCorrectionRequest } from '../services/dtrService';
 import { useSupervisor } from '@/shared/hooks/useSupervisor';
 import { useAuth } from '@/features/auth';
+import { getAssignedTrainees } from '@/features/supervisor/services/supervisorService';
 import { useToast } from '@/shared/components/Toast';
 import { formatDateFull, formatTime12 } from '@/shared/utils/dateUtils';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
@@ -36,6 +37,8 @@ export function SupervisorDTRList() {
   const { role } = useAuth();
   const { supervisor } = useSupervisor();
   const [dtrs, setDtrs] = useState<DTREntry[]>([]);
+  const [trainees, setTrainees] = useState<{ id: string; name: string }[]>([]);
+  const [traineeNameMap, setTraineeNameMap] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ListDTRParams>({ page: 1, limit: 20, status: 'pending' });
   const [total, setTotal] = useState(0);
@@ -52,6 +55,31 @@ export function SupervisorDTRList() {
     danger?: boolean;
   } | null>(null);
 
+  useEffect(() => {
+    let isMounted = true;
+    async function loadTrainees() {
+      if (!supervisor) return;
+      try {
+        const assigned = await getAssignedTrainees(supervisor.id, supervisor.companyId);
+        if (!isMounted) return;
+        const opts = assigned.map((t) => ({
+          id: t.id,
+          name: t.name || t.profile?.studentId || 'Trainee',
+        }));
+        setTrainees(opts);
+        setTraineeNameMap((prev) => {
+          const next = new Map(prev);
+          opts.forEach((t) => next.set(t.id, t.name));
+          return next;
+        });
+      } catch (err) {
+        console.error('Failed to load trainees for DTR list:', err);
+      }
+    }
+    loadTrainees();
+    return () => { isMounted = false; };
+  }, [supervisor]);
+
   const fetchDTRs = useCallback(async () => {
     if (!supervisor) return;
     setLoading(true);
@@ -65,13 +93,48 @@ export function SupervisorDTRList() {
       const result = await listDTRs({ ...filters, companyId });
       setDtrs(result.data);
       setTotal(result.total);
+
+      // Resolve any missing trainee IDs
+      const uniqueIds = [...new Set(result.data.map((d) => d.traineeId).filter(Boolean))];
+      const missing = uniqueIds.filter((id) => !traineeNameMap.has(id));
+      if (missing.length > 0) {
+        const { getFirestoreInstancePublic } = await import('@/config/firebase');
+        const { doc, getDoc } = await import('firebase/firestore');
+        const db = getFirestoreInstancePublic();
+        const resolvedEntries: [string, string][] = [];
+        for (const tId of missing) {
+          try {
+            const tSnap = await getDoc(doc(db, 'trainees', tId));
+            if (tSnap.exists()) {
+              const tData = tSnap.data();
+              let name = (tData.name as string) || '';
+              if (!name && tData.userId) {
+                const uSnap = await getDoc(doc(db, 'users', tData.userId as string));
+                if (uSnap.exists()) {
+                  name = (uSnap.data().displayName as string) || (uSnap.data().email as string) || '';
+                }
+              }
+              resolvedEntries.push([tId, name || (tData.email as string) || 'Trainee']);
+            }
+          } catch (e) {
+            console.warn('[SupervisorDTRList] Name resolution notice:', e);
+          }
+        }
+        if (resolvedEntries.length > 0) {
+          setTraineeNameMap((prev) => {
+            const next = new Map(prev);
+            resolvedEntries.forEach(([id, name]) => next.set(id, name));
+            return next;
+          });
+        }
+      }
     } catch (err) {
       console.error('Failed to load DTRs:', err);
       setError('Failed to load DTRs. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, [filters, supervisor]);
+  }, [filters, supervisor, traineeNameMap]);
 
   useEffect(() => {
     fetchDTRs();
@@ -160,6 +223,19 @@ export function SupervisorDTRList() {
             <p className="text-xs text-muted-foreground mt-0.5">Review and approve daily time records submitted by trainees</p>
           </div>
           <div className="flex flex-wrap items-center gap-2.5">
+            {trainees.length > 0 && (
+              <select
+                value={filters.traineeId || ''}
+                onChange={(e) => setFilters(f => ({ ...f, traineeId: e.target.value || undefined, page: 1 }))}
+                aria-label="Filter by trainee"
+                className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">All Trainees</option>
+                {trainees.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            )}
             <select
               value={filters.status || ''}
               onChange={(e) => setFilters(f => ({ ...f, status: e.target.value as DTRStatus | undefined, page: 1 }))}
@@ -242,7 +318,9 @@ export function SupervisorDTRList() {
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-semibold text-foreground text-sm">Trainee #{dtr.traineeId.slice(0, 8)}</p>
+                      <p className="font-semibold text-foreground text-sm">
+                        {traineeNameMap.get(dtr.traineeId) || 'Trainee'}
+                      </p>
                       <p className="text-xs text-muted-foreground">{formatDateFull(dtr.date)}</p>
                     </div>
                     {statusBadge(dtr.status)}
@@ -322,7 +400,7 @@ export function SupervisorDTRList() {
                       className="h-[44px] hover:bg-muted/50 cursor-pointer transition-colors"
                       onClick={() => handleView(dtr)}
                     >
-                      <td className="px-4 py-3 font-medium text-foreground">{dtr.traineeId.slice(0, 8)}...</td>
+                      <td className="px-4 py-3 font-medium text-foreground">{traineeNameMap.get(dtr.traineeId) || 'Trainee'}</td>
                       <td className="px-4 py-3 text-muted-foreground">{formatDateFull(dtr.date)}</td>
                       <td className="px-4 py-3 font-semibold text-foreground">{minutesToHours(dtr.regularMinutes)}</td>
                       <td className="px-4 py-3 font-semibold text-primary">{minutesToHours(dtr.overtimeMinutes)}</td>
@@ -381,7 +459,7 @@ export function SupervisorDTRList() {
       {selectedDTR && (
         <Modal
           open={showDetail}
-          title={`DTR Detail: ${selectedDTR.traineeId.slice(0, 8)}... - ${formatDateFull(selectedDTR.date)}`}
+          title={`DTR Detail: ${traineeNameMap.get(selectedDTR.traineeId) || 'Trainee'} - ${formatDateFull(selectedDTR.date)}`}
           size="lg"
           onClose={() => { setShowDetail(false); setSelectedDTR(null); }}
         >
@@ -463,7 +541,9 @@ export function SupervisorDTRList() {
                       <div key={c.id} className="p-4 bg-muted/30 rounded-xl border border-border space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-semibold uppercase px-2 py-0.5 rounded bg-muted text-foreground">{c.status}</span>
-                          <span className="text-xs text-muted-foreground">by {c.requestedBy.slice(0, 8)}...</span>
+                          <span className="text-xs text-muted-foreground">
+                            by {traineeNameMap.get(c.traineeId) || traineeNameMap.get(c.requestedBy) || 'Trainee'}
+                          </span>
                         </div>
                         <p className="text-sm text-foreground"><span className="text-muted-foreground">Reason:</span> {c.reason}</p>
                         <div className="text-xs text-muted-foreground">

@@ -764,10 +764,12 @@ service cloud.firestore {
     match /evaluations/{evaluationId} {
       allow read: if isSignedIn() && (
         isAdmin() ||
-        isCoordinator() ||
+        (isCoordinator() && (resource.data.status != 'draft' || resource.data.supervisorId == request.auth.uid)) ||
         (isSupervisor() && resource.data.supervisorId == request.auth.uid) ||
-        (isTrainee() && resource.data.traineeId == getUserTraineeId()) ||
-        (isTrainee() && resource.data.traineeId == request.auth.uid)
+        (isTrainee() && resource.data.status != 'draft' && (
+          resource.data.traineeId == getUserTraineeId() ||
+          resource.data.traineeId == request.auth.uid
+        ))
       );
       
       allow create: if isSignedIn() && (

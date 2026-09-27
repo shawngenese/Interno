@@ -16,6 +16,7 @@ import {
   UserPlus,
   ClipboardCheck,
   Bell,
+  Megaphone,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -31,7 +32,7 @@ const navigation = [
   { name: 'Verify Companies', href: '/coordinator/companies', icon: Building2 },
   { name: 'Invite Supervisors', href: '/coordinator/invite-supervisors', icon: UserPlus },
   { name: 'Evaluations', href: '/coordinator/evaluations', icon: ClipboardCheck },
-  { name: 'Announcements', href: '/coordinator/announcements', icon: Bell },
+  { name: 'Announcements', href: '/coordinator/announcements', icon: Megaphone },
 ];
 
 export function CoordinatorLayout({ children }: { children: ReactNode }) {

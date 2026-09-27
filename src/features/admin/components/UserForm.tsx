@@ -253,7 +253,7 @@ export function UserForm({ editingId, defaultRole, onCancel, onSaved }: UserForm
             >
               <option value="">Select Supervisor (Optional)</option>
               {supervisors.map((sup) => (
-                <option key={sup.id} value={sup.id}>{sup.userName || sup.userEmail || sup.id}</option>
+                <option key={sup.id} value={sup.id}>{sup.userName || sup.userEmail || 'Supervisor'}</option>
               ))}
             </FormSelect>
           </FormField>

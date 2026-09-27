@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { ChartTooltip } from '@/shared/components/ChartTooltip';
-import { collection, query, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, limit, where, documentId } from 'firebase/firestore';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -63,10 +63,23 @@ export function AdminReportDashboard() {
       ]);
 
       const trainees = traineesSnap.docs.map(d => {
-        const data = d.data() as { status?: string; ojtStatus?: string; companyId?: string; name?: string };
+        const data = d.data() as { status?: string; ojtStatus?: string; companyId?: string; name?: string; userId?: string };
         return { id: d.id, ...data };
       });
       const tasks = tasksSnap.docs.map(d => d.data());
+
+      const userIds = [...new Set(trainees.filter(t => !t.name && t.userId).map(t => t.userId as string))];
+      const userMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        for (let i = 0; i < userIds.length; i += 30) {
+          const chunk = userIds.slice(i, i + 30);
+          const userSnap = await getDocs(query(collection(db, 'users'), where(documentId(), 'in', chunk)));
+          userSnap.docs.forEach(ud => {
+            const u = ud.data();
+            userMap[ud.id] = (u.displayName as string) || (u.name as string) || (u.email as string) || 'Trainee';
+          });
+        }
+      }
 
       const activeTrainees = trainees.filter(t => t.status === 'active').length;
       const pendingTrainees = trainees.filter(t => t.status === 'pending').length;
@@ -123,7 +136,7 @@ export function AdminReportDashboard() {
         totalSupervisors: supervisorsSnap.size,
         traineesByCompany,
         traineesByStatus,
-        trainees: trainees.map(t => ({ id: t.id, name: t.name || t.id })),
+        trainees: trainees.map(t => ({ id: t.id, name: t.name || (t.userId ? userMap[t.userId] : null) || 'Trainee' })),
         recentActivity,
       });
     } catch (err) {

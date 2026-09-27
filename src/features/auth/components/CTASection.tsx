@@ -3,7 +3,7 @@ import { Button } from "@/shared/components/ui/Button"
 
 export const CTASection: React.FC = () => {
   return (
-    <section className="py-16 lg:py-24 bg-[var(--primary)] text-[var(--textInverse)]">
+    <section className="py-16 lg:py-24 bg-primary text-on-primary">
       <div className="max-w-2xl mx-auto text-center">
         <p className="text-lg opacity-90 mb-6">
           Ready to transform your trainee management experience?

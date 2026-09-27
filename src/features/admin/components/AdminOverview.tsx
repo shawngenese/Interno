@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/features/auth';
+import { resolveDocName } from '@/shared/utils/resolveDocName';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -23,7 +25,7 @@ import {
   Building,
   UserCheck,
   RefreshCw,
-  Bell,
+  Megaphone,
   GraduationCap,
 } from 'lucide-react';
 
@@ -78,9 +80,24 @@ interface OverviewData {
 
 export function AdminOverview() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [userName, setUserName] = useState<string>(() => user?.displayName || '');
   const [data, setData] = useState<OverviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user?.uid) {
+      if (user.displayName) {
+        setUserName(user.displayName);
+      } else {
+        resolveDocName('users', user.uid, 'displayName').then((name) => {
+          if (name) setUserName(name);
+          else if (user.email) setUserName(user.email.split('@')[0]);
+        });
+      }
+    }
+  }, [user]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -252,23 +269,32 @@ export function AdminOverview() {
         { name: 'Overdue / Other', value: tasksOverdue || 0, color: 'var(--color-destructive)' },
       ].filter((item) => item.value > 0);
 
-      // Recent Activity
-      const recentActivity = auditSnap.docs.slice(0, 6).map((doc) => {
-        const d = doc.data();
-        let ts = 0;
-        const raw = d.timestamp;
-        if (typeof raw === 'number') {
-          ts = raw;
-        } else if (typeof raw === 'object' && raw && typeof (raw as { toDate?: () => Date }).toDate === 'function') {
-          ts = (raw as { toDate: () => Date }).toDate().getTime();
-        } else if (typeof raw === 'object' && raw) {
+      // Recent Activity - parse and sort chronologically descending
+      const parseTs = (raw: unknown): number => {
+        if (raw == null) return 0;
+        if (typeof raw === 'number') return raw < 1e11 ? raw * 1000 : raw;
+        if (typeof raw === 'string') return new Date(raw).getTime() || 0;
+        if (typeof raw === 'object') {
           const obj = raw as Record<string, unknown>;
+          if (typeof (raw as { toDate?: () => Date }).toDate === 'function') {
+            try { return (raw as { toDate: () => Date }).toDate().getTime(); } catch { /* ignore */ }
+          }
           const seconds = (obj.seconds ?? obj._seconds) as number | undefined;
           const nanoseconds = (obj.nanoseconds ?? obj._nanoseconds) as number | undefined;
           if (typeof seconds === 'number') {
-            ts = seconds * 1000 + Math.floor((nanoseconds ?? 0) / 1_000_000);
+            return seconds * 1000 + Math.floor((nanoseconds ?? 0) / 1_000_000);
           }
         }
+        return 0;
+      };
+
+      const sortedAuditDocs = [...auditSnap.docs].sort((a, b) => {
+        return parseTs(b.data().timestamp) - parseTs(a.data().timestamp);
+      });
+
+      const recentActivity = sortedAuditDocs.slice(0, 6).map((doc) => {
+        const d = doc.data();
+        const ts = parseTs(d.timestamp);
         const diff = Date.now() - ts;
         let time = 'just now';
         if (diff > 86400000) time = `${Math.floor(diff / 86400000)}d ago`;
@@ -419,7 +445,9 @@ export function AdminOverview() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h2 className="text-xl font-bold text-foreground tracking-tight">Dashboard Overview</h2>
+          <h2 className="text-xl font-bold text-foreground tracking-tight">
+            Welcome back{userName ? `, ${userName}` : ''}
+          </h2>
           <p className="text-muted-foreground text-sm mt-0.5">System metrics, real-time attendance, and key activities</p>
         </div>
         <Button variant="ghost" size="sm" onClick={fetchData} className="self-start sm:self-auto gap-1.5 text-xs text-muted-foreground">
@@ -458,7 +486,7 @@ export function AdminOverview() {
             className="flex items-start gap-4 p-5 bg-muted/30 border border-border rounded-xl hover:border-primary/50 hover:bg-muted/60 transition-all text-left cursor-pointer group"
           >
             <div className="p-3 bg-card border border-border rounded-xl group-hover:border-primary/30 transition-colors">
-              <Bell className="h-5 w-5 text-warning" />
+              <Megaphone className="h-5 w-5 text-warning" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-1 mb-1">

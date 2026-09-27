@@ -7,13 +7,14 @@ import { BottomNav } from '@/shared/components/BottomNav';
 import {
   LayoutDashboard,
   GraduationCap,
-  CheckCircle,
+  ListTodo,
   QrCode,
   Clock,
-  FileText,
+  FileClock,
   Calendar,
   ClipboardCheck,
   Bell,
+  Megaphone,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -21,13 +22,13 @@ import {
 const navigation = [
   { name: 'Dashboard', href: '/supervisor', icon: LayoutDashboard },
   { name: 'Trainees', href: '/supervisor/trainees', icon: GraduationCap },
-  { name: 'Tasks', href: '/supervisor/tasks', icon: CheckCircle },
+  { name: 'Tasks', href: '/supervisor/tasks', icon: ListTodo },
   { name: 'QR Code', href: '/supervisor/qr', icon: QrCode },
   { name: 'Attendance', href: '/supervisor/attendance', icon: Clock },
-  { name: 'DTR Approvals', href: '/supervisor/dtr', icon: FileText },
+  { name: 'DTR Approvals', href: '/supervisor/dtr', icon: FileClock },
   { name: 'Leave Requests', href: '/supervisor/leave', icon: Calendar },
   { name: 'Evaluations', href: '/supervisor/evaluations', icon: ClipboardCheck },
-  { name: 'Announcements', href: '/supervisor/announcements', icon: Bell },
+  { name: 'Announcements', href: '/supervisor/announcements', icon: Megaphone },
 ];
 
 export function SupervisorLayout({ children }: { children: ReactNode }) {

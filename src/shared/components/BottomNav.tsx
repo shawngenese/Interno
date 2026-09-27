@@ -8,14 +8,13 @@ import {
   Calendar,
   ClipboardList,
   QrCode,
-  Clock,
-  FileText,
-  CheckCircle,
-  Handshake,
-  Bell,
-  Timer,
+  FileClock,
+  CalendarCheck,
   FolderOpen,
-  Star,
+  FileText,
+  Handshake,
+  Megaphone,
+  ListTodo,
   BarChart3,
   type LucideIcon,
 } from 'lucide-react';
@@ -27,29 +26,28 @@ interface BottomNavItem {
 }
 
 const traineeItems: BottomNavItem[] = [
-  { label: 'Attendance',    href: '/trainee/attendance',    icon: Clock },
-  { label: 'Tasks',         href: '/trainee/tasks',         icon: CheckCircle },
-  { label: 'DTR',           href: '/trainee/dtr',           icon: Timer },
-  { label: 'Documents',     href: '/trainee/documents',     icon: FolderOpen },
-  { label: 'Evaluations',   href: '/trainee/evaluations',   icon: Star },
-  { label: 'Announcements', href: '/trainee/announcements', icon: Bell },
+  { label: 'Dashboard',  href: '/trainee',            icon: LayoutDashboard },
+  { label: 'Attendance', href: '/trainee/attendance', icon: CalendarCheck },
+  { label: 'Tasks',      href: '/trainee/tasks',      icon: ListTodo },
+  { label: 'DTR',        href: '/trainee/dtr',        icon: FileClock },
+  { label: 'Documents',  href: '/trainee/documents',  icon: FolderOpen },
 ];
 
 const adminItems: BottomNavItem[] = [
-  { label: 'Dashboard',   href: '/admin',                icon: LayoutDashboard },
-  { label: 'Trainees',    href: '/admin/trainees',       icon: GraduationCap },
-  { label: 'Companies',   href: '/admin/companies',      icon: Building2 },
-  { label: 'Schedules',    href: '/admin/work-schedules', icon: Calendar },
-  { label: 'Reports',      href: '/admin/reports',        icon: BarChart3 },
-  { label: 'Audit Logs',   href: '/admin/audit-logs',     icon: ClipboardList },
+  { label: 'Dashboard',  href: '/admin',                icon: LayoutDashboard },
+  { label: 'Trainees',   href: '/admin/trainees',       icon: GraduationCap },
+  { label: 'Companies',  href: '/admin/companies',      icon: Building2 },
+  { label: 'Schedules',  href: '/admin/work-schedules', icon: Calendar },
+  { label: 'Reports',    href: '/admin/reports',        icon: BarChart3 },
+  { label: 'Audit Logs', href: '/admin/audit-logs',     icon: ClipboardList },
 ];
 
 const supervisorItems: BottomNavItem[] = [
-  { label: 'Dashboard', href: '/supervisor',            icon: LayoutDashboard },
-  { label: 'Trainees',  href: '/supervisor/trainees',   icon: GraduationCap },
-  { label: 'QR',        href: '/supervisor/qr',         icon: QrCode },
-  { label: 'DTR',       href: '/supervisor/dtr',        icon: FileText },
-  { label: 'Tasks',     href: '/supervisor/tasks',      icon: CheckCircle },
+  { label: 'Dashboard', href: '/supervisor',          icon: LayoutDashboard },
+  { label: 'Trainees',  href: '/supervisor/trainees', icon: GraduationCap },
+  { label: 'QR',        href: '/supervisor/qr',       icon: QrCode },
+  { label: 'DTR',       href: '/supervisor/dtr',      icon: FileClock },
+  { label: 'Tasks',     href: '/supervisor/tasks',    icon: ListTodo },
 ];
 
 const coordinatorItems: BottomNavItem[] = [
@@ -57,7 +55,7 @@ const coordinatorItems: BottomNavItem[] = [
   { label: 'Trainees',      href: '/coordinator/trainees',      icon: GraduationCap },
   { label: 'Placements',    href: '/coordinator/placements',    icon: Handshake },
   { label: 'Documents',     href: '/coordinator/documents',     icon: FileText },
-  { label: 'Announcements', href: '/coordinator/announcements', icon: Bell },
+  { label: 'Announcements', href: '/coordinator/announcements', icon: Megaphone },
 ];
 
 export const BottomNav = React.memo(function BottomNav({ alwaysVisible = false }: { alwaysVisible?: boolean }) {
@@ -80,14 +78,14 @@ export const BottomNav = React.memo(function BottomNav({ alwaysVisible = false }
   return (
     <nav
       aria-label="Main navigation"
-      className={`fixed bottom-[calc(0.875rem+env(safe-area-inset-bottom,0px))] left-1/2 z-50 w-max max-w-[calc(100vw-1.5rem)] -translate-x-1/2 ${alwaysVisible ? '' : 'lg:hidden'}`}
+      className={`fixed bottom-[calc(0.875rem+env(safe-area-inset-bottom,0px))] left-1/2 z-30 w-max max-w-[calc(100vw-1.5rem)] -translate-x-1/2 ${alwaysVisible ? '' : 'lg:hidden'}`}
     >
       <div className="no-scrollbar flex items-end gap-0.5 overflow-x-auto rounded-[26px] border border-border bg-card/70 px-2 py-1.5 shadow-lg backdrop-blur-xl backdrop-saturate-150">
         {items.map((item) => (
           <NavLink
             key={item.href}
             to={item.href}
-            end={item.href === '/admin' || item.href === '/supervisor' || item.href === '/coordinator'}
+            end={item.href === '/admin' || item.href === '/supervisor' || item.href === '/coordinator' || item.href === '/trainee'}
             aria-label={item.label}
             data-label={item.label}
             className={({ isActive }) =>

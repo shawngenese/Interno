@@ -268,7 +268,7 @@ export function WorkScheduleForm({ editingId, viewOnly, onCancel, onSaved }: Wor
                 disabled={viewOnly}
                 className={`min-h-[44px] min-w-[44px] px-2 py-2.5 rounded-lg border text-sm font-medium flex flex-col items-center justify-center transition-all focus:outline-none focus:ring-2 focus:ring-ring ${
                   isSelected
-                    ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                    ? 'bg-primary text-on-primary border-primary shadow-sm'
                     : 'bg-muted/40 text-muted-foreground border-border hover:bg-muted hover:text-foreground'
                 } ${viewOnly ? 'cursor-default opacity-80' : 'cursor-pointer'}`}
                 title={day.fullLabel}

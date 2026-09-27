@@ -10,7 +10,7 @@ export const WhatsNewSection: React.FC = () => {
       </Title>
       <Grid columns="2" gap={8} className="max-w-2xl">
         <div>
-          <p className="text-textSecondary text-lg leading-relaxed">
+          <p className="text-muted-foreground text-lg leading-relaxed">
             Version 2.0 introduces a completely redesigned UI inspired by
             Apple's design system, offering smoother navigation and better
             accessibility for coordinators and supervisors.
@@ -27,8 +27,8 @@ export const WhatsNewSection: React.FC = () => {
             </svg>
           </div>
           <div>
-            <p className="font-medium text-textPrimary">Seamless QR Scanning</p>
-            <p className="text-textSecondary text-sm">Fast and reliable attendance tracking</p>
+            <p className="font-medium text-foreground">Seamless QR Scanning</p>
+            <p className="text-muted-foreground text-sm">Fast and reliable attendance tracking</p>
           </div>
         </div>
       </Grid>

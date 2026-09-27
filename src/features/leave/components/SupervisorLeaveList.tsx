@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { listLeaveRequests, reviewLeaveRequest } from '../services/leaveService';
 import { useSupervisor } from '@/shared/hooks/useSupervisor';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { resolveDocName } from '@/shared/utils/resolveDocName';
 import { Skeleton } from '@/shared/components/Skeleton';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { Button } from '@/shared/components/ui/Button';
@@ -44,6 +45,7 @@ export function SupervisorLeaveList() {
   const { user, role } = useAuth();
   const { supervisor } = useSupervisor();
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
+  const [traineeNames, setTraineeNames] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ListLeaveParams>({ page: 1, limit: 20 });
   const [total, setTotal] = useState(0);
@@ -67,6 +69,20 @@ export function SupervisorLeaveList() {
       if (!signal?.aborted) {
         setLeaves(result.data);
         setTotal(result.total);
+
+        const uniqueTraineeIds = [...new Set(result.data.map((l) => l.traineeId).filter(Boolean))];
+        const nameEntries = await Promise.all(
+          uniqueTraineeIds.map(async (id) => {
+            let name = await resolveDocName('trainees', id);
+            if (!name) {
+              name = await resolveDocName('users', id);
+            }
+            return [id, name || 'Trainee'] as [string, string];
+          }),
+        );
+        if (!signal?.aborted) {
+          setTraineeNames(new Map(nameEntries));
+        }
       }
     } catch (err) {
       if (!signal?.aborted) console.error('Failed to load leave requests:', err);
@@ -152,10 +168,11 @@ export function SupervisorLeaveList() {
               <div key={leave.id} className="rounded-xl border border-border bg-card p-4 space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                   <div className="space-y-1.5 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="font-bold text-foreground text-sm">
-                        {TYPE_LABELS[leave.type]}
+                        {traineeNames.get(leave.traineeId) || 'Trainee'}
                       </span>
+                      <span className="text-xs text-muted-foreground">• {TYPE_LABELS[leave.type]}</span>
                       <span className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full border capitalize ${STATUS_STYLES[leave.status]}`}>
                         {STATUS_LABELS[leave.status]}
                       </span>
@@ -237,7 +254,7 @@ export function SupervisorLeaveList() {
         >
           <div className="space-y-4">
             <p className="text-xs text-muted-foreground">
-              {TYPE_LABELS[actionModal.leave.type]} &middot; {formatDate(actionModal.leave.startDate)} – {formatDate(actionModal.leave.endDate)}
+              <strong className="text-foreground font-semibold">{traineeNames.get(actionModal.leave.traineeId) || 'Trainee'}</strong> &middot; {TYPE_LABELS[actionModal.leave.type]} &middot; {formatDate(actionModal.leave.startDate)} – {formatDate(actionModal.leave.endDate)}
             </p>
             <div>
               <label htmlFor="review-notes" className="block text-xs font-semibold text-foreground mb-1.5">

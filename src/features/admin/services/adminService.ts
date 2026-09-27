@@ -315,13 +315,30 @@ export const adminService = {
     }
     // 1. Auth account via provisioning app (admin session untouched).
     const provisioningAuth = getProvisioningAuth();
-    const credential = await createUserWithEmailAndPassword(provisioningAuth, data.email, data.password);
+    let credential;
+    try {
+      credential = await createUserWithEmailAndPassword(provisioningAuth, data.email.trim(), data.password);
+    } catch (err: unknown) {
+      const firebaseErr = err as { code?: string; message?: string };
+      if (firebaseErr?.code === 'auth/email-already-in-use') {
+        throw new Error('This email is already in use by another account. If the user already exists, check "Link to existing user account".');
+      }
+      if (firebaseErr?.code === 'auth/invalid-email') {
+        throw new Error('Please enter a valid email address.');
+      }
+      if (firebaseErr?.code === 'auth/weak-password') {
+        throw new Error('Password must be at least 6 characters.');
+      }
+      const msg = firebaseErr?.message || 'Failed to create user account';
+      throw new Error(msg);
+    }
+
     const uid = credential.user.uid;
     try {
       // 2. Firestore profile (rules: admin + keys email/role/displayName).
       await setDoc(doc(getFirestoreInstancePublic(), COLLECTIONS.USERS, uid), {
-        email: data.email,
-        displayName: data.displayName,
+        email: data.email.trim(),
+        displayName: data.displayName.trim(),
         role: data.role,
         companyId: data.companyId,
         ...(data.departmentId ? { departmentId: data.departmentId } : {}),
@@ -350,7 +367,7 @@ export const adminService = {
         ...(data.supervisorId ? { supervisorId: data.supervisorId } : {}),
       });
     } catch (err) {
-      console.error('[createUser] setUserRole Cloud Function call failed (claims not set):', err);
+      console.warn('[createUser] setUserRole Cloud Function call failed (claims not set):', err);
       // Non-fatal: AuthProvider falls back to the Firestore doc role.
     }
     audit('create', 'user', uid, { role: data.role, companyId: data.companyId });
@@ -627,8 +644,7 @@ export const adminService = {
         supervisorId: supervisorDocId,
       });
     } catch (err) {
-      console.error('[createSupervisor] setUserRole Cloud Function call failed:', err);
-      throw new Error('Failed to set supervisor custom claims. Please check Cloud Functions.');
+      console.warn('[createSupervisor] setUserRole Cloud Function call failed:', err);
     }
 
     audit('create', 'supervisor', supervisorDocId, { userId: data.userId, companyId: data.companyId });
@@ -706,8 +722,7 @@ export const adminService = {
         departmentId: data.departmentId,
       });
     } catch (err) {
-      console.error('[createCoordinator] setUserRole Cloud Function call failed:', err);
-      throw new Error('Failed to set coordinator custom claims. Please check Cloud Functions.');
+      console.warn('[createCoordinator] setUserRole Cloud Function call failed:', err);
     }
 
     audit('create', 'coordinator', coordinatorDocId, { userId: data.userId, companyId: data.companyId });
@@ -949,7 +964,17 @@ export const adminService = {
       externalSupervisorId: data.externalSupervisorId || null,
       placementStatus: data.placementType === 'external' ? 'pending' : 'active',
       placementNotes: data.placementNotes || null,
-      profile: data.profile || {},
+      profile: {
+        studentId: data.profile?.studentId || '',
+        course: data.profile?.course || '',
+        school: data.profile?.school || '',
+        yearLevel: data.profile?.yearLevel || '',
+        emergencyContact: {
+          name: data.profile?.emergencyContact?.name || '',
+          relationship: data.profile?.emergencyContact?.relationship || '',
+          phone: data.profile?.emergencyContact?.phone || '',
+        },
+      },
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -962,21 +987,27 @@ export const adminService = {
       traineeId: ref.id,
       ...(data.supervisorId ? { supervisorId: data.supervisorId } : {}),
       updatedAt: serverTimestamp(),
+    }).catch((err) => {
+      console.warn('[createTrainee] Could not update users doc:', err);
     });
 
     // Sync supervisor.assignedTrainees if supervisorId provided
     if (data.supervisorId) {
-      const batch = writeBatch(db);
-      batch.update(doc(db, COLLECTIONS.SUPERVISORS, data.supervisorId), {
-        assignedTrainees: arrayUnion(ref.id),
-        updatedAt: serverTimestamp(),
-      });
-      batch.set(
-        doc(db, COLLECTIONS.SUPERVISORS, data.supervisorId, 'assignedTrainees', ref.id),
-        { traineeId: ref.id, assignedAt: serverTimestamp() },
-        { merge: true },
-      );
-      await batch.commit();
+      try {
+        const batch = writeBatch(db);
+        batch.update(doc(db, COLLECTIONS.SUPERVISORS, data.supervisorId), {
+          assignedTrainees: arrayUnion(ref.id),
+          updatedAt: serverTimestamp(),
+        });
+        batch.set(
+          doc(db, COLLECTIONS.SUPERVISORS, data.supervisorId, 'assignedTrainees', ref.id),
+          { traineeId: ref.id, assignedAt: serverTimestamp() },
+          { merge: true },
+        );
+        await batch.commit();
+      } catch (err) {
+        console.warn('[createTrainee] Supervisor sync failed:', err);
+      }
     }
 
     // Sync custom claims via Cloud Function `setUserRole` with traineeId
@@ -992,8 +1023,8 @@ export const adminService = {
         traineeId: ref.id,
       });
     } catch (err) {
-      console.error('[createTrainee] setUserRole Cloud Function call failed:', err);
-      throw new Error('Failed to set trainee custom claims. Please check Cloud Functions.');
+      console.warn('[createTrainee] setUserRole Cloud Function call failed (claims not set):', err);
+      // Non-fatal: AuthProvider falls back to Firestore doc role and traineeId.
     }
 
     audit('create', 'trainee', ref.id, { userId: data.userId, companyId: data.companyId });

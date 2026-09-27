@@ -131,7 +131,9 @@ export const evaluationService = {
       orderBy('createdAt', 'desc')
     );
     const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as Evaluation));
+    return snap.docs
+      .map(d => ({ id: d.id, ...d.data() } as Evaluation))
+      .filter(e => e.status !== 'draft');
   },
 
   async getSupervisorEvaluations(supervisorId: string): Promise<Evaluation[]> {

@@ -4,10 +4,11 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { getStorageInstancePublic } from '@/config/firebase';
 import { TaskForm } from './TaskForm';
 import { formatDateTime12 } from '@/shared/utils/dateUtils';
+import { Modal } from '@/shared/components/Modal';
 import { AlertModal } from '@/shared/components/AlertModal';
 import { Button } from '@/shared/components/ui/Button';
 import { Skeleton } from '@/shared/components/Skeleton';
-import { CheckCircle2, Clock, MessageSquare, Paperclip, Send, Edit, ArrowLeft, Upload } from 'lucide-react';
+import { CheckCircle2, Clock, MessageSquare, Paperclip, Send, Edit, Upload } from 'lucide-react';
 import type { Task, SubmitTaskPayload, ReviewTaskPayload } from '../types';
 import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS, TASK_STATUS_COLORS, TASK_PRIORITY_COLORS } from '../types';
 
@@ -16,7 +17,7 @@ interface TaskDetailProps {
   onBack?: () => void;
 }
 
-export function TaskDetail({ taskId, onBack }: TaskDetailProps) {
+export function TaskDetail({ taskId }: TaskDetailProps) {
   const { user, role } = useAuth();
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
@@ -142,25 +143,8 @@ export function TaskDetail({ taskId, onBack }: TaskDetailProps) {
     : role === 'supervisor' || role === 'admin';
   const isOverdue = task.dueDate < now && task.status !== 'approved';
 
-  if (editing) {
-    return (
-      <div className="space-y-4">
-        <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
-          <ArrowLeft className="w-4 h-4 mr-1.5" /> Cancel editing
-        </Button>
-        <TaskForm taskId={taskId} onSaved={() => { setEditing(false); loadTask(); }} onCancel={() => setEditing(false)} />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      {onBack && (
-        <Button variant="ghost" size="sm" onClick={onBack}>
-          <ArrowLeft className="w-4 h-4 mr-1.5" /> Back to tasks
-        </Button>
-      )}
-
       <div className="bg-card rounded-xl shadow-sm border border-border p-4 md:p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="flex-1 min-w-0">
@@ -310,6 +294,22 @@ export function TaskDetail({ taskId, onBack }: TaskDetailProps) {
           </div>
         </div>
       )}
+
+      <Modal
+        open={editing}
+        title="Edit Task"
+        size="lg"
+        onClose={() => setEditing(false)}
+      >
+        <TaskForm
+          taskId={taskId}
+          onSaved={() => {
+            setEditing(false);
+            loadTask();
+          }}
+          onCancel={() => setEditing(false)}
+        />
+      </Modal>
 
       <AlertModal
         open={alertModal !== null}

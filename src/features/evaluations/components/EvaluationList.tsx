@@ -7,6 +7,7 @@ import { EvaluationReview } from './EvaluationReview';
 import { useAuth } from '@/features/auth';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { Modal } from '@/shared/components/Modal';
 import { Button } from '@/shared/components/ui/Button';
 import { Skeleton } from '@/shared/components/Skeleton';
 import { EmptyState } from '@/shared/components/EmptyState';
@@ -98,7 +99,11 @@ export function EvaluationList({ companyId: companyIdProp, viewerRole, userId: u
         );
         if (!isMounted) return;
 
-        const traineeData = traineeSnap.docs.map((d) => ({ id: d.id, userId: d.data().userId }));
+        const traineeData = traineeSnap.docs.map((d) => ({
+          id: d.id,
+          name: (d.data().name as string) || '',
+          userId: d.data().userId as string,
+        }));
         const uids = [...new Set(traineeData.map((t) => t.userId).filter(Boolean))];
         const userMap = new Map<string, string>();
 
@@ -108,14 +113,15 @@ export function EvaluationList({ companyId: companyIdProp, viewerRole, userId: u
             query(collection(db, 'users'), where('__name__', 'in', chunk))
           );
           usersSnap.docs.forEach((doc) => {
-            userMap.set(doc.id, doc.data().displayName || doc.id);
+            const u = doc.data();
+            userMap.set(doc.id, (u.displayName as string) || (u.name as string) || (u.email as string) || 'Trainee');
           });
         }
         if (!isMounted) return;
 
         setTrainees(traineeData.map((t) => ({
           id: t.id,
-          name: userMap.get(t.userId) || t.id,
+          name: t.name || userMap.get(t.userId) || 'Trainee',
         })));
       } catch (err) {
         if (isMounted) console.error('Failed to load trainees:', err);
@@ -126,6 +132,14 @@ export function EvaluationList({ companyId: companyIdProp, viewerRole, userId: u
   }, [user?.uid, viewerRole]);
 
   const filtered = evaluations.filter((e) => {
+    // Hide other supervisors' in-progress drafts from coordinator
+    if (viewerRole === 'coordinator' && e.status === 'draft' && e.supervisorId !== userId) {
+      return false;
+    }
+    // Trainees should never see drafts
+    if (viewerRole === 'trainee' && e.status === 'draft') {
+      return false;
+    }
     if (filterType && e.type !== filterType) return false;
     if (filterStatus && e.status !== filterStatus) return false;
     return true;
@@ -184,62 +198,93 @@ export function EvaluationList({ companyId: companyIdProp, viewerRole, userId: u
             </select>
             {viewerRole === 'supervisor' && (
               <Button
-                onClick={() => { setShowForm(!showForm); setSelectedTraineeId(''); setSelectedTraineeName(''); }}
-                variant={showForm ? 'secondary' : 'primary'}
+                onClick={() => {
+                  setSelectedTraineeId('');
+                  setSelectedTraineeName('');
+                  setShowForm(true);
+                }}
+                variant="primary"
                 size="md"
               >
-                {showForm ? 'Cancel' : (
-                  <>
-                    <Plus className="w-4 h-4 mr-1.5" />
-                    New Evaluation
-                  </>
-                )}
+                <Plus className="w-4 h-4 mr-1.5" />
+                New Evaluation
               </Button>
             )}
           </div>
         </div>
 
-        {showForm && viewerRole === 'supervisor' && (
-          <div className="mb-6 p-4 bg-muted/40 rounded-xl border border-border">
-            <label htmlFor="select-trainee" className="block text-xs font-semibold text-foreground mb-1.5">
-              Select Trainee to Evaluate
-            </label>
-            <select
-              id="select-trainee"
-              value={selectedTraineeId}
-              onChange={(e) => {
-                const id = e.target.value;
-                setSelectedTraineeId(id);
-                const found = trainees.find((t) => t.id === id);
-                setSelectedTraineeName(found?.name || '');
-              }}
-              aria-label="Select trainee to evaluate"
-              className="w-full h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="">-- Choose a trainee --</option>
-              {trainees.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {showForm && selectedTraineeId && selectedTraineeName && (
-          <div className="mb-6">
-            <EvaluationForm
-              traineeId={selectedTraineeId}
-              traineeName={selectedTraineeName}
-              companyId={companyId}
-              onSuccess={() => {
-                setShowForm(false);
-                setSelectedTraineeId('');
-                setSelectedTraineeName('');
-                loadEvaluations();
-              }}
-              onCancel={() => { setShowForm(false); setSelectedTraineeId(''); setSelectedTraineeName(''); }}
-            />
-          </div>
-        )}
+        <Modal
+          open={showForm}
+          onClose={() => {
+            setShowForm(false);
+            setSelectedTraineeId('');
+            setSelectedTraineeName('');
+          }}
+          title={selectedTraineeName ? `New Evaluation: ${selectedTraineeName}` : 'New Trainee Evaluation'}
+          size="xl"
+        >
+          {!selectedTraineeId ? (
+            <div className="space-y-4 py-2">
+              <div>
+                <label htmlFor="select-trainee" className="block text-xs font-semibold text-foreground mb-1.5">
+                  Select Trainee to Evaluate
+                </label>
+                <select
+                  id="select-trainee"
+                  value={selectedTraineeId}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setSelectedTraineeId(id);
+                    const found = trainees.find((t) => t.id === id);
+                    setSelectedTraineeName(found?.name || '');
+                  }}
+                  aria-label="Select trainee to evaluate"
+                  className="w-full h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">-- Choose a trainee --</option>
+                  {trainees.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between p-3 bg-muted/40 rounded-xl border border-border">
+                <div>
+                  <span className="text-xs text-muted-foreground">Evaluating:</span>
+                  <p className="text-sm font-bold text-foreground">{selectedTraineeName}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedTraineeId('');
+                    setSelectedTraineeName('');
+                  }}
+                >
+                  Change Trainee
+                </Button>
+              </div>
+              <EvaluationForm
+                traineeId={selectedTraineeId}
+                traineeName={selectedTraineeName}
+                companyId={companyId}
+                onSuccess={() => {
+                  setShowForm(false);
+                  setSelectedTraineeId('');
+                  setSelectedTraineeName('');
+                  loadEvaluations();
+                }}
+                onCancel={() => {
+                  setShowForm(false);
+                  setSelectedTraineeId('');
+                  setSelectedTraineeName('');
+                }}
+              />
+            </div>
+          )}
+        </Modal>
 
         {loading ? (
           <div className="space-y-3">

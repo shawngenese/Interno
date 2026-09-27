@@ -1,5 +1,5 @@
 import { getFirestoreInstancePublic } from '@/config/firebase';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, documentId } from 'firebase/firestore';
 import type { Supervisor, Trainee } from '@/features/admin/types';
 import type { DTREntry } from '@/features/dtr/types';
 
@@ -40,7 +40,15 @@ export async function getSupervisorByUserId(userId: string): Promise<Supervisor 
   return null;
 }
 
-/** Get trainees assigned to a supervisor. Queries trainees where supervisorId matches. */
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+  return chunks;
+}
+
+/** Get trainees assigned to a supervisor. Queries trainees where supervisorId matches and resolves user names. */
 export async function getAssignedTrainees(supervisorId: string, _companyId?: string): Promise<Trainee[]> {
   const db = getFirestoreInstancePublic();
 
@@ -50,18 +58,44 @@ export async function getAssignedTrainees(supervisorId: string, _companyId?: str
     where('supervisorId', '==', supervisorId),
   );
   const snap = await getDocs(q);
-  return snap.docs.map(d => {
-    const data = d.data() as Record<string, unknown>;
-    return toEntity<Trainee>(d.id, { ...data, name: data.name as string });
-  });
-}
+  const rawTrainees = snap.docs.map((d) => ({
+    id: d.id,
+    ...(d.data() as Record<string, unknown>),
+  })) as (Trainee & Record<string, unknown>)[];
 
-function chunkArray<T>(arr: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) {
-    chunks.push(arr.slice(i, i + size));
+  const userIds = [...new Set(rawTrainees.map((t) => (t.userId as string) || '').filter(Boolean))];
+  const userMap = new Map<string, { displayName?: string; email?: string }>();
+
+  if (userIds.length > 0) {
+    const chunks = chunkArray(userIds, 30);
+    for (const chunk of chunks) {
+      try {
+        const usersSnap = await getDocs(
+          query(collection(db, COLLECTIONS.USERS), where(documentId(), 'in', chunk))
+        );
+        usersSnap.docs.forEach((docSnap) => {
+          userMap.set(docSnap.id, docSnap.data() as { displayName?: string; email?: string });
+        });
+      } catch (err) {
+        console.warn('[getAssignedTrainees] User lookup error:', err);
+      }
+    }
   }
-  return chunks;
+
+  return rawTrainees.map((t) => {
+    const userData = userMap.get(t.userId);
+    const resolvedName =
+      (t.name as string) ||
+      userData?.displayName ||
+      userData?.email ||
+      t.profile?.studentId ||
+      '';
+
+    return toEntity<Trainee>(t.id, {
+      ...t,
+      name: resolvedName,
+    });
+  });
 }
 
 /** Get pending DTRs for trainees assigned to a supervisor. */

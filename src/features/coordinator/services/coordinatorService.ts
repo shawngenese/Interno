@@ -19,6 +19,47 @@ function chunk<T>(arr: T[], size: number): T[][] {
   return out;
 }
 
+async function resolveTraineeNameMap(
+  db: ReturnType<typeof getFirestoreInstancePublic>,
+  traineeDocs: { id: string; data: () => Record<string, unknown> }[],
+): Promise<Map<string, string>> {
+  const traineeMap = new Map<string, string>();
+  const userIds: string[] = [];
+  const traineeToUser = new Map<string, string>();
+
+  traineeDocs.forEach((d) => {
+    const data = d.data();
+    if (data.name) {
+      traineeMap.set(d.id, data.name as string);
+    }
+    if (data.userId) {
+      userIds.push(data.userId as string);
+      traineeToUser.set(d.id, data.userId as string);
+    }
+  });
+
+  const uniqueUserIds = [...new Set(userIds.filter(Boolean))];
+  const userMap = new Map<string, string>();
+
+  for (const batch of chunk(uniqueUserIds, FIRESTORE_IN_MAX)) {
+    const userSnap = await getDocs(query(collection(db, 'users'), where(documentId(), 'in', batch)));
+    userSnap.docs.forEach((doc) => {
+      const u = doc.data();
+      userMap.set(doc.id, (u.displayName as string) || (u.name as string) || (u.email as string) || 'Trainee');
+    });
+  }
+
+  traineeDocs.forEach((d) => {
+    if (!traineeMap.has(d.id)) {
+      const uId = traineeToUser.get(d.id);
+      const name = (uId ? userMap.get(uId) : null) || (d.data().email as string) || 'Trainee';
+      traineeMap.set(d.id, name);
+    }
+  });
+
+  return traineeMap;
+}
+
 /** Get trainees assigned to a coordinator (via supervisorId or companyId). */
 export async function getCoordinatorTrainees(_coordinatorId: string, companyId: string): Promise<CoordinatorTrainee[]> {
   const db = getFirestoreInstancePublic();
@@ -31,25 +72,16 @@ export async function getCoordinatorTrainees(_coordinatorId: string, companyId: 
     ),
   );
 
-  const userIds = [...new Set(traineeSnap.docs.map((d) => d.data().userId).filter(Boolean))];
-
-  const userMap = new Map<string, Record<string, unknown>>();
-  for (const batch of chunk(userIds, FIRESTORE_IN_MAX)) {
-    const userSnap = await getDocs(
-      query(collection(db, 'users'), where('companyId', '==', companyId), where(documentId(), 'in', batch)),
-    );
-    userSnap.docs.forEach((doc) => userMap.set(doc.id, doc.data()));
-  }
+  const traineeMap = await resolveTraineeNameMap(db, traineeSnap.docs);
 
   return traineeSnap.docs.map((doc) => {
     const data = doc.data();
-    const userData = userMap.get(data.userId) ?? null;
 
     return {
       traineeId: doc.id,
       userId: data.userId || '',
-      name: data.name || (userData?.displayName as string) || 'Unknown',
-      email: (userData?.email as string) || '',
+      name: traineeMap.get(doc.id) || (data.name as string) || 'Trainee',
+      email: (data.email as string) || '',
       departmentId: data.departmentId,
       supervisorId: data.supervisorId,
       companyId: data.companyId,
@@ -75,21 +107,7 @@ export async function getAttendanceSummary(
   );
 
   const traineeIds = traineeSnap.docs.map((d) => d.id);
-
-  const userIds = [...new Set(traineeSnap.docs.map((d) => d.data().userId).filter(Boolean))];
-  const userMap = new Map<string, string>();
-  for (const batch of chunk(userIds, FIRESTORE_IN_MAX)) {
-    const userSnap = await getDocs(
-      query(collection(db, 'users'), where('companyId', '==', companyId), where(documentId(), 'in', batch)),
-    );
-    userSnap.docs.forEach((doc) => userMap.set(doc.id, (doc.data().displayName as string) || 'Unknown'));
-  }
-
-  const traineeNameMap = new Map<string, string>();
-  traineeSnap.docs.forEach((d) => {
-    const userId = d.data().userId as string;
-    traineeNameMap.set(d.id, userMap.get(userId) || 'Unknown');
-  });
+  const traineeNameMap = await resolveTraineeNameMap(db, traineeSnap.docs);
 
   // Batch fetch all DTRs across all trainees
   const dtrCounts = new Map<string, { presentDays: number; lateDays: number; totalRegular: number; totalOvertime: number; totalLate: number; totalUndertime: number }>();
@@ -124,7 +142,7 @@ export async function getAttendanceSummary(
     const acc = dtrCounts.get(traineeId) ?? { presentDays: 0, lateDays: 0, totalRegular: 0, totalOvertime: 0, totalLate: 0, totalUndertime: 0 };
     return {
       traineeId,
-      traineeName: traineeNameMap.get(traineeId) || 'Unknown',
+      traineeName: traineeNameMap.get(traineeId) || 'Trainee',
       totalDays,
       presentDays: acc.presentDays,
       lateDays: acc.lateDays,
@@ -146,21 +164,7 @@ export async function getTaskSummary(companyId: string): Promise<CoordinatorTask
   );
 
   const traineeIds = traineeSnap.docs.map((d) => d.id);
-
-  const userIds = [...new Set(traineeSnap.docs.map((d) => d.data().userId).filter(Boolean))];
-  const userMap = new Map<string, string>();
-  for (const batch of chunk(userIds, FIRESTORE_IN_MAX)) {
-    const userSnap = await getDocs(
-      query(collection(db, 'users'), where('companyId', '==', companyId), where(documentId(), 'in', batch)),
-    );
-    userSnap.docs.forEach((doc) => userMap.set(doc.id, (doc.data().displayName as string) || 'Unknown'));
-  }
-
-  const traineeNameMap = new Map<string, string>();
-  traineeSnap.docs.forEach((d) => {
-    const userId = d.data().userId as string;
-    traineeNameMap.set(d.id, userMap.get(userId) || 'Unknown');
-  });
+  const traineeNameMap = await resolveTraineeNameMap(db, traineeSnap.docs);
 
   const taskCounts = new Map<string, {
     totalTasks: number; pendingTasks: number; inProgressTasks: number;
@@ -195,7 +199,7 @@ export async function getTaskSummary(companyId: string): Promise<CoordinatorTask
 
   return traineeIds.map((traineeId) => ({
     traineeId,
-    traineeName: traineeNameMap.get(traineeId) || 'Unknown',
+    traineeName: traineeNameMap.get(traineeId) || 'Trainee',
     ...(taskCounts.get(traineeId) ?? { totalTasks: 0, pendingTasks: 0, inProgressTasks: 0, submittedTasks: 0, approvedTasks: 0, returnedTasks: 0, overdueTasks: 0 }),
   }));
 }
@@ -209,8 +213,7 @@ export async function getDocumentSummary(companyId: string): Promise<Coordinator
   );
 
   const traineeIds = traineeSnap.docs.map((d) => d.id);
-  const traineeNameMap = new Map<string, string>();
-  traineeSnap.docs.forEach((d) => traineeNameMap.set(d.id, d.data().name || 'Unknown'));
+  const traineeNameMap = await resolveTraineeNameMap(db, traineeSnap.docs);
 
   const requiredDocs: string[] = ['resume', 'endorsement', 'agreement', 'completion'];
 
@@ -240,7 +243,7 @@ export async function getDocumentSummary(companyId: string): Promise<Coordinator
     const acc = docAccum.get(traineeId) ?? { pending: 0, approved: 0, rejected: 0, uploadedTypes: new Set<string>(), total: 0 };
     return {
       traineeId,
-      traineeName: traineeNameMap.get(traineeId) || 'Unknown',
+      traineeName: traineeNameMap.get(traineeId) || 'Trainee',
       totalDocuments: acc.total,
       pendingDocuments: acc.pending,
       approvedDocuments: acc.approved,
@@ -258,6 +261,7 @@ export async function getOJTProgress(companyId: string): Promise<CoordinatorDash
     query(collection(db, 'trainees'), where('companyId', '==', companyId), where('status', '==', 'active')),
   );
 
+  const traineeNameMap = await resolveTraineeNameMap(db, traineeSnap.docs);
   const progress: CoordinatorDashboardData['ojtProgress'] = [];
 
   for (const traineeDoc of traineeSnap.docs) {
@@ -267,7 +271,7 @@ export async function getOJTProgress(companyId: string): Promise<CoordinatorDash
 
     progress.push({
       traineeId: traineeDoc.id,
-      traineeName: traineeData.name || 'Unknown',
+      traineeName: traineeNameMap.get(traineeDoc.id) || (traineeData.name as string) || 'Trainee',
       required,
       completed,
       remaining: Math.max(0, required - completed),
@@ -390,7 +394,7 @@ export async function getSupervisors(companyId: string): Promise<{ id: string; n
   const userMap = new Map<string, Record<string, unknown>>();
   for (const batch of chunk(userIds, FIRESTORE_IN_MAX)) {
     const userSnap = await getDocs(
-      query(collection(db, 'users'), where('companyId', '==', companyId), where(documentId(), 'in', batch)),
+      query(collection(db, 'users'), where(documentId(), 'in', batch)),
     );
     userSnap.docs.forEach((doc) => userMap.set(doc.id, doc.data()));
   }
@@ -400,8 +404,8 @@ export async function getSupervisors(companyId: string): Promise<{ id: string; n
     const userData = userMap.get(data.userId) ?? null;
     return {
       id: d.id,
-      name: (userData?.displayName as string) || data.name || 'Unknown',
-      email: (userData?.email as string) || data.email || '',
+      name: (userData?.displayName as string) || (userData?.name as string) || (data.name as string) || (userData?.email as string) || (data.email as string) || 'Supervisor',
+      email: (userData?.email as string) || (data.email as string) || '',
       companyId: data.companyId,
     };
   });

@@ -52,7 +52,7 @@ export function TraineeEvaluationView({ traineeId: propTraineeId }: TraineeEvalu
     (async () => {
       try {
         const data = await evaluationService.getTraineeEvaluations(traineeId);
-        if (!cancelled) setEvaluations(data);
+        if (!cancelled) setEvaluations(data.filter((e) => e.status !== 'draft'));
       } catch (error) {
         console.error('Failed to load evaluations:', error);
       } finally {

@@ -24,14 +24,15 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   return (
     <Modal open={open} title={title} onClose={onCancel} size="sm">
-      <div className="p-5">
-        <p className="text-sm text-muted-foreground mb-6">{message}</p>
-        <div className="flex items-center justify-end gap-3">
-          <Button type="button" variant="secondary" onClick={onCancel}>
+      <div className="space-y-4">
+        <p className="text-sm text-muted-foreground leading-relaxed">{message}</p>
+        <div className="flex items-center justify-end gap-2.5 pt-2">
+          <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
             {cancelLabel}
           </Button>
           <Button
             type="button"
+            size="sm"
             variant={danger ? 'destructive' : 'primary'}
             onClick={onConfirm}
           >

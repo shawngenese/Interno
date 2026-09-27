@@ -7,7 +7,7 @@ import { TraineeList } from "@/features/dashboard/components/TraineeList"
 
 export const Dashboard: React.FC = () => {
   return (
-    <main className="min-h-screen bg-[var(--surface)] text-[var(--textPrimary)]">
+    <main className="min-h-screen bg-background text-foreground">
       <Container>
         <NavBar />
         <DashboardHeader />

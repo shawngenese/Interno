@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { evaluationService } from '../services/evaluationService';
 import { EVALUATION_CATEGORIES, EVALUATION_TYPE_LABELS, RATING_LABELS } from '../types';
 import type { Evaluation, EvaluationStatus } from '../types';
+import { EvaluationForm } from './EvaluationForm';
 import { useAuth } from '@/features/auth';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import { Button } from '@/shared/components/ui/Button';
 import { Skeleton } from '@/shared/components/Skeleton';
-import { Star, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { Star, CheckCircle2, ShieldCheck, Pencil } from 'lucide-react';
 
 interface EvaluationReviewProps {
   evaluationId: string;
@@ -17,6 +18,7 @@ export function EvaluationReview({ evaluationId, onClose }: EvaluationReviewProp
   const { user, role } = useAuth();
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
   const [reviewComments, setReviewComments] = useState('');
   const [saving, setSaving] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -108,6 +110,38 @@ export function EvaluationReview({ evaluationId, onClose }: EvaluationReviewProp
     );
   }
 
+  const canEditDraft = evaluation.status === 'draft' && (
+    user?.uid === evaluation.supervisorId || role === 'admin' || role === 'supervisor'
+  );
+
+  if (isEditing) {
+    return (
+      <div className="bg-card rounded-xl shadow-sm border border-border p-4 md:p-6 space-y-4">
+        <div className="flex items-center justify-between pb-4 border-b border-border">
+          <div>
+            <h3 className="text-lg font-bold text-foreground">
+              Edit Draft Evaluation: {evaluation.traineeName}
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Update competency ratings, feedback comments, or submit to finalize.
+            </p>
+          </div>
+        </div>
+        <EvaluationForm
+          traineeId={evaluation.traineeId}
+          traineeName={evaluation.traineeName}
+          companyId={evaluation.companyId}
+          initialEvaluation={evaluation}
+          onSuccess={() => {
+            setIsEditing(false);
+            loadEvaluation();
+          }}
+          onCancel={() => setIsEditing(false)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="bg-card rounded-xl shadow-sm border border-border">
       <div className="p-4 md:p-6 border-b border-border">
@@ -120,13 +154,47 @@ export function EvaluationReview({ evaluationId, onClose }: EvaluationReviewProp
               {EVALUATION_TYPE_LABELS[evaluation.type]} • Submitted by {evaluation.supervisorName}
             </p>
           </div>
-          <span className={`inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full border capitalize self-start sm:self-auto ${getStatusBadge(evaluation.status)}`}>
-            {evaluation.status}
-          </span>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            {canEditDraft && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsEditing(true)}
+              >
+                <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                Edit Draft
+              </Button>
+            )}
+            <span className={`inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full border capitalize ${getStatusBadge(evaluation.status)}`}>
+              {evaluation.status}
+            </span>
+          </div>
         </div>
       </div>
 
       <div className="p-4 md:p-6 space-y-6">
+        {evaluation.status === 'draft' && (
+          <div className="p-3.5 bg-muted/40 border border-border rounded-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs">
+            <div className="space-y-0.5">
+              <p className="font-semibold text-foreground">Draft Evaluation (Private)</p>
+              <p className="text-muted-foreground">
+                This draft is only visible to you. Trainees and coordinators will not see it until you submit it.
+              </p>
+            </div>
+            {canEditDraft && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setIsEditing(true)}
+                className="self-start sm:self-auto"
+              >
+                <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                Resume Editing
+              </Button>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-4 text-sm bg-muted/40 p-4 rounded-xl border border-border">
           <div>
             <span className="text-xs text-muted-foreground">Evaluation Period:</span>
@@ -203,6 +271,15 @@ export function EvaluationReview({ evaluationId, onClose }: EvaluationReviewProp
           >
             Close
           </Button>
+          {canEditDraft && (
+            <Button
+              variant="primary"
+              onClick={() => setIsEditing(true)}
+            >
+              <Pencil className="w-4 h-4 mr-1.5" />
+              Edit Draft
+            </Button>
+          )}
           {evaluation.status === 'submitted' && (role === 'coordinator' || role === 'admin') && (
             <>
               <Button

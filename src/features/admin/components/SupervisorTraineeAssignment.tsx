@@ -29,14 +29,17 @@ export function SupervisorTraineeAssignment({ supervisor, onClose, onSuccess }: 
     setLoading(true);
     try {
       const db = getFirestoreInstancePublic();
-      const [traineeResult, resolvedName] = await Promise.all([
-        adminService.listTrainees({ 
-          limit: 500,
-          companyId: supervisor.companyId,
-        }),
-        resolveDocName('users', supervisor.userId, 'displayName').catch(() => supervisor.userId),
-      ]);
-      setSupervisorName(resolvedName);
+      let resolvedName = '';
+      if (supervisor.userId) {
+        resolvedName = await resolveDocName('users', supervisor.userId, 'displayName');
+        if (!resolvedName) resolvedName = await resolveDocName('users', supervisor.userId, 'email');
+      }
+      setSupervisorName(resolvedName || 'Supervisor');
+
+      const traineeResult = await adminService.listTrainees({ 
+        limit: 500,
+        companyId: supervisor.companyId,
+      });
 
       // Resolve other supervisor names for trainees assigned to a different supervisor
       const otherSupNames: Record<string, string> = {};
@@ -50,12 +53,13 @@ export function SupervisorTraineeAssignment({ supervisor, onClose, onSuccess }: 
               if (supDoc.exists()) {
                 const supUserId = (supDoc.data() as Record<string, unknown>).userId as string;
                 if (supUserId) {
-                  const name = await resolveDocName('users', supUserId, 'displayName');
-                  otherSupNames[t.supervisorId!] = name || 'Unknown';
+                  let name = await resolveDocName('users', supUserId, 'displayName');
+                  if (!name) name = await resolveDocName('users', supUserId, 'email');
+                  otherSupNames[t.supervisorId!] = name || 'Supervisor';
                 }
               }
             } catch {
-              otherSupNames[t.supervisorId!] = 'Unknown';
+              otherSupNames[t.supervisorId!] = 'Supervisor';
             }
           }),
       );
@@ -63,8 +67,12 @@ export function SupervisorTraineeAssignment({ supervisor, onClose, onSuccess }: 
 
       const resolved = await Promise.all(
         traineeResult.data.map(async (t) => {
-          const userName = await resolveDocName('users', t.userId, 'displayName');
-          return { ...t, userName };
+          let userName = t.name;
+          if (!userName && t.userId) {
+            userName = await resolveDocName('users', t.userId, 'displayName');
+            if (!userName) userName = await resolveDocName('users', t.userId, 'email');
+          }
+          return { ...t, userName: userName || 'Trainee' };
         }),
       );
       setAllTrainees(resolved);

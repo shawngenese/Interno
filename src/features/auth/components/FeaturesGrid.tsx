@@ -50,8 +50,8 @@ export const FeaturesGrid: React.FC = () => {
                 <path d={feature.icon} />
               </svg>
             </div>
-            <h3 className="font-medium text-textPrimary mb-2">{feature.title}</h3>
-            <p className="text-textSecondary leading-relaxed">
+            <h3 className="font-medium text-foreground mb-2">{feature.title}</h3>
+            <p className="text-muted-foreground leading-relaxed">
               {feature.description}
             </p>
           </Card>

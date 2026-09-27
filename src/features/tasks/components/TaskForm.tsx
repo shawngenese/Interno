@@ -4,7 +4,6 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Button } from '@/shared/components/ui/Button';
-import { CheckSquare } from 'lucide-react';
 import type { CreateTaskPayload, UpdateTaskPayload, Task, TaskPriority } from '../types';
 import { TASK_PRIORITY_LABELS } from '../types';
 
@@ -50,9 +49,13 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
         );
         if (cancelled) return;
 
-        const traineeData = snap.docs.map((d) => ({ id: d.id, userId: d.data().userId as string }));
+        const traineeData = snap.docs.map((d) => ({
+          id: d.id,
+          name: (d.data().name as string) || '',
+          userId: d.data().userId as string,
+        }));
 
-        const fallback = traineeData.map((t) => ({ id: t.id, name: t.userId || t.id }));
+        const fallback = traineeData.map((t) => ({ id: t.id, name: t.name || 'Trainee' }));
         setTrainees(fallback);
 
         const userIds = [...new Set(traineeData.map((t) => t.userId).filter(Boolean))];
@@ -66,14 +69,15 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
             query(collection(db, 'users'), where('__name__', 'in', chunk))
           );
           userSnap.docs.forEach((doc) => {
-            userMap.set(doc.id, doc.data().displayName || doc.data().email || doc.id);
+            const u = doc.data();
+            userMap.set(doc.id, (u.displayName as string) || (u.name as string) || (u.email as string) || 'Trainee');
           });
         }
         if (cancelled) return;
 
         const resolved = traineeData.map((t) => ({
           id: t.id,
-          name: userMap.get(t.userId) || t.userId || t.id,
+          name: t.name || userMap.get(t.userId) || 'Trainee',
         }));
         setTrainees(resolved);
       } catch (err) {
@@ -150,16 +154,9 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-card rounded-xl shadow-sm border border-border p-4 md:p-6">
-      <div className="flex items-center gap-2 mb-6">
-        <CheckSquare className="w-5 h-5 text-primary" />
-        <h2 className="text-lg font-bold text-foreground">
-          {taskId ? 'Edit Task' : 'Create Task'}
-        </h2>
-      </div>
-
+    <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div role="alert" className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm">
+        <div role="alert" className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm">
           {error}
         </div>
       )}

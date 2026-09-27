@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth';
 import { useSupervisor } from '@/shared/hooks/useSupervisor';
+import { resolveDocName } from '@/shared/utils/resolveDocName';
 import { getAssignedTrainees, getPendingDTRs, getTraineeAttendanceSummary } from '../services/supervisorService';
 import { approveDTR, rejectDTR } from '@/features/dtr/services/dtrService';
 import { AnimatedCard } from '@/shared/components/AnimatedCard';
@@ -29,6 +30,7 @@ export function SupervisorDashboard() {
   const navigate = useNavigate();
   const { addToast } = useToast();
   const { supervisor, loading: supLoading } = useSupervisor();
+  const [userName, setUserName] = useState<string>(() => user?.displayName || '');
   const [trainees, setTrainees] = useState<Trainee[]>([]);
   const [pendingDTRs, setPendingDTRs] = useState<DTREntry[]>([]);
   const [attendance, setAttendance] = useState<Record<string, { hasTimeIn: boolean; hasTimeOut: boolean }>>({});
@@ -36,10 +38,23 @@ export function SupervisorDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [processingDtrId, setProcessingDtrId] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (user?.uid) {
+      if (user.displayName) {
+        setUserName(user.displayName);
+      } else {
+        resolveDocName('users', user.uid, 'displayName').then((name) => {
+          if (name) setUserName(name);
+          else if (user.email) setUserName(user.email.split('@')[0]);
+        });
+      }
+    }
+  }, [user]);
+
   const traineeNameMap = useMemo(() => {
     const map = new Map<string, string>();
     for (const t of trainees) {
-      map.set(t.id, t.name || t.profile?.studentId || t.userId);
+      map.set(t.id, t.name || t.profile?.studentId || 'Trainee');
     }
     return map;
   }, [trainees]);
@@ -164,7 +179,7 @@ export function SupervisorDashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
           <h2 className="text-xl font-bold text-foreground">
-            {isExternal ? 'External Supervisor Dashboard' : 'Supervisor Dashboard'}
+            Welcome back{userName ? `, ${userName}` : ''}
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">
             {isExternal
@@ -350,7 +365,7 @@ export function SupervisorDashboard() {
                 {pendingDTRs.slice(0, 5).map((dtr) => (
                   <tr key={dtr.id} className="h-[44px] hover:bg-muted/30 transition-colors">
                     <td className="px-5 py-2 font-medium text-foreground">
-                      {traineeNameMap.get(dtr.traineeId) || dtr.traineeId}
+                      {traineeNameMap.get(dtr.traineeId) || 'Trainee'}
                     </td>
                     <td className="px-4 py-2 text-xs text-muted-foreground">
                       {new Date(dtr.date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -420,7 +435,7 @@ export function SupervisorDashboard() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <h4 className="font-semibold text-foreground text-sm truncate">
-                          {trainee.name || trainee.profile?.studentId || trainee.userId}
+                          {trainee.name || trainee.profile?.studentId || 'Trainee'}
                         </h4>
                         <p className="text-xs text-muted-foreground truncate">
                           {trainee.profile?.course || 'No course specified'}

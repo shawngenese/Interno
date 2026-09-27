@@ -7,6 +7,7 @@ import { TaskForm } from './TaskForm';
 import { TaskDetail } from './TaskDetail';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
+import { Modal } from '@/shared/components/Modal';
 import { Button } from '@/shared/components/ui/Button';
 import { Skeleton } from '@/shared/components/Skeleton';
 import { Search, Plus, Archive, Filter, CheckSquare, Clock } from 'lucide-react';
@@ -121,7 +122,11 @@ export function TaskList() {
         const traineeSnap = await getDocs(traineeQuery);
         if (!isMounted) return;
 
-        const traineeData = traineeSnap.docs.map((d) => ({ id: d.id, userId: d.data().userId }));
+        const traineeData = traineeSnap.docs.map((d) => ({
+          id: d.id,
+          name: (d.data().name as string) || '',
+          userId: d.data().userId as string,
+        }));
         const userIds = [...new Set(traineeData.map((t) => t.userId).filter(Boolean))];
         const userMap = new Map<string, string>();
 
@@ -131,14 +136,15 @@ export function TaskList() {
             query(collection(db, 'users'), where('__name__', 'in', chunk))
           );
           userSnap.docs.forEach((doc) => {
-            userMap.set(doc.id, doc.data().displayName || doc.id);
+            const u = doc.data();
+            userMap.set(doc.id, (u.displayName as string) || (u.name as string) || (u.email as string) || 'Trainee');
           });
         }
         if (!isMounted) return;
 
         const tOptions = traineeData.map((t) => ({
           id: t.id,
-          name: userMap.get(t.userId) || t.id,
+          name: t.name || userMap.get(t.userId) || 'Trainee',
         }));
         setTrainees(tOptions);
       } catch (err) {
@@ -165,13 +171,7 @@ export function TaskList() {
     });
   };
 
-  if (showForm) {
-    return (
-      <div className="space-y-4">
-        <TaskForm companyId={companyId} onSaved={() => { setShowForm(false); fetchTasks(); }} onCancel={() => setShowForm(false)} />
-      </div>
-    );
-  }
+
 
   if (selectedTask) {
     return (
@@ -414,6 +414,23 @@ export function TaskList() {
           </>
         )}
       </div>
+
+      {showForm && (
+        <Modal
+          open={showForm}
+          title="Create New Task"
+          onClose={() => setShowForm(false)}
+        >
+          <TaskForm
+            companyId={companyId}
+            onSaved={() => {
+              setShowForm(false);
+              fetchTasks();
+            }}
+            onCancel={() => setShowForm(false)}
+          />
+        </Modal>
+      )}
 
       <ConfirmDialog
         open={confirmDialog !== null}

@@ -287,6 +287,11 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
   };
 
   const onSubmit = async (data: TraineeFormData) => {
+    if (currentStep < 3) {
+      handleNext();
+      return;
+    }
+
     setError(null);
     setSaving(true);
 
@@ -345,6 +350,15 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
     }
   };
 
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (currentStep < 3) {
+      handleNext();
+      return;
+    }
+    handleSubmit(onSubmit)(e);
+  };
+
   if (loading) {
     return (
       <div className="p-6 space-y-4">
@@ -364,21 +378,34 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleFormSubmit} className="space-y-6">
       {/* Wizard Step Indicator */}
-      <div className="flex items-center justify-between gap-2 px-2 py-3 bg-muted/30 rounded-xl border border-border">
+      <div className="flex items-center justify-between gap-2 px-3 py-3 bg-muted/30 rounded-xl border border-border">
         {STEPS.map((step, idx) => {
           const isCompleted = currentStep > step.id;
           const isActive = currentStep === step.id;
+          const isClickable = step.id < currentStep;
           return (
             <div key={step.id} className="flex items-center gap-2 flex-1">
-              <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={!isClickable || viewOnly}
+                onClick={() => {
+                  if (step.id < currentStep) {
+                    setError(null);
+                    setCurrentStep(step.id);
+                  }
+                }}
+                className={`flex items-center gap-2 text-left transition-opacity ${
+                  isClickable ? 'cursor-pointer hover:opacity-80' : 'cursor-default'
+                }`}
+              >
                 <div
-                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
+                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-all shrink-0 ${
                     isCompleted
-                      ? 'bg-success text-success-foreground'
+                      ? 'bg-success text-white'
                       : isActive
-                      ? 'bg-primary text-primary-foreground ring-2 ring-primary/30'
+                      ? 'bg-primary text-on-primary ring-2 ring-primary/30'
                       : 'bg-muted text-muted-foreground'
                   }`}
                 >
@@ -389,7 +416,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
                     {step.title}
                   </p>
                 </div>
-              </div>
+              </button>
               {idx < STEPS.length - 1 && (
                 <div
                   className={`flex-1 h-0.5 mx-1 transition-colors ${
@@ -650,7 +677,7 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
                 <option value="">Select Supervisor (Optional)</option>
                 {supervisors.map((sup) => (
                   <option key={sup.id} value={sup.id}>
-                    {sup.userName || sup.userEmail || sup.userId}
+                    {sup.userName || sup.userEmail || 'Supervisor'}
                   </option>
                 ))}
               </FormSelect>
@@ -775,11 +802,11 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
       <div className="flex items-center justify-between pt-4 border-t border-border">
         <div>
           {currentStep > 1 ? (
-            <Button variant="secondary" type="button" onClick={handleBack}>
+            <Button key="btn-back" variant="secondary" type="button" onClick={handleBack}>
               Back
             </Button>
           ) : (
-            <Button variant="secondary" type="button" onClick={onCancel}>
+            <Button key="btn-cancel" variant="secondary" type="button" onClick={onCancel}>
               {viewOnly ? 'Close' : 'Cancel'}
             </Button>
           )}
@@ -787,15 +814,29 @@ export function TraineeForm({ editingId, viewOnly, onCancel, onSaved }: TraineeF
 
         <div className="flex items-center gap-3">
           {currentStep < 3 ? (
-            <Button variant="primary" type="button" onClick={handleNext}>
+            <Button
+              key={`btn-next-step-${currentStep}`}
+              variant="primary"
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleNext();
+              }}
+            >
               Next
             </Button>
           ) : !viewOnly ? (
-            <Button variant="primary" type="submit" isLoading={saving}>
-              Save
+            <Button
+              key="btn-save-trainee-final"
+              variant="primary"
+              type="submit"
+              isLoading={saving}
+            >
+              {isEditing ? 'Update Trainee' : 'Save Trainee'}
             </Button>
           ) : (
-            <Button variant="primary" type="button" onClick={onCancel}>
+            <Button key="btn-done-view" variant="primary" type="button" onClick={onCancel}>
               Done
             </Button>
           )}

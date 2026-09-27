@@ -194,7 +194,7 @@ export function DepartmentForm({ editingId, onCancel, onSaved }: DepartmentFormP
           <option value="">None</option>
           {supervisors.map((sup) => (
             <option key={sup.id} value={sup.userId}>
-              {sup.userName || sup.userEmail || sup.userId}
+              {sup.userName || sup.userEmail || 'Supervisor'}
             </option>
           ))}
         </FormSelect>

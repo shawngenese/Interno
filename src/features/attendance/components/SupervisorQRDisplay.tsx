@@ -39,6 +39,7 @@ export function SupervisorQRDisplay({
   const [error, setError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState<number>(expirationSeconds);
   const [scans, setScans] = useState<ScanNotification[]>([]);
+  const [traineeNameMap, setTraineeNameMap] = useState<Map<string, string>>(new Map());
   const countdownRef = useRef<number | null>(null);
   const refreshTimerRef = useRef<number | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
@@ -91,19 +92,53 @@ export function SupervisorQRDisplay({
           limit(10),
         );
 
-        const unsubscribe = onSnapshot(scansQuery, (snapshot) => {
+        const unsubscribe = onSnapshot(scansQuery, async (snapshot) => {
           const newScans: ScanNotification[] = [];
-          snapshot.forEach((doc) => {
-            const docData = doc.data();
+          const tIds: string[] = [];
+          snapshot.forEach((docSnap) => {
+            const docData = docSnap.data();
             newScans.push({
-              id: doc.id,
+              id: docSnap.id,
               traineeId: docData.traineeId,
               type: docData.type,
               timestamp: docData.timestamp,
               deviceInfo: docData.deviceInfo,
             });
+            if (docData.traineeId) tIds.push(docData.traineeId);
           });
           setScans(newScans);
+
+          // Resolve names for scanned trainees
+          const uniqueIds = [...new Set(tIds)];
+          if (uniqueIds.length > 0) {
+            const { doc, getDoc } = await import('firebase/firestore');
+            const entries: [string, string][] = [];
+            for (const id of uniqueIds) {
+              try {
+                const tSnap = await getDoc(doc(db, 'trainees', id));
+                if (tSnap.exists()) {
+                  const tData = tSnap.data();
+                  let name = (tData.name as string) || '';
+                  if (!name && tData.userId) {
+                    const uSnap = await getDoc(doc(db, 'users', tData.userId as string));
+                    if (uSnap.exists()) {
+                      name = (uSnap.data().displayName as string) || (uSnap.data().email as string) || '';
+                    }
+                  }
+                  entries.push([id, name || tData.profile?.studentId || 'Trainee']);
+                }
+              } catch (e) {
+                console.warn('[SupervisorQRDisplay] Name resolution notice:', e);
+              }
+            }
+            if (entries.length > 0) {
+              setTraineeNameMap((prev) => {
+                const next = new Map(prev);
+                entries.forEach(([id, name]) => next.set(id, name));
+                return next;
+              });
+            }
+          }
         });
 
         unsubscribeRef.current = unsubscribe;
@@ -353,7 +388,7 @@ export function SupervisorQRDisplay({
                         {scan.type === 'time_in' ? 'Time In Recorded' : 'Time Out Recorded'}
                       </p>
                       <p className="text-[11px] text-muted-foreground">
-                        Trainee ID: {scan.traineeId.slice(0, 8)}...
+                        {traineeNameMap.get(scan.traineeId) || 'Trainee'}
                       </p>
                     </div>
                   </div>

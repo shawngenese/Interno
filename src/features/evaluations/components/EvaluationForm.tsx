@@ -3,12 +3,13 @@ import { evaluationService } from '../services/evaluationService';
 import { useAuth } from '@/features/auth';
 import { Button } from '@/shared/components/ui/Button';
 import { EVALUATION_CATEGORIES, EVALUATION_TYPE_LABELS, RATING_LABELS } from '../types';
-import type { EvaluationType, EvaluationRating, RatingScale } from '../types';
+import type { Evaluation, EvaluationType, EvaluationRating, RatingScale } from '../types';
 
 interface EvaluationFormProps {
   traineeId: string;
   traineeName: string;
   companyId: string;
+  initialEvaluation?: Evaluation;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
@@ -17,24 +18,37 @@ export function EvaluationForm({
   traineeId,
   traineeName,
   companyId,
+  initialEvaluation,
   onSuccess,
   onCancel,
 }: EvaluationFormProps) {
   const { user } = useAuth();
-  const [type, setType] = useState<EvaluationType>('monthly');
-  const [ratings, setRatings] = useState<EvaluationRating[]>(
-    EVALUATION_CATEGORIES.map(category => ({
+  const [type, setType] = useState<EvaluationType>(initialEvaluation?.type || 'monthly');
+  const [ratings, setRatings] = useState<EvaluationRating[]>(() => {
+    if (initialEvaluation?.ratings && initialEvaluation.ratings.length > 0) {
+      return EVALUATION_CATEGORIES.map(category => {
+        const existing = initialEvaluation.ratings.find(r => r.category === category);
+        return existing || { category, rating: 3 as RatingScale, comments: '' };
+      });
+    }
+    return EVALUATION_CATEGORIES.map(category => ({
       category,
       rating: 3 as RatingScale,
       comments: '',
-    }))
-  );
-  const [overallComments, setOverallComments] = useState('');
+    }));
+  });
+  const [overallComments, setOverallComments] = useState(initialEvaluation?.overallComments || '');
   const [periodStart, setPeriodStart] = useState(() => {
+    if (initialEvaluation?.period?.startDate) {
+      return new Date(initialEvaluation.period.startDate).toISOString().split('T')[0];
+    }
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
   });
   const [periodEnd, setPeriodEnd] = useState(() => {
+    if (initialEvaluation?.period?.endDate) {
+      return new Date(initialEvaluation.period.endDate).toISOString().split('T')[0];
+    }
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
   });
@@ -61,14 +75,14 @@ export function EvaluationForm({
 
     try {
       const overallRating = calculateOverallRating();
-      await evaluationService.createEvaluation({
+      const payload = {
         traineeId,
         traineeName,
-        supervisorId: user.uid,
-        supervisorName: user.displayName || user.email || 'Unknown',
-        companyId,
+        supervisorId: initialEvaluation?.supervisorId || user.uid,
+        supervisorName: initialEvaluation?.supervisorName || user.displayName || user.email || 'Supervisor',
+        companyId: companyId || initialEvaluation?.companyId || '',
         type,
-        status: asDraft ? 'draft' : 'submitted',
+        status: asDraft ? ('draft' as const) : ('submitted' as const),
         period: {
           startDate: new Date(periodStart).getTime(),
           endDate: new Date(periodEnd).getTime(),
@@ -76,7 +90,13 @@ export function EvaluationForm({
         ratings,
         overallComments,
         overallRating,
-      });
+      };
+
+      if (initialEvaluation?.id) {
+        await evaluationService.updateEvaluation(initialEvaluation.id, payload);
+      } else {
+        await evaluationService.createEvaluation(payload);
+      }
       onSuccess?.();
     } catch (err) {
       setError('Failed to save evaluation');
@@ -87,20 +107,19 @@ export function EvaluationForm({
   };
 
   return (
-    <div className="bg-card rounded-xl shadow-sm border border-border">
-      <div className="p-4 md:p-6 border-b border-border">
-        <h3 className="text-base font-bold text-foreground">
-          New Evaluation for {traineeName}
-        </h3>
-        <p className="text-xs text-muted-foreground mt-0.5">Rate key competencies and provide constructive feedback</p>
-      </div>
+    <div className="space-y-6">
+      {initialEvaluation && (
+        <div className="p-3 bg-primary/10 border border-primary/20 rounded-xl text-primary text-xs font-medium flex items-center justify-between">
+          <span>Editing draft evaluation for <strong>{traineeName}</strong></span>
+          <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-primary/20">Draft Mode</span>
+        </div>
+      )}
 
-      <div className="p-4 md:p-6 space-y-6">
-        {error && (
-          <div role="alert" className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm">
-            {error}
-          </div>
-        )}
+      {error && (
+        <div role="alert" className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm">
+          {error}
+        </div>
+      )}
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
@@ -213,18 +232,17 @@ export function EvaluationForm({
               isLoading={saving}
               onClick={() => handleSave(true)}
             >
-              Save Draft
+              {initialEvaluation?.id ? 'Update Draft' : 'Save Draft'}
             </Button>
             <Button
               variant="primary"
               isLoading={saving}
               onClick={() => handleSave(false)}
             >
-              Submit
+              {initialEvaluation?.id ? 'Submit Evaluation' : 'Submit'}
             </Button>
           </div>
         </div>
       </div>
-    </div>
   );
 }

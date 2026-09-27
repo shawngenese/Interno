@@ -1,8 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 
-type ModalSize = 'sm' | 'md' | 'lg';
+type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
 
 interface ModalProps {
   open: boolean;
@@ -16,9 +17,18 @@ const sizeClasses: Record<ModalSize, string> = {
   sm: 'max-w-sm',
   md: 'max-w-md',
   lg: 'max-w-lg',
+  xl: 'max-w-xl',
+  '2xl': 'max-w-2xl',
+  full: 'max-w-4xl',
 };
 
 export function Modal({ open, title, onClose, children, size = 'md' }: ModalProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -33,11 +43,11 @@ export function Modal({ open, title, onClose, children, size = 'md' }: ModalProp
     };
   }, [open, onClose]);
 
-  return (
+  const modalContent = (
     <AnimatePresence>
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto"
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-title"
@@ -48,20 +58,20 @@ export function Modal({ open, title, onClose, children, size = 'md' }: ModalProp
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute inset-0 bg-foreground/50"
+            className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-xs"
             onClick={onClose}
             aria-hidden="true"
           />
 
           {/* Panel */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.95, y: 6 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 6 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
             className={[
-              'relative w-full mx-4 max-h-[85vh] flex flex-col',
-              'bg-card border border-border rounded-xl shadow-lg',
+              'relative w-full my-auto max-h-[90vh] flex flex-col',
+              'bg-card border border-border rounded-xl shadow-2xl',
               sizeClasses[size],
             ].join(' ')}
           >
@@ -84,7 +94,7 @@ export function Modal({ open, title, onClose, children, size = 'md' }: ModalProp
             </div>
 
             {/* Scrollable content — padded by default so children never touch edges */}
-            <div className="flex-1 overflow-y-auto p-4 md:p-6">
+            <div className={`flex-1 overflow-y-auto ${size === 'sm' ? 'p-4 md:p-5' : 'p-4 md:p-6'}`}>
               {children}
             </div>
           </motion.div>
@@ -92,4 +102,8 @@ export function Modal({ open, title, onClose, children, size = 'md' }: ModalProp
       )}
     </AnimatePresence>
   );
+
+  if (!mounted || typeof document === 'undefined') return null;
+
+  return createPortal(modalContent, document.body);
 }

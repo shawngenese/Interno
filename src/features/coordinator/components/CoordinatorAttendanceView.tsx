@@ -57,18 +57,19 @@ export function CoordinatorAttendanceView() {
       const userMap = new Map<string, string>();
       for (const batch of chunkArray(userIds, 30)) {
         const userSnap = await getDocs(
-          query(collection(db, 'users'), where('companyId', '==', companyId), where(documentId(), 'in', batch)),
+          query(collection(db, 'users'), where(documentId(), 'in', batch)),
         );
         if (signal?.aborted) return;
         userSnap.docs.forEach((doc) => {
-          userMap.set(doc.id, (doc.data().displayName as string) || 'Unknown');
+          const u = doc.data();
+          userMap.set(doc.id, (u.displayName as string) || (u.name as string) || (u.email as string) || 'Trainee');
         });
       }
 
       const traineeMap = new Map<string, string>();
       for (const t of traineeSnap.docs) {
         const data = t.data();
-        const name = data.name || userMap.get(data.userId) || 'Unknown';
+        const name = data.name || userMap.get(data.userId) || (data.email as string) || 'Trainee';
         traineeMap.set(t.id, name);
       }
 

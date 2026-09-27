@@ -60,7 +60,7 @@ export function DocumentReview() {
             name = (userDoc.data().displayName as string) || (userDoc.data().email as string) || '';
           }
         }
-        if (!name) name = data.name || t.id.slice(0, 8) + '...';
+        if (!name) name = data.name || (data.email as string) || 'Trainee';
         traineeMap.set(t.id, name);
         traineeList.push({ id: t.id, name, email: data.email || '' });
       }

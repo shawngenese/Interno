@@ -32,14 +32,15 @@ export function AlertModal({
 
   return (
     <Modal open={open} title={title} onClose={onClose} size="sm">
-      <div className="p-5 space-y-4">
+      <div className="space-y-4">
         <div className={`flex items-start gap-3 ${colorClass}`}>
           <span className="shrink-0 mt-0.5">{icon}</span>
-          <p className="text-sm text-muted-foreground">{message}</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">{message}</p>
         </div>
         <div className="flex justify-end pt-2">
           <Button
             type="button"
+            size="sm"
             variant={type === 'error' ? 'destructive' : type === 'warning' ? 'accent' : 'primary'}
             onClick={onClose}
           >

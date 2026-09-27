@@ -5,6 +5,7 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { resolveDocName } from '@/shared/utils/resolveDocName';
 import { getCoordinatorDashboardData } from '../services/coordinatorService';
 import { AnimatedCard } from '@/shared/components/AnimatedCard';
 import { ChartTooltip } from '@/shared/components/ChartTooltip';
@@ -34,10 +35,24 @@ const TASK_STATUS_COLORS: Record<string, string> = {
 export function CoordinatorDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [userName, setUserName] = useState<string>(() => user?.displayName || '');
   const [data, setData] = useState<CoordinatorDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const companyIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (user?.uid) {
+      if (user.displayName) {
+        setUserName(user.displayName);
+      } else {
+        resolveDocName('users', user.uid, 'displayName').then((name) => {
+          if (name) setUserName(name);
+          else if (user.email) setUserName(user.email.split('@')[0]);
+        });
+      }
+    }
+  }, [user]);
 
   const period = useMemo(() => {
     const now = new Date();
@@ -193,7 +208,7 @@ export function CoordinatorDashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
           <h2 className="text-xl font-bold text-foreground">
-            Coordinator Dashboard
+            Welcome back{userName ? `, ${userName}` : ''}
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">
             Overview of trainees, attendance, placements, and pending reviews

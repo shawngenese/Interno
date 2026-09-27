@@ -16,6 +16,7 @@ import {
   Clock,
   ClipboardList,
   Bell,
+  Megaphone,
   BarChart3,
   ChevronLeft,
   ChevronRight,
@@ -33,7 +34,7 @@ const navigation = [
   { name: 'OJT Schedules', href: '/admin/ojt-schedules', icon: Clock },
   { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
   { name: 'Audit Logs', href: '/admin/audit-logs', icon: ClipboardList },
-  { name: 'Announcements', href: '/admin/announcements', icon: Bell },
+  { name: 'Announcements', href: '/admin/announcements', icon: Megaphone },
 ];
 
 export function AdminLayout({ children }: { children: ReactNode }) {

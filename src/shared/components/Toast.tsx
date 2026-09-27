@@ -46,7 +46,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: string) => void }) {
   return (
     <div
-      className="fixed bottom-20 right-4 z-50 flex flex-col gap-2 max-w-sm w-full px-4 md:px-0"
+      className="fixed bottom-20 right-4 z-[110] flex flex-col gap-2 max-w-sm w-full px-4 md:px-0 pointer-events-none"
       role="status"
       aria-live="polite"
       aria-atomic="false"
@@ -92,7 +92,7 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
   return (
     <div
       className={[
-        'flex items-start gap-3 p-3 rounded-lg shadow-md',
+        'flex items-start gap-3 p-3 rounded-lg shadow-md pointer-events-auto',
         containerClass,
       ].join(' ')}
       role={toast.type === 'error' ? 'alert' : 'status'}

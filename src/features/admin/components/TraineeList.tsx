@@ -101,7 +101,8 @@ export function TraineeList({ onEdit, onView, onViewDocuments }: TraineeListProp
       const [userNames, companyNames, departmentNames, supervisorNames] = await Promise.all([
         Promise.all(
           Array.from(userIds).map(async (id) => {
-            const name = await resolveDocName('users', id, 'displayName');
+            let name = await resolveDocName('users', id, 'displayName');
+            if (!name) name = await resolveDocName('users', id, 'email');
             return { id, name };
           }),
         ),
@@ -119,7 +120,8 @@ export function TraineeList({ onEdit, onView, onViewDocuments }: TraineeListProp
         ),
         Promise.all(
           Array.from(supervisorUserIds.entries()).map(async ([supId, userId]) => {
-            const name = await resolveDocName('users', userId, 'displayName');
+            let name = await resolveDocName('users', userId, 'displayName');
+            if (!name) name = await resolveDocName('users', userId, 'email');
             return { supId, name };
           }),
         ),
@@ -134,7 +136,7 @@ export function TraineeList({ onEdit, onView, onViewDocuments }: TraineeListProp
         const raw = t as unknown as Record<string, unknown>;
         return {
           ...t,
-          userName: userNameMap.get(t.userId) || '',
+          userName: t.name || userNameMap.get(t.userId) || 'Trainee',
           companyName: companyNameMap.get(t.companyId) || '',
           departmentName: departmentNameMap.get(t.departmentId) || '',
           supervisorName: t.supervisorId ? supervisorNameMap.get(t.supervisorId) || '—' : '—',

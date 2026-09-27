@@ -6,6 +6,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { useFormValidation } from '@/shared/hooks/useFormValidation';
 import { required } from '@/shared/utils/validators';
 import { FormField, FormSelect, FormTextarea } from '@/shared/components/FormField';
+import { Button } from '@/shared/components/ui/Button';
 
 interface Company {
   id: string;
@@ -14,10 +15,12 @@ interface Company {
 }
 
 interface PlacementRequestFormProps {
+  initialCompanyId?: string;
   onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
-export function PlacementRequestForm({ onSuccess }: PlacementRequestFormProps) {
+export function PlacementRequestForm({ initialCompanyId, onSuccess, onCancel }: PlacementRequestFormProps) {
   const { user } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,9 +37,15 @@ export function PlacementRequestForm({ onSuccess }: PlacementRequestFormProps) {
     handleSubmit,
     setFormData,
   } = useFormValidation(
-    { selectedCompanyId: '', requestNotes: '' },
+    { selectedCompanyId: initialCompanyId || '', requestNotes: '' },
     { selectedCompanyId: [required('Please select a company')] },
   );
+
+  useEffect(() => {
+    if (initialCompanyId) {
+      setFormData((prev) => ({ ...prev, selectedCompanyId: initialCompanyId }));
+    }
+  }, [initialCompanyId, setFormData]);
 
   const fetchCompanies = async () => {
     setLoading(true);
@@ -110,6 +119,7 @@ export function PlacementRequestForm({ onSuccess }: PlacementRequestFormProps) {
               Your external placement request has been submitted for coordinator review.
             </p>
             <button
+              type="button"
               onClick={() => setSuccess(false)}
               className="mt-2 text-sm font-medium text-success hover:underline"
             >
@@ -122,67 +132,65 @@ export function PlacementRequestForm({ onSuccess }: PlacementRequestFormProps) {
   }
 
   return (
-    <div className="bg-card rounded-xl shadow-sm border border-border">
-      <div className="p-4 border-b border-border">
-        <h3 className="text-lg font-semibold text-foreground">
-          Request External Placement
-        </h3>
-        <p className="text-sm text-muted-foreground mt-1">
-          Submit a request to be placed at an external company
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="p-4 space-y-4">
-        {error && (
-          <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
-            {error}
-          </div>
-        )}
-
-        <FormField id="external-company" label="Select External Company" required error={touched.selectedCompanyId ? errors.selectedCompanyId : undefined}>
-          {loading ? (
-            <div className="w-full px-4 py-3 border border-input rounded-lg bg-muted text-muted-foreground">
-              Loading companies...
-            </div>
-          ) : (
-            <FormSelect
-              id="external-company"
-              value={formData.selectedCompanyId}
-              onValueChange={handleChange('selectedCompanyId')}
-              onBlur={handleBlur('selectedCompanyId')}
-              error={touched.selectedCompanyId ? errors.selectedCompanyId : undefined}
-            >
-              <option value="">Select a company...</option>
-              {companies.map((company) => (
-                <option key={company.id} value={company.id}>
-                  {company.name} {company.address ? `- ${company.address}` : ''}
-                </option>
-              ))}
-            </FormSelect>
-          )}
-        </FormField>
-
-        <FormField id="request-notes" label="Request Notes (optional)">
-          <FormTextarea
-            id="request-notes"
-            value={formData.requestNotes}
-            onValueChange={handleChange('requestNotes')}
-            onBlur={handleBlur('requestNotes')}
-            rows={4}
-            placeholder="Explain why you want to be placed at this company..."
-          />
-        </FormField>
-
-        <div className="flex justify-end pt-4 border-t border-border">
-          <button
-            type="submit"
-            disabled={submitting}
-            className="px-6 py-2.5 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {submitting ? 'Submitting...' : 'Submit Request'}
-          </button>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      {error && (
+        <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
+          {error}
         </div>
-      </form>
-    </div>
+      )}
+
+      <FormField id="external-company" label="Select External Company" required error={touched.selectedCompanyId ? errors.selectedCompanyId : undefined}>
+        {loading ? (
+          <div className="w-full px-4 py-3 border border-input rounded-lg bg-muted text-muted-foreground">
+            Loading companies...
+          </div>
+        ) : (
+          <FormSelect
+            id="external-company"
+            value={formData.selectedCompanyId}
+            onValueChange={handleChange('selectedCompanyId')}
+            onBlur={handleBlur('selectedCompanyId')}
+            error={touched.selectedCompanyId ? errors.selectedCompanyId : undefined}
+          >
+            <option value="">Select a company...</option>
+            {companies.map((company) => (
+              <option key={company.id} value={company.id}>
+                {company.name} {company.address ? `- ${company.address}` : ''}
+              </option>
+            ))}
+          </FormSelect>
+        )}
+      </FormField>
+
+      <FormField id="request-notes" label="Request Notes (optional)">
+        <FormTextarea
+          id="request-notes"
+          value={formData.requestNotes}
+          onValueChange={handleChange('requestNotes')}
+          onBlur={handleBlur('requestNotes')}
+          rows={4}
+          placeholder="Explain why you want to be placed at this company..."
+        />
+      </FormField>
+
+      <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-border">
+        {onCancel && (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onCancel}
+          >
+            Cancel
+          </Button>
+        )}
+        <Button
+          type="submit"
+          variant="primary"
+          isLoading={submitting}
+        >
+          Submit Request
+        </Button>
+      </div>
+    </form>
   );
 }
