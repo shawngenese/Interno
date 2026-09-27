@@ -6,7 +6,9 @@ import {
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/shared/components/Skeleton';
+import { ChartTooltip } from '@/shared/components/ChartTooltip';
 import { EmptyState } from '@/shared/components/EmptyState';
+import { TASK_STATUS_CHART_COLORS, type TaskStatus } from '@/features/tasks/types';
 
 interface ChartData {
   attendanceByDate: { date: string; present: number; late: number; absent: number }[];
@@ -22,8 +24,6 @@ interface ChartData {
     tasksPending: number;
   };
 }
-
-const COLORS = ['var(--color-success)', 'var(--color-warning)', 'var(--color-destructive)', 'var(--color-primary)', 'var(--color-info)', 'var(--color-muted-foreground)'];
 
 interface DashboardChartsProps {
   traineeId: string;
@@ -229,14 +229,7 @@ export function DashboardCharts({ traineeId, startDate, endDate }: DashboardChar
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
             <XAxis dataKey="date" tick={{ fontSize: 12, fill: 'currentColor' }} />
             <YAxis tick={{ fontSize: 12, fill: 'currentColor' }} />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'var(--card)',
-                borderColor: 'var(--border)',
-                borderRadius: '0.75rem',
-                color: 'var(--foreground)',
-              }}
-            />
+            <Tooltip content={<ChartTooltip />} />
             <Legend />
             <Bar dataKey="present" fill="var(--color-success)" name="Present" radius={[4, 4, 0, 0]} />
             <Bar dataKey="late" fill="var(--color-warning)" name="Late" radius={[4, 4, 0, 0]} />
@@ -261,18 +254,14 @@ export function DashboardCharts({ traineeId, startDate, endDate }: DashboardChar
                 dataKey="count"
                 nameKey="status"
               >
-                {data.taskByStatus.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                {data.taskByStatus.map((entry) => (
+                  <Cell
+                    key={entry.status}
+                    fill={TASK_STATUS_CHART_COLORS[entry.status as TaskStatus] ?? 'var(--color-muted-foreground)'}
+                  />
                 ))}
               </Pie>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: 'var(--card)',
-                  borderColor: 'var(--border)',
-                  borderRadius: '0.75rem',
-                  color: 'var(--foreground)',
-                }}
-              />
+              <Tooltip content={<ChartTooltip />} />
               <Legend />
             </PieChart>
           </ResponsiveContainer>
@@ -285,14 +274,7 @@ export function DashboardCharts({ traineeId, startDate, endDate }: DashboardChar
               <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
               <XAxis dataKey="week" tick={{ fontSize: 12, fill: 'currentColor' }} />
               <YAxis tick={{ fontSize: 12, fill: 'currentColor' }} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: 'var(--card)',
-                  borderColor: 'var(--border)',
-                  borderRadius: '0.75rem',
-                  color: 'var(--foreground)',
-                }}
-              />
+              <Tooltip content={<ChartTooltip />} />
               <Legend />
               <Line type="monotone" dataKey="regular" stroke="var(--color-primary)" strokeWidth={2} name="Regular" />
               <Line type="monotone" dataKey="overtime" stroke="var(--color-info)" strokeWidth={2} name="Overtime" />

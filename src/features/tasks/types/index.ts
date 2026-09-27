@@ -133,6 +133,15 @@ export const TASK_STATUS_COLORS: Record<TaskStatus, { bg: string; text: string }
   archived: { bg: 'bg-muted border border-border', text: 'text-muted-foreground' },
 };
 
+export const TASK_STATUS_CHART_COLORS: Record<TaskStatus, string> = {
+  pending: 'var(--color-muted-foreground)',
+  in_progress: 'var(--color-primary)',
+  submitted: 'var(--color-warning)',
+  approved: 'var(--color-success)',
+  returned: 'var(--color-destructive)',
+  archived: 'var(--color-muted-foreground)',
+};
+
 export const TASK_PRIORITY_COLORS: Record<TaskPriority, { bg: string; text: string }> = {
   low: { bg: 'bg-muted border border-border', text: 'text-muted-foreground' },
   medium: { bg: 'bg-primary/15 border border-primary/20', text: 'text-primary' },

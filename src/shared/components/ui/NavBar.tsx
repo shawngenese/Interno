@@ -2,7 +2,7 @@ import React from "react"
 
 export const NavBar: React.FC = () => {
   return (
-    <header className="bg-white border-b border-[var(--border)] shadow-sm">
+    <header className="bg-card border-b border-border shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-3">

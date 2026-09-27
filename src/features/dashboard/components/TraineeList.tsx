@@ -35,7 +35,7 @@ export const TraineeList: React.FC = () => {
         Assigned Trainees
       </Title>
       <div className="bg-[var(--surface)] rounded-2xl overflow-x-auto">
-        <table className="min-w-full divide-y divide-[var(--border)]">
+        <table className="min-w-full divide-y divide-border">
           <thead>
             <tr>
               <th className="relative py-3 pl-4 pr-3 text-left text-textSecondary font-medium text-xs uppercase tracking-wider">

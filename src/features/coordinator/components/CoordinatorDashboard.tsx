@@ -7,6 +7,7 @@ import {
 import { useAuth } from '@/features/auth/AuthProvider';
 import { getCoordinatorDashboardData } from '../services/coordinatorService';
 import { AnimatedCard } from '@/shared/components/AnimatedCard';
+import { ChartTooltip } from '@/shared/components/ChartTooltip';
 import { Skeleton } from '@/shared/components/Skeleton';
 import { Button } from '@/shared/components/ui/Button';
 import { EmptyState } from '@/shared/components/EmptyState';
@@ -23,9 +24,9 @@ import {
 import type { CoordinatorDashboardData } from '../types';
 
 const TASK_STATUS_COLORS: Record<string, string> = {
-  Pending: 'var(--color-warning)',
+  Pending: 'var(--color-muted-foreground)',
   'In Progress': 'var(--color-primary)',
-  Submitted: 'var(--color-accent)',
+  Submitted: 'var(--color-warning)',
   Approved: 'var(--color-success)',
   Returned: 'var(--color-destructive)',
 };
@@ -372,15 +373,7 @@ export function CoordinatorDashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" vertical={false} />
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'currentColor' }} className="text-muted-foreground" axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: 'currentColor' }} className="text-muted-foreground" allowDecimals={false} axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'var(--color-card)',
-                    borderColor: 'var(--color-border)',
-                    color: 'var(--color-foreground)',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                  }}
-                />
+                <Tooltip content={<ChartTooltip />} />
                 <Bar dataKey="present" fill="var(--color-success)" radius={[4, 4, 0, 0]} name="Present" />
                 <Bar dataKey="late" fill="var(--color-warning)" radius={[4, 4, 0, 0]} name="Late" />
                 <Bar dataKey="absent" fill="var(--color-destructive)" radius={[4, 4, 0, 0]} name="Absent" />
@@ -410,15 +403,7 @@ export function CoordinatorDashboard() {
                       <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
                   </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'var(--color-card)',
-                      borderColor: 'var(--color-border)',
-                      color: 'var(--color-foreground)',
-                      borderRadius: '8px',
-                      fontSize: '12px',
-                    }}
-                  />
+                  <Tooltip content={<ChartTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="space-y-2">

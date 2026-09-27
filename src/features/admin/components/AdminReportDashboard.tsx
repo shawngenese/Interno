@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { getFirestoreInstancePublic } from '@/config/firebase';
+import { ChartTooltip } from '@/shared/components/ChartTooltip';
 import { collection, query, getDocs, orderBy, limit } from 'firebase/firestore';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -8,7 +9,14 @@ import {
 } from 'recharts';
 import { DashboardCharts } from '@/features/reports/components/DashboardCharts';
 
-const COLORS = ['var(--color-success)', 'var(--color-warning)', 'var(--color-destructive)', 'var(--color-primary)', 'var(--color-info)', 'var(--color-muted-foreground)'];
+const OJT_STATUS_COLORS: Record<string, string> = {
+  pending: 'var(--color-warning)',
+  active: 'var(--color-success)',
+  on_leave: 'var(--color-info)',
+  completed: 'var(--color-primary)',
+  terminated: 'var(--color-destructive)',
+  archived: 'var(--color-muted-foreground)',
+};
 
 interface OverviewStats {
   totalTrainees: number;
@@ -247,7 +255,7 @@ export function AdminReportDashboard() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
+                <Tooltip content={<ChartTooltip />} />
                 <Bar dataKey="count" fill="var(--color-primary)" name="Trainees" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -272,11 +280,14 @@ export function AdminReportDashboard() {
                   nameKey="status"
                   label={(props: { name?: string; value?: number }) => `${props.name}: ${props.value}`}
                 >
-                  {stats.traineesByStatus.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  {stats.traineesByStatus.map((entry) => (
+                    <Cell
+                      key={entry.status}
+                      fill={OJT_STATUS_COLORS[entry.status] ?? 'var(--color-muted-foreground)'}
+                    />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip content={<ChartTooltip />} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>

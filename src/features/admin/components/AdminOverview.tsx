@@ -11,6 +11,7 @@ import { Button } from '@/shared/components/ui/Button';
 import { Skeleton } from '@/shared/components/Skeleton';
 import { AnimatedCard } from '@/shared/components/AnimatedCard';
 import { AnimatedList, AnimatedListItem, listItemVariants } from '@/shared/components/AnimatedList';
+import { ChartTooltip } from '@/shared/components/ChartTooltip';
 import {
   Users,
   Check,
@@ -245,10 +246,10 @@ export function AdminOverview() {
       }
 
       const taskStatusData = [
-        { name: 'Completed', value: tasksCompleted || 1, color: 'var(--color-primary)' },
-        { name: 'In Progress', value: tasksInProgress || 1, color: 'var(--color-accent)' },
-        { name: 'Pending Review', value: tasksPending || 1, color: 'var(--color-success)' },
-        { name: 'Overdue / Other', value: tasksOverdue || 0, color: 'var(--color-muted-foreground)' },
+        { name: 'Completed', value: tasksCompleted || 1, color: 'var(--color-success)' },
+        { name: 'In Progress', value: tasksInProgress || 1, color: 'var(--color-primary)' },
+        { name: 'Pending Review', value: tasksPending || 1, color: 'var(--color-warning)' },
+        { name: 'Overdue / Other', value: tasksOverdue || 0, color: 'var(--color-destructive)' },
       ].filter((item) => item.value > 0);
 
       // Recent Activity
@@ -537,16 +538,7 @@ export function AdminOverview() {
                   axisLine={{ stroke: 'var(--color-border)' }}
                   tickLine={false}
                 />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'var(--color-card)',
-                    borderColor: 'var(--color-border)',
-                    borderRadius: '8px',
-                    color: 'var(--color-foreground)',
-                    fontSize: '12px',
-                  }}
-                  itemStyle={{ color: 'var(--color-foreground)' }}
-                />
+                <Tooltip content={<ChartTooltip />} />
                 <Bar dataKey="count" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -575,16 +567,7 @@ export function AdminOverview() {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'var(--color-card)',
-                    borderColor: 'var(--color-border)',
-                    borderRadius: '8px',
-                    color: 'var(--color-foreground)',
-                    fontSize: '12px',
-                  }}
-                  itemStyle={{ color: 'var(--color-foreground)' }}
-                />
+                <Tooltip content={<ChartTooltip />} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -640,16 +623,7 @@ export function AdminOverview() {
                   axisLine={{ stroke: 'var(--color-border)' }}
                   tickLine={false}
                 />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'var(--color-card)',
-                    borderColor: 'var(--color-border)',
-                    borderRadius: '8px',
-                    color: 'var(--color-foreground)',
-                    fontSize: '12px',
-                  }}
-                  itemStyle={{ color: 'var(--color-foreground)' }}
-                />
+                <Tooltip content={<ChartTooltip />} />
                 <Bar dataKey="present" fill="var(--color-success)" radius={[3, 3, 0, 0]} />
                 <Bar dataKey="late" fill="var(--color-warning)" radius={[3, 3, 0, 0]} />
                 <Bar dataKey="absent" fill="var(--color-destructive)" radius={[3, 3, 0, 0]} />

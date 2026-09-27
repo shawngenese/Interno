@@ -4,7 +4,7 @@ import { Button } from "@/shared/components/ui/Button"
 
 export const DashboardHeader: React.FC = () => {
   return (
-    <section className="py-8 lg:py-12 border-b border-[var(--border)]">
+    <section className="py-8 lg:py-12 border-b border-border">
       <div className="max-w-7xl mx-auto">
         <Title level={2} className="mb-4">
           Dashboard
