@@ -141,6 +141,23 @@ async function setupInitialData() {
     companyId: 'company-1',
     name: 'Department 1',
   });
+
+  // Companies must exist so cross-tenant read tests exercise real permission
+  // checks (a nonexistent doc now resolves to exists() == false instead of
+  // erroring, which would make deny assertions pass for the wrong reason).
+  await adminDb.collection('companies').doc('company-1').set({
+    companyId: 'company-1',
+    name: 'Company One',
+    type: 'internal',
+    verified: false,
+  });
+
+  await adminDb.collection('companies').doc('company-2').set({
+    companyId: 'company-2',
+    name: 'Company Two',
+    type: 'internal',
+    verified: false,
+  });
   
   await adminDb.collection('audit_logs').doc('log-1').set({
     userId: 'admin-uid',
@@ -1530,6 +1547,117 @@ describe('Firestore Security Rules', () => {
     test('supervisor unfiltered task list is denied (no cross-tenant bleed)', async () => {
       const db = getSupervisorAuth('supervisor-1').firestore();
       await assertFails(db.collection('tasks').get());
+    });
+  });
+
+  describe('Nonexistent documents (wiped database)', () => {
+    const missingDocCollections = [
+      'users', 'trainees', 'supervisors', 'coordinators', 'companies',
+      'attendance_records', 'qr_sessions', 'tasks', 'task_approvals',
+      'documents', 'dtrs', 'leave_requests', 'notifications', 'fcm_tokens',
+      'task_comments', 'task_documents', 'placement_requests',
+      'document_requirements', 'evaluations', 'announcements',
+    ];
+
+    for (const col of missingDocCollections) {
+      test(`admin get of missing ${col} doc resolves to exists() == false`, async () => {
+        const db = getAdminAuth().firestore();
+        const snap = await assertSucceeds(db.collection(col).doc('does-not-exist').get());
+        expect(snap.exists).toBe(false);
+      });
+    }
+
+    test('owner get of own missing users doc resolves to exists() == false', async () => {
+      const db = testEnv.authenticatedContext('ghost-uid', {
+        role: 'trainee', companyId: 'company-1', departmentId: 'dept-1', traineeId: 'ghost-uid',
+      }).firestore();
+      const snap = await assertSucceeds(db.collection('users').doc('ghost-uid').get());
+      expect(snap.exists).toBe(false);
+    });
+
+    test('supervisor get of own missing supervisors doc resolves to exists() == false', async () => {
+      const db = getSupervisorAuth('ghost-supervisor').firestore();
+      const snap = await assertSucceeds(db.collection('supervisors').doc('ghost-supervisor').get());
+      expect(snap.exists).toBe(false);
+    });
+
+    test('coordinator get of own missing coordinators doc resolves to exists() == false', async () => {
+      const db = getCoordinatorAuth().firestore();
+      const snap = await assertSucceeds(db.collection('coordinators').doc('coordinator-1').get());
+      expect(snap.exists).toBe(false);
+    });
+
+    test('trainee get of missing trainees doc resolves to exists() == false', async () => {
+      const db = getTraineeAuth('ghost-trainee').firestore();
+      const snap = await assertSucceeds(db.collection('trainees').doc('ghost-trainee').get());
+      expect(snap.exists).toBe(false);
+    });
+
+    test('supervisor get of missing correction request under deleted DTR resolves to exists() == false', async () => {
+      const db = getSupervisorAuth().firestore();
+      const snap = await assertSucceeds(
+        db.collection('dtrs').doc('ghost-dtr').collection('correction_requests').doc('ghost-corr').get()
+      );
+      expect(snap.exists).toBe(false);
+    });
+
+    test('unauthenticated get of missing doc is still denied', async () => {
+      const db = getUnauthenticated().firestore();
+      await assertFails(db.collection('users').doc('does-not-exist').get());
+    });
+
+    test('update of a nonexistent doc still fails even for admin (guard is read-only)', async () => {
+      const db = getAdminAuth().firestore();
+      await expect(db.collection('users').doc('does-not-exist').update({ displayName: 'x' })).rejects.toThrow();
+    });
+
+    test('delete of a nonexistent doc is denied for non-admin (guard is read-only)', async () => {
+      const db = getTraineeAuth().firestore();
+      await assertFails(db.collection('tasks').doc('does-not-exist').delete());
+    });
+
+    test('query with no matches returns empty, not denied (trainee tasks)', async () => {
+      const db = getTraineeAuth('ghost-trainee').firestore();
+      const snap = await assertSucceeds(
+        db.collection('tasks').where('traineeId', '==', 'ghost-trainee').get()
+      );
+      expect(snap.empty).toBe(true);
+    });
+
+    test('query for a trainee profile that does not exist returns empty, not denied', async () => {
+      const db = testEnv.authenticatedContext('ghost-uid', {
+        role: 'trainee', companyId: 'company-1', departmentId: 'dept-1', traineeId: 'ghost-uid',
+      }).firestore();
+      const snap = await assertSucceeds(
+        db.collection('trainees').where('userId', '==', 'ghost-uid').get()
+      );
+      expect(snap.empty).toBe(true);
+    });
+
+    test('company-scoped query with zero docs returns empty, not denied (supervisor DTRs)', async () => {
+      const db = testEnv.authenticatedContext('ghost-sup', {
+        role: 'supervisor', companyId: 'company-empty', departmentId: 'dept-empty', supervisorId: 'ghost-sup',
+      }).firestore();
+      const snap = await assertSucceeds(
+        db.collection('dtrs').where('companyId', '==', 'company-empty').get()
+      );
+      expect(snap.empty).toBe(true);
+    });
+
+    test('company-scoped query with zero docs returns empty, not denied (coordinator trainees)', async () => {
+      const db = testEnv.authenticatedContext('ghost-coord', {
+        role: 'coordinator', companyId: 'company-empty', departmentId: 'dept-empty',
+      }).firestore();
+      const snap = await assertSucceeds(
+        db.collection('trainees').where('companyId', '==', 'company-empty').get()
+      );
+      expect(snap.empty).toBe(true);
+    });
+
+    test('unfiltered query on a fully empty collection returns empty, not denied', async () => {
+      const db = getCoordinatorAuth().firestore();
+      const snap = await assertSucceeds(db.collection('announcements').get());
+      expect(snap.empty).toBe(true);
     });
   });
 });

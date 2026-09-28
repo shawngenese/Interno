@@ -114,134 +114,146 @@ export function TraineeDashboard() {
       setRequiredHours(reqHours);
 
       // 2. Fetch DTR entries for OJT hours & weekly chart
-      const dtrSnap = await getDocs(
-        query(
-          collection(db, 'dtrs'),
-          where('traineeId', '==', resolvedTraineeId),
-          orderBy('date', 'desc'),
-          limit(60)
-        )
-      );
+      try {
+        const dtrSnap = await getDocs(
+          query(
+            collection(db, 'dtrs'),
+            where('traineeId', '==', resolvedTraineeId),
+            orderBy('date', 'desc'),
+            limit(60)
+          )
+        );
 
-      let regMins = 0;
-      let otMins = 0;
-      let presentDaysCount = 0;
-      const dtrMap = new Map<string, { regular: number; overtime: number }>();
+        let regMins = 0;
+        let otMins = 0;
+        let presentDaysCount = 0;
+        const dtrMap = new Map<string, { regular: number; overtime: number }>();
 
-      dtrSnap.docs.forEach((docSnap) => {
-        const d = docSnap.data();
-        const regular = (d.regularMinutes as number) || 0;
-        const overtime = (d.overtimeMinutes as number) || 0;
-        regMins += regular;
-        otMins += overtime;
+        dtrSnap.docs.forEach((docSnap) => {
+          const d = docSnap.data();
+          const regular = (d.regularMinutes as number) || 0;
+          const overtime = (d.overtimeMinutes as number) || 0;
+          regMins += regular;
+          otMins += overtime;
 
-        if (regular > 0 || overtime > 0) {
-          presentDaysCount++;
-        }
+          if (regular > 0 || overtime > 0) {
+            presentDaysCount++;
+          }
 
-        const dateObj = new Date(d.date as number);
-        const dateKey = dateObj.toISOString().split('T')[0];
-        const existing = dtrMap.get(dateKey) || { regular: 0, overtime: 0 };
-        existing.regular += regular / 60;
-        existing.overtime += overtime / 60;
-        dtrMap.set(dateKey, existing);
-      });
-
-      const totalRendered = Math.round(((regMins + otMins) / 60) * 10) / 10;
-      setTotalRenderedHours(totalRendered);
-      setTotalOvertimeHours(Math.round((otMins / 60) * 10) / 10);
-
-      // Estimate past workdays (Mon-Fri) in the last 30 days to calculate absences
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
-      let workdaysInPast30Days = 0;
-      for (let i = 0; i < 30; i++) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const dayOfWeek = d.getDay();
-        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-          workdaysInPast30Days++;
-        }
-      }
-
-      // Absences = workdays in cycle minus days with logged attendance
-      const effectiveAbsentDays = Math.max(0, Math.min(workdaysInPast30Days, workdaysInPast30Days - presentDaysCount));
-      const totalTrackedDays = presentDaysCount + effectiveAbsentDays;
-      const rate = totalTrackedDays > 0 ? Math.round((presentDaysCount / totalTrackedDays) * 100) : 100;
-      setAttendanceStats({
-        presentDays: presentDaysCount,
-        absentDays: effectiveAbsentDays,
-        attendanceRate: rate,
-      });
-
-      // Generate last 7 days series for weekly bar chart
-      const daysData: DailyHoursData[] = [];
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().split('T')[0];
-        const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
-        const logged = dtrMap.get(dateStr) || { regular: 0, overtime: 0 };
-        const reg = Math.round(logged.regular * 10) / 10;
-        const ot = Math.round(logged.overtime * 10) / 10;
-        daysData.push({
-          day: dayName,
-          dateStr,
-          regular: reg,
-          overtime: ot,
-          total: Math.round((reg + ot) * 10) / 10,
+          const dateObj = new Date(d.date as number);
+          const dateKey = dateObj.toISOString().split('T')[0];
+          const existing = dtrMap.get(dateKey) || { regular: 0, overtime: 0 };
+          existing.regular += regular / 60;
+          existing.overtime += overtime / 60;
+          dtrMap.set(dateKey, existing);
         });
+
+        const totalRendered = Math.round(((regMins + otMins) / 60) * 10) / 10;
+        setTotalRenderedHours(totalRendered);
+        setTotalOvertimeHours(Math.round((otMins / 60) * 10) / 10);
+
+        // Estimate past workdays (Mon-Fri) in the last 30 days to calculate absences
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        let workdaysInPast30Days = 0;
+        for (let i = 0; i < 30; i++) {
+          const d = new Date();
+          d.setDate(d.getDate() - i);
+          const dayOfWeek = d.getDay();
+          if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+            workdaysInPast30Days++;
+          }
+        }
+
+        // Absences = workdays in cycle minus days with logged attendance
+        const effectiveAbsentDays = Math.max(0, Math.min(workdaysInPast30Days, workdaysInPast30Days - presentDaysCount));
+        const totalTrackedDays = presentDaysCount + effectiveAbsentDays;
+        const rate = totalTrackedDays > 0 ? Math.round((presentDaysCount / totalTrackedDays) * 100) : 100;
+        setAttendanceStats({
+          presentDays: presentDaysCount,
+          absentDays: effectiveAbsentDays,
+          attendanceRate: rate,
+        });
+
+        // Generate last 7 days series for weekly bar chart
+        const daysData: DailyHoursData[] = [];
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date();
+          d.setDate(d.getDate() - i);
+          const dateStr = d.toISOString().split('T')[0];
+          const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+          const logged = dtrMap.get(dateStr) || { regular: 0, overtime: 0 };
+          const reg = Math.round(logged.regular * 10) / 10;
+          const ot = Math.round(logged.overtime * 10) / 10;
+          daysData.push({
+            day: dayName,
+            dateStr,
+            regular: reg,
+            overtime: ot,
+            total: Math.round((reg + ot) * 10) / 10,
+          });
+        }
+        setWeeklyHours(daysData);
+      } catch (dtrErr) {
+        console.warn('Failed to load trainee DTR metrics:', dtrErr);
       }
-      setWeeklyHours(daysData);
 
       // 3. Fetch Tasks distribution
-      const taskSnap = await getDocs(
-        query(collection(db, 'tasks'), where('traineeId', '==', resolvedTraineeId))
-      );
+      try {
+        const taskSnap = await getDocs(
+          query(collection(db, 'tasks'), where('traineeId', '==', resolvedTraineeId))
+        );
 
-      let approvedCount = 0;
-      let inProgressCount = 0;
-      let pendingCount = 0;
-      let returnedCount = 0;
-      let activeTasksCount = 0;
+        let approvedCount = 0;
+        let inProgressCount = 0;
+        let pendingCount = 0;
+        let returnedCount = 0;
+        let activeTasksCount = 0;
 
-      taskSnap.docs.forEach((docSnap) => {
-        const status = docSnap.data().status;
-        if (status === 'archived') return;
-        activeTasksCount++;
-        if (status === 'approved' || status === 'completed') approvedCount++;
-        else if (status === 'in_progress') inProgressCount++;
-        else if (status === 'submitted' || status === 'pending') pendingCount++;
-        else if (status === 'returned') returnedCount++;
-      });
+        taskSnap.docs.forEach((docSnap) => {
+          const status = docSnap.data().status;
+          if (status === 'archived') return;
+          activeTasksCount++;
+          if (status === 'approved' || status === 'completed') approvedCount++;
+          else if (status === 'in_progress') inProgressCount++;
+          else if (status === 'submitted' || status === 'pending') pendingCount++;
+          else if (status === 'returned') returnedCount++;
+        });
 
-      setTaskSummary({ total: activeTasksCount, completed: approvedCount });
+        setTaskSummary({ total: activeTasksCount, completed: approvedCount });
 
-      const distribution: TaskStatusCount[] = [
-        { name: 'Completed', value: approvedCount, color: 'var(--color-success)' },
-        { name: 'In Progress', value: inProgressCount, color: 'var(--color-primary)' },
-        { name: 'Pending Review', value: pendingCount, color: 'var(--color-warning)' },
-        { name: 'Returned', value: returnedCount, color: 'var(--color-destructive)' },
-      ].filter((item) => item.value > 0);
+        const distribution: TaskStatusCount[] = [
+          { name: 'Completed', value: approvedCount, color: 'var(--color-success)' },
+          { name: 'In Progress', value: inProgressCount, color: 'var(--color-primary)' },
+          { name: 'Pending Review', value: pendingCount, color: 'var(--color-warning)' },
+          { name: 'Returned', value: returnedCount, color: 'var(--color-destructive)' },
+        ].filter((item) => item.value > 0);
 
-      setTaskDistribution(distribution);
+        setTaskDistribution(distribution);
+      } catch (taskErr) {
+        console.warn('Failed to load trainee task distribution:', taskErr);
+      }
 
       // 4. Fetch Evaluations (Competency scores)
-      const evals = await evaluationService.getTraineeEvaluations(resolvedTraineeId);
-      if (evals && evals.length > 0) {
-        const latest = evals[0];
-        setLatestEvaluation(latest);
-        if (latest.ratings && latest.ratings.length > 0) {
-          const competencyChartData: CompetencyData[] = latest.ratings.map((r) => ({
-            subject: r.category.length > 12 ? `${r.category.substring(0, 10)}..` : r.category,
-            score: r.rating,
-            fullMark: 5,
-          }));
-          setCompetencyScores(competencyChartData);
+      try {
+        const evals = await evaluationService.getTraineeEvaluations(resolvedTraineeId);
+        if (evals && evals.length > 0) {
+          const latest = evals[0];
+          setLatestEvaluation(latest);
+          if (latest.ratings && latest.ratings.length > 0) {
+            const competencyChartData: CompetencyData[] = latest.ratings.map((r) => ({
+              subject: r.category.length > 12 ? `${r.category.substring(0, 10)}..` : r.category,
+              score: r.rating,
+              fullMark: 5,
+            }));
+            setCompetencyScores(competencyChartData);
+          }
         }
+      } catch (evalErr) {
+        console.warn('Failed to load trainee evaluations:', evalErr);
       }
     } catch (err) {
-      console.error('Failed to load trainee analytics:', err);
+      console.error('Failed to load trainee profile:', err);
     } finally {
       setLoading(false);
     }

@@ -43,7 +43,7 @@ function daysBetween(start: number, end: number): number {
 
 export function SupervisorLeaveList() {
   const { user, role } = useAuth();
-  const { supervisor } = useSupervisor();
+  const { supervisor, loading: supLoading } = useSupervisor();
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [traineeNames, setTraineeNames] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -54,7 +54,17 @@ export function SupervisorLeaveList() {
   const [actionModal, setActionModal] = useState<{ leave: LeaveRequest; action: 'approved' | 'rejected' } | null>(null);
 
   const fetchLeaves = useCallback(async (signal?: AbortSignal) => {
-    if (!supervisor) return;
+    // Keep skeleton while the supervisor profile is still loading
+    if (supLoading) return;
+    // No supervisor profile (e.g. empty database) -> show empty state
+    if (!supervisor) {
+      if (!signal?.aborted) {
+        setLeaves([]);
+        setTotal(0);
+        setLoading(false);
+      }
+      return;
+    }
     setLoading(true);
     try {
       const companyId = supervisor.companyId;
@@ -89,7 +99,7 @@ export function SupervisorLeaveList() {
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
-  }, [filters, supervisor]);
+  }, [filters, supervisor, supLoading]);
 
   useEffect(() => {
     const controller = new AbortController();

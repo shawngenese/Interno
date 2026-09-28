@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getTraineeTasks, getTraineeTaskCounts } from '../services/taskService';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { getFirestoreInstancePublic } from '@/config/firebase';
@@ -27,30 +27,43 @@ export function MyTasks() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
   const [traineeId, setTraineeId] = useState<string | null>(null);
-  const resolvedRef = useRef(false);
+  const [traineeResolved, setTraineeResolved] = useState(false);
 
   useEffect(() => {
-    if (!user?.uid || resolvedRef.current) return;
+    if (!user?.uid || traineeResolved) return;
+    let cancelled = false;
     const resolveTrainee = async () => {
       try {
         const db = getFirestoreInstancePublic();
         const traineeSnap = await getDocs(
           query(collection(db, 'trainees'), where('userId', '==', user.uid), where('status', '==', 'active'))
         );
-        if (!traineeSnap.empty) {
+        if (!cancelled && !traineeSnap.empty) {
           setTraineeId(traineeSnap.docs[0].id);
         }
-        resolvedRef.current = true;
       } catch (err) {
         console.error('Failed to resolve trainee ID:', err);
-        resolvedRef.current = true;
+      } finally {
+        if (!cancelled) setTraineeResolved(true);
       }
     };
     resolveTrainee();
-  }, [user?.uid]);
+    return () => { cancelled = true; };
+  }, [user?.uid, traineeResolved]);
 
   const fetchTasks = useCallback(async () => {
-    if (!user?.uid || !traineeId) return;
+    if (!user?.uid) {
+      setLoading(false);
+      return;
+    }
+    // Keep skeleton while the trainee profile lookup is still in flight
+    if (!traineeResolved) return;
+    // No trainee profile (e.g. fresh/empty database) -> show empty state
+    if (!traineeId) {
+      setTasks([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const [allTasks, taskCounts] = await Promise.all([
@@ -65,7 +78,7 @@ export function MyTasks() {
     } finally {
       setLoading(false);
     }
-  }, [user?.uid, traineeId]);
+  }, [user?.uid, traineeId, traineeResolved]);
 
   useEffect(() => {
     fetchTasks();

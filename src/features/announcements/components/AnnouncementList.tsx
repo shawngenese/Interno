@@ -22,6 +22,9 @@ interface AnnouncementListProps {
 export function AnnouncementList({ companyId: companyIdProp, viewerRole }: AnnouncementListProps) {
   const { user } = useAuth();
   const [resolvedCompanyId, setResolvedCompanyId] = useState<string>(companyIdProp || '');
+  const [companyIdReady, setCompanyIdReady] = useState<boolean>(
+    !!companyIdProp || viewerRole === 'trainee' || viewerRole === 'admin'
+  );
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -43,9 +46,13 @@ export function AnnouncementList({ companyId: companyIdProp, viewerRole }: Annou
   useEffect(() => {
     if (companyIdProp) {
       setResolvedCompanyId(companyIdProp);
+      setCompanyIdReady(true);
       return;
     }
-    if (!user?.uid || viewerRole === 'trainee') return;
+    if (!user?.uid || viewerRole === 'trainee' || viewerRole === 'admin') {
+      setCompanyIdReady(true);
+      return;
+    }
     let cancelled = false;
     async function resolveCompanyId() {
       try {
@@ -60,6 +67,8 @@ export function AnnouncementList({ companyId: companyIdProp, viewerRole }: Annou
         }
       } catch (err) {
         console.error('Failed to resolve companyId for announcements:', err);
+      } finally {
+        if (!cancelled) setCompanyIdReady(true);
       }
     }
     resolveCompanyId();
@@ -68,9 +77,15 @@ export function AnnouncementList({ companyId: companyIdProp, viewerRole }: Annou
   }, [user?.uid, companyIdProp, viewerRole]);
 
   const loadAnnouncements = useCallback(async (signal?: AbortSignal) => {
+    // Keep skeleton while companyId resolution is still in flight
+    if (!companyIdReady) return;
     // Admin sees all announcements (no companyId filter)
     // Trainees without companyId also see all (system-wide)
-    if (viewerRole !== 'admin' && viewerRole !== 'trainee' && !resolvedCompanyId) return;
+    if (viewerRole !== 'admin' && viewerRole !== 'trainee' && !resolvedCompanyId) {
+      setAnnouncements([]);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const data = await announcementService.getAnnouncements(
@@ -88,7 +103,7 @@ export function AnnouncementList({ companyId: companyIdProp, viewerRole }: Annou
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
-  }, [resolvedCompanyId, filterStatus, viewerRole]);
+  }, [resolvedCompanyId, companyIdReady, filterStatus, viewerRole]);
 
   useEffect(() => {
     abortRef.current?.abort();

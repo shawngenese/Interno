@@ -73,7 +73,12 @@ service cloud.firestore {
     }
     
     function isAssignedTrainee(traineeId) {
-      return isTrainee() && getUserTraineeId() == traineeId;
+      return isSignedIn() && (
+        (isTrainee() && getUserTraineeId() == traineeId) ||
+        traineeId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/trainees/$(traineeId)) &&
+         get(/databases/$(database)/documents/trainees/$(traineeId)).data.userId == request.auth.uid)
+      );
     }
     
     function sameCompany(entityCompanyId) {
@@ -98,12 +103,20 @@ service cloud.firestore {
     function isValidRole(role) {
       return role == 'admin' || role == 'supervisor' || role == 'coordinator' || role == 'trainee';
     }
+
+    // PATTERN (see notification_preferences below): every read rule that derefs
+    // resource.data must start with `resource == null ||`. For a document that
+    // was deleted or never created, resource is null and any resource.data
+    // deref errors into a deny; the guard makes such reads resolve to
+    // exists() == false instead. Guards are read-only: update/delete on a
+    // missing doc must stay denied.
     
     // ============================================
     // USERS Collection
     // ============================================
     match /users/{userId} {
       allow read: if isSignedIn() && (
+        resource == null ||
         isOwner(userId) ||
         isAdmin() ||
         (isCoordinator() && companyFieldMatches(resource.data)) ||
@@ -135,6 +148,7 @@ service cloud.firestore {
     // ============================================
     match /trainees/{traineeId} {
       allow read: if isSignedIn() && (
+        resource == null ||
         isAdmin() ||
         (isCoordinator() && companyFieldMatches(resource.data)) ||
         (isSupervisor() && (
@@ -143,7 +157,7 @@ service cloud.firestore {
           ('externalCompanyId' in resource.data && resource.data.externalCompanyId == getUserCompanyId())
         )) ||
         isAssignedTrainee(traineeId) ||
-        (isTrainee() && resource.data.userId == request.auth.uid)
+        resource.data.userId == request.auth.uid
       );
       
       allow create: if isSignedIn() && isAdmin() &&
@@ -184,6 +198,7 @@ service cloud.firestore {
     // ============================================
     match /supervisors/{supervisorId} {
       allow read: if isSignedIn() && (
+        resource == null ||
         isAdmin() ||
         isCoordinator() ||
         isOwner(supervisorId) ||
@@ -221,6 +236,7 @@ service cloud.firestore {
     // ============================================
     match /coordinators/{coordinatorId} {
       allow read: if isSignedIn() && (
+        resource == null ||
         isAdmin() ||
         isOwner(coordinatorId) ||
         (isCoordinator() && sameCompany(resource.data.companyId))
@@ -242,6 +258,7 @@ service cloud.firestore {
     // ============================================
     match /companies/{companyId} {
       allow read: if isSignedIn() && (
+        resource == null ||
         isAdmin() ||
         isCoordinator() ||
         isSupervisor() ||
@@ -284,6 +301,7 @@ service cloud.firestore {
     // ============================================
     match /attendance_records/{recordId} {
       allow read: if isSignedIn() && (
+        resource == null ||
         isAdmin() ||
         (isCoordinator() && traineeCompanyMatches(resource.data)) ||
         (isSupervisor() && (
@@ -346,6 +364,7 @@ service cloud.firestore {
     // ============================================
     match /qr_sessions/{sessionId} {
       allow read: if isSignedIn() && (
+        resource == null ||
         isAdmin() ||
         (isSupervisor() && resource.data.createdBy == request.auth.uid)
       );
@@ -364,6 +383,7 @@ service cloud.firestore {
     // ============================================
     match /tasks/{taskId} {
       allow read: if isSignedIn() && (
+        resource == null ||
         isAdmin() ||
         ((isSupervisor() || isCoordinator()) && (
           companyFieldMatches(resource.data) ||
@@ -454,6 +474,7 @@ service cloud.firestore {
     // ============================================
     match /task_approvals/{approvalId} {
       allow read: if isSignedIn() && (
+        resource == null ||
         isAdmin() ||
         ((isSupervisor() || isCoordinator()) &&
           companyFieldMatches(get(/databases/$(database)/documents/tasks/$(resource.data.taskId)).data)) ||
@@ -484,6 +505,7 @@ service cloud.firestore {
     // ============================================
     match /documents/{documentId} {
       allow read: if isSignedIn() && (
+        resource == null ||
         isAdmin() ||
         ((isSupervisor() || isCoordinator()) && (
           companyFieldMatches(resource.data) ||
@@ -526,6 +548,7 @@ service cloud.firestore {
     // ============================================
     match /dtrs/{dtrId} {
       allow read: if isSignedIn() && (
+        resource == null ||
         isAdmin() ||
         ((isSupervisor() || isCoordinator()) && (
           companyFieldMatches(resource.data) ||
@@ -590,6 +613,7 @@ service cloud.firestore {
     // ============================================
     match /leave_requests/{leaveId} {
       allow read: if isSignedIn() && (
+        resource == null ||
         isAdmin() ||
         ((isSupervisor() || isCoordinator()) && (
           companyFieldMatches(resource.data) ||
@@ -652,7 +676,7 @@ service cloud.firestore {
     // NOTIFICATIONS Collection
     // ============================================
     match /notifications/{notificationId} {
-      allow read: if isSignedIn() && isOwner(resource.data.userId);
+      allow read: if isSignedIn() && (resource == null || isOwner(resource.data.userId));
       // creates are owned by the sendNotification Cloud Function (Admin SDK bypasses rules)
       allow create: if false;
       allow update: if isSignedIn() && isOwner(resource.data.userId) &&
@@ -664,7 +688,7 @@ service cloud.firestore {
     // FCM_TOKENS Collection
     // ============================================
     match /fcm_tokens/{tokenId} {
-      allow read: if isSignedIn() && isOwner(resource.data.userId);
+      allow read: if isSignedIn() && (resource == null || isOwner(resource.data.userId));
       allow create: if isSignedIn() && isOwner(request.resource.data.userId);
       allow update: if isSignedIn() && isOwner(resource.data.userId);
       allow delete: if isSignedIn() && isOwner(resource.data.userId);
@@ -686,7 +710,7 @@ service cloud.firestore {
     // TASK_COMMENTS Collection (subcollection of tasks)
     // ============================================
     match /task_comments/{commentId} {
-      allow read: if isSignedIn() && 'taskId' in resource.data && (
+      allow read: if isSignedIn() && (resource == null || ('taskId' in resource.data && (
         isAdmin() ||
         (isSupervisor() && (
           companyFieldMatches(get(/databases/$(database)/documents/tasks/$(resource.data.taskId)).data) ||
@@ -697,7 +721,7 @@ service cloud.firestore {
           companyFieldMatches(get(/databases/$(database)/documents/tasks/$(resource.data.taskId)).data)) ||
         (isTrainee() &&
           get(/databases/$(database)/documents/tasks/$(resource.data.taskId)).data.traineeId == getUserTraineeId())
-      );
+      )));
       
       allow create: if isSignedIn() && isOwner(request.resource.data.userId) &&
         request.resource.data.keys().hasAll(['taskId', 'userId', 'content']) &&
@@ -718,6 +742,7 @@ service cloud.firestore {
     // ============================================
     match /task_documents/{docId} {
       allow read: if isSignedIn() && (
+        resource == null ||
         isAdmin() ||
         isAssignedTrainee(resource.data.traineeId) ||
         isSupervisorOf(resource.data.traineeId) ||
@@ -751,6 +776,7 @@ service cloud.firestore {
     // ============================================
     match /placement_requests/{requestId} {
       allow read: if isSignedIn() && (
+        resource == null ||
         isAdmin() ||
         isCoordinator() ||
         (isTrainee() && resource.data.traineeId == getUserTraineeId()) ||
@@ -790,6 +816,7 @@ service cloud.firestore {
     // ============================================
     match /document_requirements/{requirementId} {
       allow read: if isSignedIn() && (
+        resource == null ||
         isAdmin() ||
         isCoordinator() ||
         sameCompany(resource.data.companyId)
@@ -817,13 +844,11 @@ service cloud.firestore {
     // ============================================
     match /evaluations/{evaluationId} {
       allow read: if isSignedIn() && (
+        resource == null ||
         isAdmin() ||
         (isCoordinator() && (resource.data.status != 'draft' || resource.data.supervisorId == request.auth.uid)) ||
         (isSupervisor() && resource.data.supervisorId == request.auth.uid) ||
-        (isTrainee() && resource.data.status != 'draft' && (
-          resource.data.traineeId == getUserTraineeId() ||
-          resource.data.traineeId == request.auth.uid
-        ))
+        isAssignedTrainee(resource.data.traineeId)
       );
       
       allow create: if isSignedIn() && (

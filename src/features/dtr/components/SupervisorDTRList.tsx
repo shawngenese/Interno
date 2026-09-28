@@ -35,7 +35,7 @@ function statusBadge(status: DTREntry['status']): React.ReactNode {
 export function SupervisorDTRList() {
   const { addToast } = useToast();
   const { role } = useAuth();
-  const { supervisor } = useSupervisor();
+  const { supervisor, loading: supLoading } = useSupervisor();
   const [dtrs, setDtrs] = useState<DTREntry[]>([]);
   const [trainees, setTrainees] = useState<{ id: string; name: string }[]>([]);
   const [traineeNameMap, setTraineeNameMap] = useState<Map<string, string>>(new Map());
@@ -81,7 +81,15 @@ export function SupervisorDTRList() {
   }, [supervisor]);
 
   const fetchDTRs = useCallback(async () => {
-    if (!supervisor) return;
+    // Keep skeleton while the supervisor profile is still loading
+    if (supLoading) return;
+    // No supervisor profile (e.g. empty database) -> show empty state
+    if (!supervisor) {
+      setDtrs([]);
+      setTotal(0);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const companyId = supervisor.companyId;
@@ -134,7 +142,7 @@ export function SupervisorDTRList() {
     } finally {
       setLoading(false);
     }
-  }, [filters, supervisor, traineeNameMap]);
+  }, [filters, supervisor, supLoading, traineeNameMap]);
 
   useEffect(() => {
     fetchDTRs();

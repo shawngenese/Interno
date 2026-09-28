@@ -61,26 +61,32 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
   const { addToast } = useToast();
   const { user, role } = useAuth();
   const [resolvedTraineeId, setResolvedTraineeId] = useState<string | undefined>(undefined);
+  const [traineeIdResolved, setTraineeIdResolved] = useState(false);
 
   // Resolve trainee doc ID from auth UID for trainee role
   useEffect(() => {
     if (role !== 'trainee' || !user?.uid) {
       setResolvedTraineeId(undefined);
+      setTraineeIdResolved(true);
       return;
     }
+    let cancelled = false;
     const resolveId = async () => {
       try {
         const db = getFirestoreInstancePublic();
         const q = query(collection(db, 'trainees'), where('userId', '==', user.uid), limit(1));
         const snap = await getDocs(q);
-        if (!snap.empty) {
+        if (!cancelled && !snap.empty) {
           setResolvedTraineeId(snap.docs[0].id);
         }
       } catch (err) {
         console.error('Failed to resolve trainee ID:', err);
+      } finally {
+        if (!cancelled) setTraineeIdResolved(true);
       }
     };
     resolveId();
+    return () => { cancelled = true; };
   }, [role, user?.uid]);
 
   const traineeId = propTraineeId || resolvedTraineeId;
@@ -101,7 +107,15 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
   } | null>(null);
 
   const fetchDocuments = useCallback(async () => {
-    if (role === 'trainee' && !traineeId) return;
+    if (role === 'trainee' && !traineeId) {
+      // Keep skeleton while the trainee profile lookup is still in flight
+      if (!traineeIdResolved) return;
+      // No trainee profile (e.g. empty database) -> show empty state
+      setDocuments([]);
+      setTotal(0);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -135,7 +149,7 @@ export function DocumentList({ traineeId: propTraineeId, isSupervisor = false, c
     } finally {
       setLoading(false);
     }
-  }, [filters, traineeId, companyId, role]);
+  }, [filters, traineeId, traineeIdResolved, companyId, role]);
 
   useEffect(() => {
     fetchDocuments();
