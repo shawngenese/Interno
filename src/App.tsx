@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, useLocation, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, Link, Navigate } from 'react-router-dom';
 import { Bell } from 'lucide-react';
 import { AuthProvider } from '@/features/auth';
 import { LoginPage, UnauthorizedPage } from '@/features/auth';
@@ -9,7 +9,6 @@ import { LandingPage } from '@/features/landing';
 import { AdminLayout } from '@/features/admin/components/AdminLayout';
 import { AdminDashboard } from '@/features/admin/components/AdminDashboard';
 import { AdminReportDashboard } from '@/features/admin/components/AdminReportDashboard';
-import { ReportGenerator } from '@/features/reports/components/ReportGenerator';
 import { SupervisorLayout, SupervisorDashboard, SupervisorTraineeList } from '@/features/supervisor';
 import { TraineeDashboard } from '@/features/trainee/components/TraineeDashboard';
 
@@ -111,13 +110,7 @@ function App() {
           } />
 
           <Route path="/admin/reports/generate" element={
-            <AdminRoute>
-              <AdminLayout>
-                <PageTransition>
-                  <ReportGenerator />
-                </PageTransition>
-              </AdminLayout>
-            </AdminRoute>
+            <Navigate to="/admin/reports?modal=generate" replace />
           } />
 
           <Route path="/admin/notifications" element={

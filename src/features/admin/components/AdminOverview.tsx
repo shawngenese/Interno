@@ -163,8 +163,8 @@ export function AdminOverview() {
         if (d.placementType === 'external') externalTrainees++;
         else internalTrainees++;
 
-        const completedH = Number(d.completedHours || d.hoursRendered || 0);
-        const requiredH = Number(d.requiredHours || d.totalHours || 300);
+        const completedH = Number(d.completedHours || d.ojtHoursCompleted || d.hoursRendered || 0);
+        const requiredH = Number(d.ojtHoursRequired ?? d.requiredHours ?? d.totalHours ?? 480);
         totalCompletedHours += completedH;
         totalRequiredHours += requiredH;
       });

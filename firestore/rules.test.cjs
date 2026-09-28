@@ -1,4 +1,4 @@
-﻿const {
+const {
   initializeTestEnvironment,
   assertFails,
   assertSucceeds,
@@ -452,6 +452,72 @@ describe('Firestore Security Rules', () => {
       }));
     });
 
+    test('supervisor can update assigned trainee ojtHoursCompleted, milestonesNotified, and updatedAt', async () => {
+      const supervisor = getSupervisorAuth('supervisor-1');
+      const db = supervisor.firestore();
+      await assertSucceeds(db.collection('trainees').doc('trainee-1').update({
+        ojtHoursCompleted: 120,
+        milestonesNotified: ['50%', '100%'],
+        updatedAt: Date.now(),
+      }));
+    });
+
+    test('coordinator can update trainee ojtHoursCompleted, milestonesNotified, ojtStatus, scheduleId', async () => {
+      const coordinator = getCoordinatorAuth();
+      const db = coordinator.firestore();
+      await assertSucceeds(db.collection('trainees').doc('trainee-1').update({
+        ojtHoursCompleted: 150.5,
+        milestonesNotified: ['75%'],
+        ojtStatus: 'completed',
+        scheduleId: 'sched-2',
+        updatedAt: Date.now(),
+      }));
+    });
+
+    test('admin can update trainee ojtHoursCompleted and milestonesNotified', async () => {
+      const admin = getAdminAuth();
+      const db = admin.firestore();
+      await assertSucceeds(db.collection('trainees').doc('trainee-1').update({
+        ojtHoursCompleted: 200,
+        milestonesNotified: ['100%'],
+      }));
+    });
+
+    test('supervisor cannot update ojtHoursCompleted with non-number', async () => {
+      const supervisor = getSupervisorAuth('supervisor-1');
+      const db = supervisor.firestore();
+      await assertFails(db.collection('trainees').doc('trainee-1').update({
+        ojtHoursCompleted: 'one hundred',
+      }));
+    });
+
+    test('supervisor cannot update milestonesNotified with non-list', async () => {
+      const supervisor = getSupervisorAuth('supervisor-1');
+      const db = supervisor.firestore();
+      await assertFails(db.collection('trainees').doc('trainee-1').update({
+        milestonesNotified: 'not-a-list',
+      }));
+    });
+
+    test('trainee cannot update ojtHoursCompleted or milestonesNotified', async () => {
+      const trainee = getTraineeAuth('trainee-1');
+      const db = trainee.firestore();
+      await assertFails(db.collection('trainees').doc('trainee-1').update({
+        ojtHoursCompleted: 300,
+      }));
+      await assertFails(db.collection('trainees').doc('trainee-1').update({
+        milestonesNotified: ['100%'],
+      }));
+    });
+
+    test('other company supervisor cannot update trainee', async () => {
+      const supervisor = getOtherCompanySupervisor();
+      const db = supervisor.firestore();
+      await assertFails(db.collection('trainees').doc('trainee-1').update({
+        ojtHoursCompleted: 50,
+      }));
+    });
+
     test('trainee can update own profile and emergencyContact', async () => {
       const trainee = getTraineeAuth('trainee-1');
       const db = trainee.firestore();
@@ -628,6 +694,104 @@ describe('Firestore Security Rules', () => {
         status: 'approved',
         approvedAt: Date.now(),
         approvedBy: 'supervisor-1',
+      }));
+    });
+
+    test('supervisor can edit task details (title, description, priority, dueDate, estimatedHours, requireAttachment)', async () => {
+      const supervisor = getSupervisorAuth('supervisor-1');
+      const db = supervisor.firestore();
+      await assertSucceeds(db.collection('tasks').doc('task-1').update({
+        title: 'Updated Task Title',
+        description: 'Updated Task Description',
+        priority: 'urgent',
+        dueDate: Date.now() + 172800000,
+        estimatedHours: 10,
+        requireAttachment: true,
+        updatedAt: Date.now(),
+      }));
+    });
+
+    test('supervisor can unarchive task back to pending', async () => {
+      const supervisor = getSupervisorAuth('supervisor-1');
+      const db = supervisor.firestore();
+      await assertSucceeds(db.collection('tasks').doc('task-1').update({
+        status: 'pending',
+        updatedAt: Date.now(),
+      }));
+    });
+
+    test('supervisor cannot update task with title exceeding 300 characters', async () => {
+      const supervisor = getSupervisorAuth('supervisor-1');
+      const db = supervisor.firestore();
+      await assertFails(db.collection('tasks').doc('task-1').update({
+        title: 'a'.repeat(301),
+      }));
+    });
+
+    test('supervisor cannot update task with invalid status', async () => {
+      const supervisor = getSupervisorAuth('supervisor-1');
+      const db = supervisor.firestore();
+      await assertFails(db.collection('tasks').doc('task-1').update({
+        status: 'invalid_status',
+      }));
+    });
+
+    test('supervisor can update task notification flags (dueSoonNotified, overdueNotified)', async () => {
+      const supervisor = getSupervisorAuth('supervisor-1');
+      const db = supervisor.firestore();
+      await assertSucceeds(db.collection('tasks').doc('task-1').update({
+        dueSoonNotified: true,
+        overdueNotified: false,
+        updatedAt: Date.now(),
+      }));
+    });
+
+    test('supervisor cannot update task notification flags with non-boolean values', async () => {
+      const supervisor = getSupervisorAuth('supervisor-1');
+      const db = supervisor.firestore();
+      await assertFails(db.collection('tasks').doc('task-1').update({
+        dueSoonNotified: 'yes',
+      }));
+      await assertFails(db.collection('tasks').doc('task-1').update({
+        overdueNotified: 123,
+      }));
+    });
+
+    test('user with supervisor doc in firestore but no custom claim can create and update tasks', async () => {
+      // User has supervisor document created in setupInitialData ('supervisor-1'), but token has no custom claims
+      const plainAuth = testEnv.authenticatedContext('supervisor-1', {});
+      const db = plainAuth.firestore();
+      await assertSucceeds(db.collection('tasks').add({
+        traineeId: 'trainee-1',
+        title: 'Task by doc supervisor',
+        description: 'Description',
+        status: 'pending',
+        priority: 'medium',
+        dueDate: Date.now() + 86400000,
+        createdBy: 'supervisor-1',
+      }));
+      await assertSucceeds(db.collection('tasks').doc('task-1').update({
+        title: 'Updated by doc supervisor',
+        description: 'New Description',
+        progress: 50,
+        updatedAt: Date.now(),
+      }));
+    });
+
+    test('user who created the task without supervisor claim can edit task', async () => {
+      const creatorAuth = testEnv.authenticatedContext('supervisor-1', {});
+      const db = creatorAuth.firestore();
+      await assertSucceeds(db.collection('tasks').doc('task-1').update({
+        title: 'Edited by creator',
+        updatedAt: Date.now(),
+      }));
+    });
+
+    test('trainee cannot edit task title', async () => {
+      const trainee = getTraineeAuth('trainee-1');
+      const db = trainee.firestore();
+      await assertFails(db.collection('tasks').doc('task-1').update({
+        title: 'Hacked Title',
       }));
     });
   });

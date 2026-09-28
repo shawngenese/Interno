@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { listTasks, deleteTask } from '../services/taskService';
+import { listTasks, deleteTask, unarchiveTask } from '../services/taskService';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -10,9 +10,10 @@ import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import { Modal } from '@/shared/components/Modal';
 import { Button } from '@/shared/components/ui/Button';
 import { Skeleton } from '@/shared/components/Skeleton';
-import { Search, Plus, Archive, Filter, CheckSquare, Clock } from 'lucide-react';
+import { Search, Plus, Archive, Filter, CheckSquare, Clock, Edit, RotateCcw } from 'lucide-react';
 import type { Task, TaskStatus, TaskPriority } from '../types';
 import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS, TASK_STATUS_COLORS, TASK_PRIORITY_COLORS } from '../types';
+import { isTaskOverdue } from '../utils/taskUtils';
 
 const FIRESTORE_IN_LIMIT = 30;
 
@@ -39,6 +40,7 @@ export function TaskList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [companyId, setCompanyId] = useState<string>('');
   const [filters, setFilters] = useState<TaskFilters>({
@@ -158,7 +160,7 @@ export function TaskList() {
   const handleArchive = async (taskId: string) => {
     setConfirmDialog({
       title: 'Archive Task',
-      message: 'Archive this task?',
+      message: 'Archive this task? It will be hidden from the trainee and normal view.',
       danger: true,
       onConfirm: async () => {
         try {
@@ -169,6 +171,15 @@ export function TaskList() {
         }
       },
     });
+  };
+
+  const handleRestore = async (taskId: string) => {
+    try {
+      await unarchiveTask(taskId);
+      fetchTasks();
+    } catch (err) {
+      console.error('Restore failed:', err);
+    }
   };
 
 
@@ -311,51 +322,85 @@ export function TaskList() {
           <>
             {/* Mobile Cards */}
             <div className="space-y-3 md:hidden pt-2">
-              {tasks.map((task) => (
-                <div
-                  key={task.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setSelectedTask(task)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setSelectedTask(task);
-                    }
-                  }}
-                  className="bg-card border border-border rounded-xl p-4 space-y-3 hover:border-primary transition-colors cursor-pointer"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h3 className="font-semibold text-foreground text-sm">{task.title}</h3>
-                      <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{task.description}</p>
+              {tasks.map((task) => {
+                const isOverdue = isTaskOverdue(task.dueDate, task.status);
+                return (
+                  <div
+                    key={task.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setSelectedTask(task)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setSelectedTask(task);
+                      }
+                    }}
+                    className="bg-card border border-border rounded-xl p-4 space-y-3 hover:border-primary transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <h3 className="font-semibold text-foreground text-sm truncate">{task.title}</h3>
+                          {isOverdue && (
+                            <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-destructive/15 text-destructive rounded border border-destructive/20 shrink-0">
+                              OVERDUE
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2">{task.description}</p>
+                      </div>
+                      {(role === 'supervisor' || role === 'admin') && (
+                        <div className="flex items-center gap-1 shrink-0">
+                          {task.status === 'archived' ? (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleRestore(task.id); }}
+                              className="text-muted-foreground hover:text-primary p-1 rounded-md transition-colors"
+                              aria-label="Restore task"
+                              title="Restore task"
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setEditingTaskId(task.id); }}
+                                className="text-muted-foreground hover:text-primary p-1 rounded-md transition-colors"
+                                aria-label="Edit task"
+                                title="Edit task"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleArchive(task.id); }}
+                                className="text-muted-foreground hover:text-destructive p-1 rounded-md transition-colors"
+                                aria-label="Archive task"
+                                title="Archive task"
+                              >
+                                <Archive className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    {(role === 'supervisor' || role === 'admin') && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleArchive(task.id); }}
-                        className="text-muted-foreground hover:text-destructive p-1 rounded-md transition-colors shrink-0"
-                        aria-label="Archive task"
-                      >
-                        <Archive className="w-4 h-4" />
-                      </button>
-                    )}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-border text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`px-2 py-0.5 font-semibold rounded-full ${TASK_STATUS_COLORS[task.status].bg} ${TASK_STATUS_COLORS[task.status].text}`}>
+                          {TASK_STATUS_LABELS[task.status]}
+                        </span>
+                        <span className={`px-2 py-0.5 font-semibold rounded-full ${TASK_PRIORITY_COLORS[task.priority].bg} ${TASK_PRIORITY_COLORS[task.priority].text}`}>
+                          {TASK_PRIORITY_LABELS[task.priority]}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-border text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <span className={`px-2 py-0.5 font-semibold rounded-full ${TASK_STATUS_COLORS[task.status].bg} ${TASK_STATUS_COLORS[task.status].text}`}>
-                        {TASK_STATUS_LABELS[task.status]}
-                      </span>
-                      <span className={`px-2 py-0.5 font-semibold rounded-full ${TASK_PRIORITY_COLORS[task.priority].bg} ${TASK_PRIORITY_COLORS[task.priority].text}`}>
-                        {TASK_PRIORITY_LABELS[task.priority]}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Desktop Table */}
@@ -367,47 +412,80 @@ export function TaskList() {
                     <th className="h-[44px] text-center px-4 font-semibold text-xs text-muted-foreground uppercase tracking-wider">Status</th>
                     <th className="h-[44px] text-center px-4 font-semibold text-xs text-muted-foreground uppercase tracking-wider">Priority</th>
                     <th className="h-[44px] text-center px-4 font-semibold text-xs text-muted-foreground uppercase tracking-wider">Due Date</th>
-                    <th className="h-[44px] text-right px-4 font-semibold text-xs text-muted-foreground uppercase tracking-wider w-20">Actions</th>
+                    <th className="h-[44px] text-right px-4 font-semibold text-xs text-muted-foreground uppercase tracking-wider w-24">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {tasks.map((task) => (
-                    <tr
-                      key={task.id}
-                      className="h-[44px] hover:bg-muted/50 cursor-pointer transition-colors"
-                      onClick={() => setSelectedTask(task)}
-                    >
-                      <td className="px-4 py-3">
-                        <p className="font-semibold text-foreground text-sm">{task.title}</p>
-                        <p className="text-xs text-muted-foreground truncate max-w-md">{task.description}</p>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full ${TASK_STATUS_COLORS[task.status].bg} ${TASK_STATUS_COLORS[task.status].text}`}>
-                          {TASK_STATUS_LABELS[task.status]}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full ${TASK_PRIORITY_COLORS[task.priority].bg} ${TASK_PRIORITY_COLORS[task.priority].text}`}>
-                          {TASK_PRIORITY_LABELS[task.priority]}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center text-xs text-muted-foreground">
-                        {new Date(task.dueDate).toLocaleDateString()}
-                      </td>
-                      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                        {(role === 'supervisor' || role === 'admin') && (
-                          <button
-                            onClick={() => handleArchive(task.id)}
-                            className="text-muted-foreground hover:text-destructive p-1 rounded-md transition-colors"
-                            aria-label="Archive task"
-                            title="Archive task"
-                          >
-                            <Archive className="w-4 h-4" />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {tasks.map((task) => {
+                    const isOverdue = isTaskOverdue(task.dueDate, task.status);
+                    return (
+                      <tr
+                        key={task.id}
+                        className="h-[44px] hover:bg-muted/50 cursor-pointer transition-colors"
+                        onClick={() => setSelectedTask(task)}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-foreground text-sm">{task.title}</p>
+                            {isOverdue && (
+                              <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-destructive/15 text-destructive rounded border border-destructive/20 shrink-0">
+                                OVERDUE
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate max-w-md">{task.description}</p>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full ${TASK_STATUS_COLORS[task.status].bg} ${TASK_STATUS_COLORS[task.status].text}`}>
+                            {TASK_STATUS_LABELS[task.status]}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full ${TASK_PRIORITY_COLORS[task.priority].bg} ${TASK_PRIORITY_COLORS[task.priority].text}`}>
+                            {TASK_PRIORITY_LABELS[task.priority]}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center text-xs text-muted-foreground">
+                          {new Date(task.dueDate).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                          {(role === 'supervisor' || role === 'admin') && (
+                            <div className="flex items-center justify-end gap-1.5">
+                              {task.status === 'archived' ? (
+                                <button
+                                  onClick={() => handleRestore(task.id)}
+                                  className="text-muted-foreground hover:text-primary p-1 rounded-md transition-colors"
+                                  aria-label="Restore task"
+                                  title="Restore task"
+                                >
+                                  <RotateCcw className="w-4 h-4" />
+                                </button>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => setEditingTaskId(task.id)}
+                                    className="text-muted-foreground hover:text-primary p-1 rounded-md transition-colors"
+                                    aria-label="Edit task"
+                                    title="Edit task"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleArchive(task.id)}
+                                    className="text-muted-foreground hover:text-destructive p-1 rounded-md transition-colors"
+                                    aria-label="Archive task"
+                                    title="Archive task"
+                                  >
+                                    <Archive className="w-4 h-4" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -428,6 +506,25 @@ export function TaskList() {
               fetchTasks();
             }}
             onCancel={() => setShowForm(false)}
+          />
+        </Modal>
+      )}
+
+      {editingTaskId && (
+        <Modal
+          open={Boolean(editingTaskId)}
+          title="Edit Task"
+          size="lg"
+          onClose={() => setEditingTaskId(null)}
+        >
+          <TaskForm
+            taskId={editingTaskId}
+            companyId={companyId}
+            onSaved={() => {
+              setEditingTaskId(null);
+              fetchTasks();
+            }}
+            onCancel={() => setEditingTaskId(null)}
           />
         </Modal>
       )}

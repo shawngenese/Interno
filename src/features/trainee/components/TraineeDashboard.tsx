@@ -68,9 +68,10 @@ export function TraineeDashboard() {
   const [loading, setLoading] = useState(true);
 
   // Trainee stats & chart states
-  const [requiredHours, setRequiredHours] = useState<number>(300);
+  const [requiredHours, setRequiredHours] = useState<number>(480);
   const [totalRenderedHours, setTotalRenderedHours] = useState<number>(0);
   const [totalOvertimeHours, setTotalOvertimeHours] = useState<number>(0);
+  const [attendanceStats, setAttendanceStats] = useState({ presentDays: 0, absentDays: 0, attendanceRate: 100 });
   const [weeklyHours, setWeeklyHours] = useState<DailyHoursData[]>([]);
   const [taskDistribution, setTaskDistribution] = useState<TaskStatusCount[]>([]);
   const [taskSummary, setTaskSummary] = useState({ total: 0, completed: 0 });
@@ -109,7 +110,7 @@ export function TraineeDashboard() {
       const traineeDoc = traineeSnap.docs[0];
       const resolvedTraineeId = traineeDoc.id;
       const tData = traineeDoc.data();
-      const reqHours = (tData.requiredHours as number) || 300;
+      const reqHours = Number(tData.ojtHoursRequired ?? tData.requiredHours ?? tData.totalHours ?? 480);
       setRequiredHours(reqHours);
 
       // 2. Fetch DTR entries for OJT hours & weekly chart
@@ -124,6 +125,7 @@ export function TraineeDashboard() {
 
       let regMins = 0;
       let otMins = 0;
+      let presentDaysCount = 0;
       const dtrMap = new Map<string, { regular: number; overtime: number }>();
 
       dtrSnap.docs.forEach((docSnap) => {
@@ -132,6 +134,10 @@ export function TraineeDashboard() {
         const overtime = (d.overtimeMinutes as number) || 0;
         regMins += regular;
         otMins += overtime;
+
+        if (regular > 0 || overtime > 0) {
+          presentDaysCount++;
+        }
 
         const dateObj = new Date(d.date as number);
         const dateKey = dateObj.toISOString().split('T')[0];
@@ -144,6 +150,29 @@ export function TraineeDashboard() {
       const totalRendered = Math.round(((regMins + otMins) / 60) * 10) / 10;
       setTotalRenderedHours(totalRendered);
       setTotalOvertimeHours(Math.round((otMins / 60) * 10) / 10);
+
+      // Estimate past workdays (Mon-Fri) in the last 30 days to calculate absences
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      let workdaysInPast30Days = 0;
+      for (let i = 0; i < 30; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dayOfWeek = d.getDay();
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+          workdaysInPast30Days++;
+        }
+      }
+
+      // Absences = workdays in cycle minus days with logged attendance
+      const effectiveAbsentDays = Math.max(0, Math.min(workdaysInPast30Days, workdaysInPast30Days - presentDaysCount));
+      const totalTrackedDays = presentDaysCount + effectiveAbsentDays;
+      const rate = totalTrackedDays > 0 ? Math.round((presentDaysCount / totalTrackedDays) * 100) : 100;
+      setAttendanceStats({
+        presentDays: presentDaysCount,
+        absentDays: effectiveAbsentDays,
+        attendanceRate: rate,
+      });
 
       // Generate last 7 days series for weekly bar chart
       const daysData: DailyHoursData[] = [];
@@ -174,17 +203,19 @@ export function TraineeDashboard() {
       let inProgressCount = 0;
       let pendingCount = 0;
       let returnedCount = 0;
+      let activeTasksCount = 0;
 
       taskSnap.docs.forEach((docSnap) => {
         const status = docSnap.data().status;
+        if (status === 'archived') return;
+        activeTasksCount++;
         if (status === 'approved' || status === 'completed') approvedCount++;
         else if (status === 'in_progress') inProgressCount++;
         else if (status === 'submitted' || status === 'pending') pendingCount++;
         else if (status === 'returned') returnedCount++;
       });
 
-      const totalTasksCount = taskSnap.docs.length;
-      setTaskSummary({ total: totalTasksCount, completed: approvedCount });
+      setTaskSummary({ total: activeTasksCount, completed: approvedCount });
 
       const distribution: TaskStatusCount[] = [
         { name: 'Completed', value: approvedCount, color: 'var(--color-success)' },
@@ -214,7 +245,7 @@ export function TraineeDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [user?.uid]);
+  }, [user]);
 
   useEffect(() => {
     fetchTraineeData();
@@ -338,13 +369,13 @@ export function TraineeDashboard() {
 
       {/* KPI Stats Grid */}
       {loading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          {[1, 2, 3, 4, 5].map((i) => (
             <Skeleton key={i} variant="rectangular" height={96} className="rounded-xl" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           <div className="bg-card p-4 rounded-xl border border-border space-y-1">
             <div className="flex items-center justify-between text-muted-foreground">
               <span className="text-xs font-medium">Logged Hours</span>
@@ -367,6 +398,20 @@ export function TraineeDashboard() {
 
           <div className="bg-card p-4 rounded-xl border border-border space-y-1">
             <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-xs font-medium">Attendance & Absences</span>
+              <CalendarCheck className="w-4 h-4 text-success" />
+            </div>
+            <p className="text-xl sm:text-2xl font-bold text-foreground">{attendanceStats.attendanceRate}%</p>
+            <p className="text-[11px] text-muted-foreground truncate">
+              <span className="text-success font-semibold">{attendanceStats.presentDays}d present</span> •{' '}
+              <span className={attendanceStats.absentDays > 0 ? 'text-destructive font-semibold' : 'text-muted-foreground'}>
+                {attendanceStats.absentDays}d absent
+              </span>
+            </p>
+          </div>
+
+          <div className="bg-card p-4 rounded-xl border border-border space-y-1">
+            <div className="flex items-center justify-between text-muted-foreground">
               <span className="text-xs font-medium">Tasks Completed</span>
               <CheckCircle2 className="w-4 h-4 text-success" />
             </div>
@@ -380,7 +425,7 @@ export function TraineeDashboard() {
             </p>
           </div>
 
-          <div className="bg-card p-4 rounded-xl border border-border space-y-1">
+          <div className="bg-card p-4 rounded-xl border border-border space-y-1 col-span-2 sm:col-span-1">
             <div className="flex items-center justify-between text-muted-foreground">
               <span className="text-xs font-medium">Latest Evaluation</span>
               <Award className="w-4 h-4 text-accent" />

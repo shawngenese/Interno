@@ -24,7 +24,7 @@ import type {
   TaskFilters,
   TaskStatus,
 } from '../types';
-import { notifyTaskCreated, notifyTaskApproved, notifyTaskReturned, notifyTaskSubmitted } from '@/features/notifications/services/notificationTriggers';
+import { notifyTaskCreated, notifyTaskUpdated, notifyTaskApproved, notifyTaskReturned, notifyTaskSubmitted } from '@/features/notifications/services/notificationTriggers';
 import { writeWithOfflineFallback } from '@/shared/utils/offline';
 
 const COLLECTIONS = {
@@ -110,23 +110,34 @@ export async function createTask(payload: CreateTaskPayload): Promise<Task> {
 export async function updateTask(taskId: string, payload: UpdateTaskPayload): Promise<void> {
   const db = getFirestoreInstancePublic();
   const taskRef = doc(db, COLLECTIONS.TASKS, taskId);
+  const cleanPayload = Object.fromEntries(
+    Object.entries(payload).filter(([, v]) => v !== undefined),
+  );
   return writeWithOfflineFallback(
     async () => {
+      const existingSnap = await getDoc(taskRef);
+      const existingData = existingSnap.exists() ? existingSnap.data() : null;
+
       await updateDoc(taskRef, {
-        ...payload,
+        ...cleanPayload,
         updatedAt: serverTimestamp(),
       });
+
+      if (existingData && existingData.traineeId) {
+        const title = (payload.title as string) || (existingData.title as string) || 'Task';
+        notifyTaskUpdated(existingData.traineeId, title, taskId).catch(console.error);
+      }
     },
     {
       type: 'update',
       collection: COLLECTIONS.TASKS,
       docId: taskId,
-      data: payload as unknown as Record<string, unknown>,
+      data: cleanPayload as unknown as Record<string, unknown>,
     },
   );
 }
 
-/** Delete a task (admin only). */
+/** Delete / archive a task (supervisor/admin). */
 export async function deleteTask(taskId: string): Promise<void> {
   const db = getFirestoreInstancePublic();
   const taskRef = doc(db, COLLECTIONS.TASKS, taskId);
@@ -142,6 +153,26 @@ export async function deleteTask(taskId: string): Promise<void> {
       collection: COLLECTIONS.TASKS,
       docId: taskId,
       data: { status: 'archived' },
+    },
+  );
+}
+
+/** Restore / unarchive a task (sets status to 'pending'). */
+export async function unarchiveTask(taskId: string): Promise<void> {
+  const db = getFirestoreInstancePublic();
+  const taskRef = doc(db, COLLECTIONS.TASKS, taskId);
+  return writeWithOfflineFallback(
+    async () => {
+      await updateDoc(taskRef, {
+        status: 'pending',
+        updatedAt: serverTimestamp(),
+      });
+    },
+    {
+      type: 'update',
+      collection: COLLECTIONS.TASKS,
+      docId: taskId,
+      data: { status: 'pending' },
     },
   );
 }
@@ -423,7 +454,7 @@ export async function bulkReviewTasks(
   await batch.commit();
 }
 
-/** Get tasks assigned to a trainee. */
+/** Get tasks assigned to a trainee (excludes archived tasks). */
 export async function getTraineeTasks(traineeId: string): Promise<Task[]> {
   const db = getFirestoreInstancePublic();
   const q = query(
@@ -432,7 +463,9 @@ export async function getTraineeTasks(traineeId: string): Promise<Task[]> {
     orderBy('createdAt', 'desc'),
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => toEntity<Task>(d.id, d.data() as Record<string, unknown>));
+  return snap.docs
+    .map((d) => toEntity<Task>(d.id, d.data() as Record<string, unknown>))
+    .filter((t) => t.status !== 'archived');
 }
 
 /** Get task counts by status for a trainee. */

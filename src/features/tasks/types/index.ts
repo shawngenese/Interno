@@ -32,6 +32,8 @@ export interface Task {
   returnedBy?: string;
   returnedAt?: number;
   returnCount: number;
+  dueSoonNotified?: boolean;
+  overdueNotified?: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -71,6 +73,8 @@ export interface CreateTaskPayload {
 export interface UpdateTaskPayload {
   title?: string;
   description?: string;
+  traineeId?: string;
+  traineeName?: string;
   priority?: TaskPriority;
   dueDate?: number;
   startDate?: number;

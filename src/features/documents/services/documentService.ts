@@ -44,7 +44,7 @@ export async function createDocument(
   data: Omit<Document, 'id' | 'createdAt' | 'updatedAt'>,
 ): Promise<Document> {
   const { getFirestoreInstancePublic } = await import('@/config/firebase');
-  const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
+  const { collection, addDoc, serverTimestamp, doc, getDoc } = await import('firebase/firestore');
   const db = getFirestoreInstancePublic();
 
   const ref = await addDoc(collection(db, 'documents'), {
@@ -52,6 +52,23 @@ export async function createDocument(
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+
+  // Non-blocking notification to coordinators
+  try {
+    let traineeName = 'A trainee';
+    if (data.traineeId) {
+      const traineeSnap = await getDoc(doc(db, 'trainees', data.traineeId));
+      if (traineeSnap.exists()) {
+        const tData = traineeSnap.data();
+        traineeName = (tData.name as string) || 'A trainee';
+      }
+    }
+    const { notifyDocumentUploaded } = await import('@/features/notifications/services/notificationTriggers');
+    await notifyDocumentUploaded(data.traineeId, traineeName, data.type, ref.id);
+  } catch (err) {
+    console.warn('Failed to send document upload notification:', err);
+  }
+
   return { ...data, id: ref.id, createdAt: Date.now(), updatedAt: Date.now() };
 }
 
@@ -138,20 +155,40 @@ export async function updateDocumentStatus(
   reviewNotes?: string,
 ): Promise<void> {
   const { getFirestoreInstancePublic } = await import('@/config/firebase');
-  const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
+  const { doc, getDoc, updateDoc, serverTimestamp } = await import('firebase/firestore');
   const { getAuthInstancePublic } = await import('@/config/firebase');
   const auth = getAuthInstancePublic();
   const currentUser = auth.currentUser;
   if (!currentUser) throw new Error('Not authenticated');
 
   const db = getFirestoreInstancePublic();
-  await updateDoc(doc(db, 'documents', id), {
+  const docRef = doc(db, 'documents', id);
+  const docSnap = await getDoc(docRef);
+  const docData = docSnap.exists() ? (docSnap.data() as Document) : null;
+
+  await updateDoc(docRef, {
     status,
     reviewedBy: currentUser.uid,
     reviewedAt: serverTimestamp(),
     ...(reviewNotes ? { reviewNotes } : {}),
     updatedAt: serverTimestamp(),
   });
+
+  // Non-blocking notification to trainee
+  if (docData?.traineeId) {
+    try {
+      const { notifyDocumentApproved, notifyDocumentRejected } = await import(
+        '@/features/notifications/services/notificationTriggers'
+      );
+      if (status === 'approved') {
+        await notifyDocumentApproved(docData.traineeId, docData.type, id);
+      } else if (status === 'rejected') {
+        await notifyDocumentRejected(docData.traineeId, docData.type, id, reviewNotes);
+      }
+    } catch (err) {
+      console.warn('Failed to trigger document review notification:', err);
+    }
+  }
 }
 
 /** Delete document metadata and file from storage. */

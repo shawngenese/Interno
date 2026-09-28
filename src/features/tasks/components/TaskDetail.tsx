@@ -8,9 +8,10 @@ import { Modal } from '@/shared/components/Modal';
 import { AlertModal } from '@/shared/components/AlertModal';
 import { Button } from '@/shared/components/ui/Button';
 import { Skeleton } from '@/shared/components/Skeleton';
-import { CheckCircle2, Clock, MessageSquare, Paperclip, Send, Edit, Upload } from 'lucide-react';
+import { CheckCircle2, Clock, MessageSquare, Paperclip, Send, Edit, Upload, RotateCcw } from 'lucide-react';
 import type { Task, SubmitTaskPayload, ReviewTaskPayload } from '../types';
 import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS, TASK_STATUS_COLORS, TASK_PRIORITY_COLORS } from '../types';
+import { isTaskOverdue } from '../utils/taskUtils';
 
 interface TaskDetailProps {
   taskId: string;
@@ -58,8 +59,6 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskId]);
 
-  const [now] = useState(() => Date.now());
-
   const uploadFiles = async (files: File[], companyId: string): Promise<string[]> => {
     if (files.length === 0) return [];
     const storage = getStorageInstancePublic();
@@ -90,7 +89,8 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
       await loadTask();
     } catch (err) {
       console.error('Failed to submit task:', err);
-      setAlertModal({ title: 'Error', message: 'Failed to submit. Please try again.' });
+      const message = err instanceof Error && err.message ? err.message : 'Failed to submit. Please try again.';
+      setAlertModal({ title: 'Error', message });
     } finally {
       setSubmitting(false);
     }
@@ -103,6 +103,25 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
       await reviewTask(taskId, payload);
       setReviewFeedback('');
       await loadTask();
+    } catch (err) {
+      console.error('Failed to review task:', err);
+      const message = err instanceof Error && err.message ? err.message : 'Failed to save review. Please try again.';
+      setAlertModal({ title: 'Error', message });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    setSubmitting(true);
+    try {
+      const { unarchiveTask } = await import('../services/taskService');
+      await unarchiveTask(taskId);
+      await loadTask();
+    } catch (err) {
+      console.error('Failed to restore task:', err);
+      const message = err instanceof Error && err.message ? err.message : 'Failed to restore task. Please try again.';
+      setAlertModal({ title: 'Error', message });
     } finally {
       setSubmitting(false);
     }
@@ -141,7 +160,7 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
   const isSupervisor = traineeUserId
     ? user?.uid !== traineeUserId
     : role === 'supervisor' || role === 'admin';
-  const isOverdue = task.dueDate < now && task.status !== 'approved';
+  const isOverdue = isTaskOverdue(task.dueDate, task.status);
 
   return (
     <div className="space-y-6">
@@ -169,14 +188,27 @@ export function TaskDetail({ taskId }: TaskDetailProps) {
               {task.estimatedHours && <span>• Est. {task.estimatedHours}h</span>}
             </div>
           </div>
-          {isSupervisor && task.status === 'pending' && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setEditing(true)}
-            >
-              <Edit className="w-3.5 h-3.5 mr-1" /> Edit
-            </Button>
+          {isSupervisor && (
+            <div className="flex items-center gap-2 shrink-0">
+              {task.status === 'archived' ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleRestore}
+                  isLoading={submitting}
+                >
+                  <RotateCcw className="w-3.5 h-3.5 mr-1" /> Restore Task
+                </Button>
+              ) : (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setEditing(true)}
+                >
+                  <Edit className="w-3.5 h-3.5 mr-1" /> Edit
+                </Button>
+              )}
+            </div>
           )}
         </div>
 

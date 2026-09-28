@@ -10,14 +10,7 @@ import { Skeleton } from '@/shared/components/Skeleton';
 import { CheckSquare, Clock, ArrowLeft } from 'lucide-react';
 import type { Task, TaskStatus } from '../types';
 import { TASK_STATUS_LABELS, TASK_STATUS_COLORS, TASK_PRIORITY_LABELS, TASK_PRIORITY_COLORS } from '../types';
-
-const getDueMs = (d: unknown): number => {
-  if (!d) return Infinity;
-  if (typeof d === 'number') return d;
-  if (d instanceof Date) return d.getTime();
-  if (typeof d === 'object' && d !== null && 'toMillis' in d) return (d as { toMillis: () => number }).toMillis();
-  return Infinity;
-};
+import { isTaskOverdue } from '../utils/taskUtils';
 
 export function MyTasks() {
   const { user } = useAuth();
@@ -79,11 +72,9 @@ export function MyTasks() {
   }, [fetchTasks]);
 
   const filteredTasks = useMemo(
-    () => statusFilter === 'all' ? tasks : tasks.filter((t) => t.status === statusFilter),
+    () => (statusFilter === 'all' ? tasks.filter((t) => t.status !== 'archived') : tasks.filter((t) => t.status === statusFilter)),
     [tasks, statusFilter]
   );
-
-  const [now] = useState(() => Date.now());
 
   if (selectedTask) {
     return (
@@ -142,7 +133,7 @@ export function MyTasks() {
       ) : (
         <div className="grid grid-cols-1 gap-3">
           {filteredTasks.map((task) => {
-            const isOverdue = getDueMs(task.dueDate) < now && task.status !== 'approved';
+            const isOverdue = isTaskOverdue(task.dueDate, task.status);
             return (
               <button
                 key={task.id}
@@ -173,7 +164,7 @@ export function MyTasks() {
                 <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border">
                   <div className="flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5" />
-                    <span>Due: {new Date(getDueMs(task.dueDate)).toLocaleDateString()}</span>
+                    <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
                   </div>
                   {task.returnCount > 0 && (
                     <span className="text-destructive font-semibold">Returned {task.returnCount}x</span>

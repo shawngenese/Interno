@@ -140,8 +140,8 @@ export function TraineeList({ onEdit, onView, onViewDocuments }: TraineeListProp
           companyName: companyNameMap.get(t.companyId) || '',
           departmentName: departmentNameMap.get(t.departmentId) || '',
           supervisorName: t.supervisorId ? supervisorNameMap.get(t.supervisorId) || '—' : '—',
-          requiredHours: Number(raw.requiredHours || raw.totalHours || 300),
-          completedHours: Number(raw.completedHours || raw.hoursRendered || 0),
+          requiredHours: Number(raw.ojtHoursRequired ?? raw.requiredHours ?? raw.totalHours ?? 480),
+          completedHours: Number(raw.completedHours || raw.ojtHoursCompleted || raw.hoursRendered || 0),
         };
       });
 
@@ -296,7 +296,7 @@ export function TraineeList({ onEdit, onView, onViewDocuments }: TraineeListProp
           {/* Mobile Card Layout (< md) */}
           <div className="space-y-3 md:hidden">
             {trainees.map((trainee) => {
-              const reqHours = Number(trainee.requiredHours || 300);
+              const reqHours = Number(trainee.requiredHours || 480);
               const compHours = Number(trainee.completedHours || 0);
               const progressPct = reqHours > 0 ? Math.min(100, Math.round((compHours / reqHours) * 100)) : 0;
 
@@ -401,7 +401,7 @@ export function TraineeList({ onEdit, onView, onViewDocuments }: TraineeListProp
               </thead>
               <tbody className="divide-y divide-border">
                 {trainees.map((trainee) => {
-                  const reqHours = Number(trainee.requiredHours || 300);
+                  const reqHours = Number(trainee.requiredHours || 480);
                   const compHours = Number(trainee.completedHours || 0);
                   const progressPct = reqHours > 0 ? Math.min(100, Math.round((compHours / reqHours) * 100)) : 0;
 

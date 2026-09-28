@@ -724,12 +724,11 @@ export function AuditLogViewer() {
               Clear All Filters
             </button>
           )}
-        </div>
-      </div>
 
-      {/* Logs Count Summary */}
-      <div className="flex items-center justify-between px-3 py-2 bg-muted/30 border border-border rounded-xl text-xs text-muted-foreground">
-        <span>Showing {displayedLogs.length} of {filteredLogs.length} logs</span>
+          <div className="text-xs text-muted-foreground self-center pl-1 sm:ml-auto">
+            Showing log {displayedLogs.length} of {filteredLogs.length} logs
+          </div>
+        </div>
       </div>
 
       {/* Log List */}

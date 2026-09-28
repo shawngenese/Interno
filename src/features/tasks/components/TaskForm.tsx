@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createTask, updateTask, getTask } from '../services/taskService';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { getFirestoreInstancePublic } from '@/config/firebase';
@@ -6,6 +6,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Button } from '@/shared/components/ui/Button';
 import type { CreateTaskPayload, UpdateTaskPayload, Task, TaskPriority } from '../types';
 import { TASK_PRIORITY_LABELS } from '../types';
+import { parseDateInputToEndOfDay, formatDueDateForInput } from '../utils/taskUtils';
 
 interface TaskFormProps {
   taskId?: string;
@@ -20,11 +21,22 @@ interface TraineeOption {
   name: string;
 }
 
+interface TaskFormState {
+  title: string;
+  description: string;
+  selectedTraineeId: string;
+  priority: TaskPriority;
+  dueDate: string;
+  estimatedHours: string;
+  requireAttachment: boolean;
+}
+
 export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSaved, onCancel }: TaskFormProps) {
   const { user, role } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [trainees, setTrainees] = useState<TraineeOption[]>([]);
+  const [initialState, setInitialState] = useState<TaskFormState | null>(null);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -94,22 +106,55 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
       getTask(taskId)
         .then((task) => {
           if (task) {
+            const formattedDueDate = formatDueDateForInput(task.dueDate);
+            const estHours = task.estimatedHours?.toString() || '';
             setTitle(task.title);
             setDescription(task.description);
             setSelectedTraineeId(task.traineeId);
             setPriority(task.priority);
-            setDueDate(new Date(task.dueDate).toISOString().split('T')[0]);
-            setEstimatedHours(task.estimatedHours?.toString() || '');
+            setDueDate(formattedDueDate);
+            setEstimatedHours(estHours);
             setRequireAttachment(task.requireAttachment);
+
+            setInitialState({
+              title: task.title,
+              description: task.description,
+              selectedTraineeId: task.traineeId,
+              priority: task.priority,
+              dueDate: formattedDueDate,
+              estimatedHours: estHours,
+              requireAttachment: task.requireAttachment,
+            });
           }
         })
         .finally(() => setLoading(false));
     }
   }, [taskId]);
 
+  const isDirty = useMemo(() => {
+    if (!taskId) return true;
+    if (!initialState) return false;
+    return (
+      title.trim() !== initialState.title.trim() ||
+      description.trim() !== initialState.description.trim() ||
+      selectedTraineeId !== initialState.selectedTraineeId ||
+      priority !== initialState.priority ||
+      dueDate !== initialState.dueDate ||
+      estimatedHours.trim() !== initialState.estimatedHours.trim() ||
+      requireAttachment !== initialState.requireAttachment
+    );
+  }, [taskId, initialState, title, description, selectedTraineeId, priority, dueDate, estimatedHours, requireAttachment]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // If editing and no changes were made, close gracefully without redundant Firestore write
+    if (taskId && !isDirty) {
+      onCancel?.();
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -118,12 +163,15 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
       if (!selectedTraineeId) throw new Error('Select a trainee');
       if (!dueDate) throw new Error('Due date is required');
 
-      const dueDateMs = new Date(dueDate).getTime();
+      const dueDateMs = parseDateInputToEndOfDay(dueDate);
 
       if (taskId) {
+        const selectedTrainee = trainees.find((t) => t.id === selectedTraineeId);
         const payload: UpdateTaskPayload = {
           title: title.trim(),
           description: description.trim(),
+          traineeId: selectedTraineeId || undefined,
+          traineeName: selectedTrainee?.name || undefined,
           priority,
           dueDate: dueDateMs,
           estimatedHours: estimatedHours ? Number(estimatedHours) : undefined,
@@ -284,8 +332,9 @@ export function TaskForm({ taskId, traineeId: initialTraineeId, companyId, onSav
           type="submit"
           variant="primary"
           isLoading={loading}
+          disabled={Boolean(taskId && !isDirty)}
         >
-          Save
+          {taskId ? 'Save Changes' : 'Create Task'}
         </Button>
       </div>
     </form>

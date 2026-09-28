@@ -4,7 +4,7 @@ import { EmptyState, InboxIcon } from '@/shared/components/EmptyState';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import { Button } from '@/shared/components/ui/Button';
 import { Skeleton } from '@/shared/components/Skeleton';
-import { CheckCheck, Settings, Trash2, Bell, CheckCircle2, Clock, AlertTriangle, FileText, Calendar } from 'lucide-react';
+import { CheckCheck, Settings, Trash2, Bell, CheckCircle2, Clock, AlertTriangle, FileText, Calendar, Star, Handshake, UserCheck, Award } from 'lucide-react';
 import type { Notification, NotificationType, NotificationPreferences, ListNotificationsParams } from '../types';
 
 function formatTime(ms: number): string {
@@ -44,6 +44,9 @@ function typeIcon(type: NotificationType): React.ReactNode {
     case 'dtr_rejected':
     case 'document_rejected':
     case 'leave_rejected':
+    case 'placement_rejected':
+    case 'supervisor_unassigned':
+    case 'trainee_unassigned':
       return <AlertTriangle className="w-4 h-4 text-destructive" />;
     case 'dtr_pending':
     case 'dtr_approved':
@@ -54,6 +57,18 @@ function typeIcon(type: NotificationType): React.ReactNode {
     case 'leave_requested':
     case 'leave_approved':
       return <Calendar className="w-4 h-4 text-primary" />;
+    case 'evaluation_submitted':
+    case 'evaluation_reviewed':
+    case 'evaluation_finalized':
+      return <Star className="w-4 h-4 text-primary" />;
+    case 'placement_requested':
+    case 'placement_approved':
+      return <Handshake className="w-4 h-4 text-primary" />;
+    case 'supervisor_assigned':
+    case 'trainee_assigned':
+      return <UserCheck className="w-4 h-4 text-primary" />;
+    case 'ojt_milestone_reached':
+      return <Award className="w-4 h-4 text-primary" />;
     default:
       return <Bell className="w-4 h-4 text-muted-foreground" />;
   }

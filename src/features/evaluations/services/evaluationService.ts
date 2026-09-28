@@ -12,6 +12,11 @@ import {
 } from 'firebase/firestore';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import type { Evaluation, EvaluationFormData, EvaluationStatus } from '../types';
+import {
+  notifyEvaluationSubmitted,
+  notifyEvaluationReviewed,
+  notifyEvaluationFinalized,
+} from '@/features/notifications/services/notificationTriggers';
 
 const COLLECTION = 'evaluations';
 
@@ -68,6 +73,19 @@ export const evaluationService = {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
+
+    if (data.status === 'submitted') {
+      notifyEvaluationSubmitted({
+        id: docRef.id,
+        traineeId: data.traineeId,
+        traineeName: data.traineeName,
+        supervisorName: data.supervisorName,
+        type: data.type,
+        overallRating: data.overallRating,
+        companyId: data.companyId,
+      }).catch((err) => console.error('Failed to notify evaluation submitted:', err));
+    }
+
     return { id: docRef.id, ...data } as Evaluation;
   },
 
@@ -77,6 +95,23 @@ export const evaluationService = {
       ...data,
       updatedAt: serverTimestamp(),
     });
+
+    if (data.status === 'submitted') {
+      try {
+        const fullDoc = await this.getEvaluation(id);
+        notifyEvaluationSubmitted({
+          id: fullDoc.id,
+          traineeId: fullDoc.traineeId,
+          traineeName: fullDoc.traineeName,
+          supervisorName: fullDoc.supervisorName,
+          type: fullDoc.type,
+          overallRating: fullDoc.overallRating,
+          companyId: fullDoc.companyId,
+        }).catch((err) => console.error('Failed to notify evaluation submitted:', err));
+      } catch (err) {
+        console.error('Failed to trigger evaluation submitted notification on update:', err);
+      }
+    }
   },
 
   async submitEvaluation(id: string): Promise<void> {
@@ -85,6 +120,21 @@ export const evaluationService = {
       status: 'submitted',
       updatedAt: serverTimestamp(),
     });
+
+    try {
+      const fullDoc = await this.getEvaluation(id);
+      notifyEvaluationSubmitted({
+        id: fullDoc.id,
+        traineeId: fullDoc.traineeId,
+        traineeName: fullDoc.traineeName,
+        supervisorName: fullDoc.supervisorName,
+        type: fullDoc.type,
+        overallRating: fullDoc.overallRating,
+        companyId: fullDoc.companyId,
+      }).catch((err) => console.error('Failed to notify evaluation submitted:', err));
+    } catch (err) {
+      console.error('Failed to trigger evaluation submitted notification:', err);
+    }
   },
 
   async reviewEvaluation(
@@ -100,6 +150,21 @@ export const evaluationService = {
       reviewComments: reviewComments || null,
       updatedAt: serverTimestamp(),
     });
+
+    try {
+      const fullDoc = await this.getEvaluation(id);
+      notifyEvaluationReviewed({
+        id: fullDoc.id,
+        traineeId: fullDoc.traineeId,
+        traineeName: fullDoc.traineeName,
+        supervisorId: fullDoc.supervisorId,
+        type: fullDoc.type,
+        overallRating: fullDoc.overallRating,
+        reviewComments,
+      }).catch((err) => console.error('Failed to notify evaluation reviewed:', err));
+    } catch (err) {
+      console.error('Failed to trigger evaluation reviewed notification:', err);
+    }
   },
 
   async finalizeEvaluation(
@@ -113,6 +178,20 @@ export const evaluationService = {
       finalizedAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
+
+    try {
+      const fullDoc = await this.getEvaluation(id);
+      notifyEvaluationFinalized({
+        id: fullDoc.id,
+        traineeId: fullDoc.traineeId,
+        traineeName: fullDoc.traineeName,
+        supervisorId: fullDoc.supervisorId,
+        type: fullDoc.type,
+        overallRating: fullDoc.overallRating,
+      }).catch((err) => console.error('Failed to notify evaluation finalized:', err));
+    } catch (err) {
+      console.error('Failed to trigger evaluation finalized notification:', err);
+    }
   },
 
   async deleteEvaluation(id: string): Promise<void> {

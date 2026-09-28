@@ -265,18 +265,6 @@ export function SupervisorDTRList() {
               className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder="End Date"
             />
-            {totalPages > 1 && (
-              <select
-                value={filters.page || 1}
-                onChange={(e) => setFilters(f => ({ ...f, page: Number(e.target.value) }))}
-                aria-label="Page navigation"
-                className="h-10 px-3 border border-input rounded-lg bg-background text-foreground text-sm w-28 focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                  <option key={p} value={p}>Page {p}</option>
-                ))}
-              </select>
-            )}
           </div>
         </div>
 
@@ -337,11 +325,11 @@ export function SupervisorDTRList() {
                     </div>
                     <div>
                       <span className="text-muted-foreground">Late:</span>{' '}
-                      <span className="font-semibold text-warning">{Math.round(dtr.lateMinutes)} min</span>
+                      <span className="font-semibold text-warning">{minutesToHours(dtr.lateMinutes)} hrs</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Undertime:</span>{' '}
-                      <span className="font-semibold text-warning">{Math.round(dtr.undertimeMinutes)} min</span>
+                      <span className="font-semibold text-warning">{minutesToHours(dtr.undertimeMinutes)} hrs</span>
                     </div>
                   </div>
 
@@ -387,8 +375,8 @@ export function SupervisorDTRList() {
                     <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Date</th>
                     <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Regular (hrs)</th>
                     <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">OT (hrs)</th>
-                    <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Late (min)</th>
-                    <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Undertime (min)</th>
+                    <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Late (hrs)</th>
+                    <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Undertime (hrs)</th>
                     <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
                     <th className="h-[44px] px-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wide">Actions</th>
                   </tr>
@@ -404,8 +392,8 @@ export function SupervisorDTRList() {
                       <td className="px-4 py-3 text-muted-foreground">{formatDateFull(dtr.date)}</td>
                       <td className="px-4 py-3 font-semibold text-foreground">{minutesToHours(dtr.regularMinutes)}</td>
                       <td className="px-4 py-3 font-semibold text-primary">{minutesToHours(dtr.overtimeMinutes)}</td>
-                      <td className="px-4 py-3 text-warning font-medium">{Math.round(dtr.lateMinutes)}</td>
-                      <td className="px-4 py-3 text-warning font-medium">{Math.round(dtr.undertimeMinutes)}</td>
+                      <td className="px-4 py-3 text-warning font-medium">{minutesToHours(dtr.lateMinutes)}</td>
+                      <td className="px-4 py-3 text-warning font-medium">{minutesToHours(dtr.undertimeMinutes)}</td>
                       <td className="px-4 py-3">{statusBadge(dtr.status)}</td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -444,11 +432,30 @@ export function SupervisorDTRList() {
               </table>
             </div>
 
+            {/* Pagination */}
             {totalPages > 1 && (
-              <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
-                <p>
-                  Showing {((filters.page ?? 1) - 1) * (filters.limit || 20) + 1} to {Math.min((filters.page ?? 1) * (filters.limit || 20), total)} of {total} records
+              <div className="mt-4 p-4 bg-card border border-border rounded-lg flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Page {filters.page || 1} of {totalPages} ({total} total)
                 </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setFilters(f => ({ ...f, page: (f.page || 1) - 1 }))}
+                    disabled={(filters.page || 1) <= 1}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setFilters(f => ({ ...f, page: (f.page || 1) + 1 }))}
+                    disabled={(filters.page || 1) >= totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
               </div>
             )}
           </>
@@ -500,21 +507,21 @@ export function SupervisorDTRList() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="p-3.5 bg-muted/40 rounded-xl border border-border">
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-                    <AlertTriangle className="w-3.5 h-3.5 text-warning" /> Late (min)
+                    <AlertTriangle className="w-3.5 h-3.5 text-warning" /> Late (hrs)
                   </div>
-                  <p className="text-lg font-bold text-warning">{Math.round(selectedDTR.lateMinutes)} min</p>
+                  <p className="text-lg font-bold text-warning">{minutesToHours(selectedDTR.lateMinutes)} hrs</p>
                 </div>
                 <div className="p-3.5 bg-muted/40 rounded-xl border border-border">
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-                    <AlertTriangle className="w-3.5 h-3.5 text-warning" /> Undertime (min)
+                    <AlertTriangle className="w-3.5 h-3.5 text-warning" /> Undertime (hrs)
                   </div>
-                  <p className="text-lg font-bold text-warning">{Math.round(selectedDTR.undertimeMinutes)} min</p>
+                  <p className="text-lg font-bold text-warning">{minutesToHours(selectedDTR.undertimeMinutes)} hrs</p>
                 </div>
                 <div className="p-3.5 bg-muted/40 rounded-xl border border-border">
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-                    <Moon className="w-3.5 h-3.5 text-primary" /> Night Diff (min)
+                    <Moon className="w-3.5 h-3.5 text-primary" /> Night Diff (hrs)
                   </div>
-                  <p className="text-lg font-bold text-primary">{selectedDTR.nightDiffMinutes}</p>
+                  <p className="text-lg font-bold text-primary">{minutesToHours(selectedDTR.nightDiffMinutes)} hrs</p>
                 </div>
                 <div className="p-3.5 bg-muted/40 rounded-xl border border-border">
                   <p className="text-xs text-muted-foreground mb-1">Status</p>

@@ -21,23 +21,48 @@ export async function calculateDTR(params: CalculateDTRParams): Promise<Calculat
   return result.data;
 }
 
-/** Approve a DTR entry (calls Cloud Function with audit logging). */
+/** Approve a DTR entry (calls Cloud Function with audit logging & triggers notification). */
 export async function approveDTR(dtrId: string, notes?: string): Promise<{ success: boolean; dtrId: string }> {
   const functions = getFunctionsInstancePublic();
   const fn = httpsCallable<{ dtrId: string; notes?: string }, { success: boolean; dtrId: string }>(functions, 'approveDTR');
   const result = await fn({ dtrId, notes });
+
+  try {
+    const dtr = await getDTR(dtrId);
+    if (dtr?.traineeId) {
+      const { notifyDTRApproved, checkAndNotifyOJTMilestones } = await import('@/features/notifications/services/notificationTriggers');
+      const { formatDateFull } = await import('@/shared/utils/dateUtils');
+      await notifyDTRApproved(dtr.traineeId, formatDateFull(dtr.date), dtrId);
+      await checkAndNotifyOJTMilestones(dtr.traineeId);
+    }
+  } catch (err) {
+    console.warn('Failed to send DTR approval notification:', err);
+  }
+
   return result.data;
 }
 
-/** Reject a DTR entry (calls Cloud Function with audit logging). */
+/** Reject a DTR entry (calls Cloud Function with audit logging & triggers notification). */
 export async function rejectDTR(dtrId: string, reason?: string): Promise<{ success: boolean; dtrId: string }> {
   const functions = getFunctionsInstancePublic();
   const fn = httpsCallable<{ dtrId: string; reason?: string }, { success: boolean; dtrId: string }>(functions, 'rejectDTR');
   const result = await fn({ dtrId, reason });
+
+  try {
+    const dtr = await getDTR(dtrId);
+    if (dtr?.traineeId) {
+      const { notifyDTRRejected } = await import('@/features/notifications/services/notificationTriggers');
+      const { formatDateFull } = await import('@/shared/utils/dateUtils');
+      await notifyDTRRejected(dtr.traineeId, formatDateFull(dtr.date), dtrId, reason);
+    }
+  } catch (err) {
+    console.warn('Failed to send DTR rejection notification:', err);
+  }
+
   return result.data;
 }
 
-/** Review a DTR correction request (calls Cloud Function with transaction + audit logging). */
+/** Review a DTR correction request (calls Cloud Function with transaction + audit logging & triggers notification). */
 export async function reviewCorrectionRequest(
   dtrId: string,
   correctionRequestId: string,
@@ -50,6 +75,20 @@ export async function reviewCorrectionRequest(
     { success: boolean; correctionRequestId: string }
   >(functions, 'reviewCorrectionRequest');
   const result = await fn({ dtrId, correctionRequestId, action, notes });
+
+  try {
+    const dtr = await getDTR(dtrId);
+    if (dtr?.traineeId) {
+      const { notifyDTRCorrectionReviewed, checkAndNotifyOJTMilestones } = await import('@/features/notifications/services/notificationTriggers');
+      await notifyDTRCorrectionReviewed(dtr.traineeId, action, dtrId);
+      if (action === 'approve') {
+        await checkAndNotifyOJTMilestones(dtr.traineeId);
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to send DTR correction review notification:', err);
+  }
+
   return result.data;
 }
 
@@ -163,6 +202,19 @@ export async function createCorrectionRequest(
 
   // Re-fetch to get actual server-resolved timestamps (serverTimestamp() resolves on write)
   const createdSnap = await getDoc(ref);
+
+  try {
+    const { notifyDTRCorrectionRequested } = await import('@/features/notifications/services/notificationTriggers');
+    await notifyDTRCorrectionRequested(
+      dtr.traineeId,
+      currentUser.displayName || currentUser.email || 'Trainee',
+      dtrId,
+      reason
+    );
+  } catch (err) {
+    console.warn('Failed to send DTR correction request notification:', err);
+  }
+
   return { id: createdSnap.id, ...createdSnap.data() } as DTRCorrectionRequest;
 }
 

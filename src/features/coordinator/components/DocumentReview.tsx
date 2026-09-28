@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getFirestoreInstancePublic } from '@/config/firebase';
-import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/features/auth';
 import type { Document } from '@/features/documents/types';
 
@@ -161,14 +161,8 @@ export function DocumentReview() {
     if (!user) return;
     setProcessing(true);
     try {
-      const db = getFirestoreInstancePublic();
-      const docRef = doc(db, 'documents', docId);
-      await updateDoc(docRef, {
-        status: 'approved',
-        reviewedBy: user.uid,
-        reviewedAt: serverTimestamp(),
-        ...(reviewNotes ? { reviewNotes } : {}),
-      });
+      const { updateDocumentStatus } = await import('@/features/documents/services/documentService');
+      await updateDocumentStatus(docId, 'approved', reviewNotes);
       setSelectedDoc(null);
       setReviewNotes('');
       fetchData();
@@ -184,31 +178,8 @@ export function DocumentReview() {
     if (!user) return;
     setProcessing(true);
     try {
-      const db = getFirestoreInstancePublic();
-      const docRef = doc(db, 'documents', docId);
-
-      // Delete the Storage file to avoid orphaned files
-      try {
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const docData = docSnap.data();
-          if (docData.storagePath) {
-            const { getStorageInstancePublic } = await import('@/config/firebase');
-            const storage = getStorageInstancePublic();
-            const { ref, deleteObject } = await import('firebase/storage');
-            await deleteObject(ref(storage, docData.storagePath));
-          }
-        }
-      } catch (storageErr) {
-        console.warn('Failed to delete rejected file from storage:', storageErr);
-      }
-
-      await updateDoc(docRef, {
-        status: 'rejected',
-        reviewedBy: user.uid,
-        reviewedAt: serverTimestamp(),
-        ...(reviewNotes ? { reviewNotes } : {}),
-      });
+      const { updateDocumentStatus } = await import('@/features/documents/services/documentService');
+      await updateDocumentStatus(docId, 'rejected', reviewNotes);
       setSelectedDoc(null);
       setReviewNotes('');
       fetchData();

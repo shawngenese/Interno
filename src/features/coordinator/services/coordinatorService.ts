@@ -8,6 +8,11 @@ import type {
   CoordinatorDashboardData,
 } from '../types';
 import type { Trainee } from '@/features/admin/types';
+import { isTaskOverdue } from '@/features/tasks/utils/taskUtils';
+import {
+  notifySupervisorAssigned,
+  notifySupervisorUnassigned,
+} from '@/features/notifications/services/notificationTriggers';
 
 const FIRESTORE_IN_MAX = 30;
 
@@ -88,8 +93,8 @@ export async function getCoordinatorTrainees(_coordinatorId: string, companyId: 
       status: data.status || 'active',
       startDate: data.startDate,
       endDate: data.endDate,
-      ojtHoursRequired: data.ojtHoursRequired || 480,
-      ojtHoursCompleted: data.ojtHoursCompleted || 0,
+      ojtHoursRequired: Number(data.ojtHoursRequired ?? data.requiredHours ?? data.totalHours ?? 480),
+      ojtHoursCompleted: Number(data.ojtHoursCompleted || 0),
     };
   });
 }
@@ -171,8 +176,6 @@ export async function getTaskSummary(companyId: string): Promise<CoordinatorTask
     submittedTasks: number; approvedTasks: number; returnedTasks: number; overdueTasks: number;
   }>();
 
-  const now = Date.now();
-
   for (const batch of chunk(traineeIds, FIRESTORE_IN_MAX)) {
     const taskSnap = await getDocs(
       query(collection(db, 'tasks'), where('traineeId', 'in', batch)),
@@ -190,7 +193,7 @@ export async function getTaskSummary(companyId: string): Promise<CoordinatorTask
         case 'approved': acc.approvedTasks++; break;
         case 'returned': acc.returnedTasks++; break;
       }
-      if (task.dueDate && task.dueDate < now && task.status !== 'approved') {
+      if (isTaskOverdue(task.dueDate, task.status)) {
         acc.overdueTasks++;
       }
       taskCounts.set(tid, acc);
@@ -266,8 +269,8 @@ export async function getOJTProgress(companyId: string): Promise<CoordinatorDash
 
   for (const traineeDoc of traineeSnap.docs) {
     const traineeData = traineeDoc.data();
-    const required = traineeData.ojtHoursRequired || 480;
-    const completed = traineeData.ojtHoursCompleted || 0;
+    const required = Number(traineeData.ojtHoursRequired ?? traineeData.requiredHours ?? traineeData.totalHours ?? 480);
+    const completed = Number(traineeData.ojtHoursCompleted || 0);
 
     progress.push({
       traineeId: traineeDoc.id,
@@ -324,13 +327,18 @@ export async function updateTraineeAssignment(
   const docRef = doc(db, 'trainees', traineeId);
 
   // If supervisorId changed, sync the assignedTrainees subcollection
+  let oldSupervisorId = '';
+  let newSupervisorId = '';
+  let supervisorChanged = false;
+
   if (updates.supervisorId !== undefined) {
     const currentSnap = await getDoc(docRef);
     const currentData = currentSnap.exists() ? currentSnap.data() as Record<string, unknown> : null;
-    const oldSupervisorId = (currentData?.supervisorId as string) || '';
-    const newSupervisorId = updates.supervisorId || '';
+    oldSupervisorId = (currentData?.supervisorId as string) || '';
+    newSupervisorId = updates.supervisorId || '';
 
     if (oldSupervisorId !== newSupervisorId) {
+      supervisorChanged = true;
       try {
         const batch = writeBatch(db);
 
@@ -370,6 +378,22 @@ export async function updateTraineeAssignment(
     ...(supervisorId ? { supervisorId } : { supervisorId: deleteField() }),
     updatedAt: serverTimestamp(),
   });
+
+  // Trigger Notifications
+  if (supervisorChanged) {
+    if (newSupervisorId) {
+      notifySupervisorAssigned({
+        traineeId,
+        supervisorId: newSupervisorId,
+        oldSupervisorId: oldSupervisorId || undefined,
+      }).catch((err) => console.error('Failed to notify supervisor assignment:', err));
+    } else if (oldSupervisorId) {
+      notifySupervisorUnassigned({
+        traineeId,
+        oldSupervisorId,
+      }).catch((err) => console.error('Failed to notify supervisor unassignment:', err));
+    }
+  }
 }
 
 /** Get all companies for coordinator management. */

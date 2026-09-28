@@ -152,11 +152,29 @@ service cloud.firestore {
       allow update: if isSignedIn() && (
         isAdmin() ||
         (isCoordinator() && companyFieldMatches(resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'supervisorId', 'companyId', 'placementType', 'externalCompanyId', 'externalCompanyName', 'status', 'updatedAt'
+          'supervisorId', 'companyId', 'placementType', 'externalCompanyId', 'externalCompanyName', 'status', 'ojtStatus', 'scheduleId', 'updatedAt', 'ojtHoursCompleted', 'milestonesNotified'
         ])) ||
-        (isSupervisorOf(traineeId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'ojtStatus', 'supervisorId', 'scheduleId'])) ||
+        (
+          (
+            isSupervisorOf(traineeId) ||
+            isSupervisorOfByField(traineeId) ||
+            exists(/databases/$(database)/documents/supervisors/$(request.auth.uid)) ||
+            (isSupervisor() && (
+              companyFieldMatches(resource.data) ||
+              ('supervisorId' in resource.data && resource.data.supervisorId == request.auth.uid) ||
+              ('externalCompanyId' in resource.data && resource.data.externalCompanyId == getUserCompanyId())
+            ))
+          ) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'ojtStatus', 'supervisorId', 'scheduleId', 'updatedAt', 'ojtHoursCompleted', 'milestonesNotified'
+          ])
+        ) ||
         ((isAssignedTrainee(traineeId) || (isTrainee() && resource.data.userId == request.auth.uid)) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['profile', 'emergencyContact']))
-      );
+      ) &&
+      (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['ojtHoursCompleted']) ||
+        (request.resource.data.ojtHoursCompleted is int || request.resource.data.ojtHoursCompleted is float || request.resource.data.ojtHoursCompleted is number)) &&
+      (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['milestonesNotified']) ||
+        request.resource.data.milestonesNotified is list);
       
       allow delete: if isSignedIn() && isAdmin();
     }
@@ -359,18 +377,54 @@ service cloud.firestore {
         (isSupervisor() && resource.data.createdBy == request.auth.uid)
       );
       
-      allow create: if isSignedIn() && isSupervisorOrAdmin() &&
+      allow create: if isSignedIn() && (
+        isAdmin() ||
+        isSupervisor() ||
+        isCoordinator() ||
+        exists(/databases/$(database)/documents/supervisors/$(request.auth.uid)) ||
+        request.resource.data.createdBy == request.auth.uid
+      ) &&
         request.resource.data.keys().hasAll(['traineeId', 'title', 'description', 'status', 'priority', 'dueDate', 'createdBy']) &&
         request.resource.data.title is string && request.resource.data.title.size() <= 300 &&
         request.resource.data.description is string && request.resource.data.description.size() <= 5000;
       
       allow update: if isSignedIn() && (
-        (isAssignedTrainee(resource.data.traineeId) && 
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'progress', 'submission', 'attachments', 'updatedAt']) &&
-         request.resource.data.status in ['in_progress', 'submitted']) ||
-        (isSupervisorOf(resource.data.traineeId) &&
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'feedback', 'approvedAt', 'approvedBy', 'returnedBy', 'returnedAt', 'returnCount', 'updatedAt']) &&
-         request.resource.data.status in ['approved', 'returned', 'archived']) ||
+        (
+          (
+            isAssignedTrainee(resource.data.traineeId) ||
+            (isTrainee() && resource.data.traineeId == getUserTraineeId()) ||
+            (isTrainee() && get(/databases/$(database)/documents/trainees/$(resource.data.traineeId)).data.userId == request.auth.uid)
+          ) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'progress', 'submission', 'attachments', 'updatedAt']) &&
+          request.resource.data.status in ['in_progress', 'submitted']
+        ) ||
+        (
+          (
+            isAdmin() ||
+            resource.data.createdBy == request.auth.uid ||
+            isSupervisor() ||
+            isCoordinator() ||
+            exists(/databases/$(database)/documents/supervisors/$(request.auth.uid)) ||
+            exists(/databases/$(database)/documents/supervisors/$(request.auth.uid)/assignedTrainees/$(resource.data.traineeId)) ||
+            get(/databases/$(database)/documents/trainees/$(resource.data.traineeId)).data.supervisorId == request.auth.uid ||
+            ((isSupervisor() || isCoordinator() || exists(/databases/$(database)/documents/supervisors/$(request.auth.uid))) &&
+             (companyFieldMatches(resource.data) || traineeCompanyMatches(resource.data)))
+          ) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'title', 'description', 'priority', 'dueDate', 'startDate', 'estimatedHours', 'tags', 'requireAttachment',
+            'traineeId', 'traineeName', 'companyId', 'updatedAt', 'status', 'feedback',
+            'approvedAt', 'approvedBy', 'returnedBy', 'returnedAt', 'returnCount',
+            'progress', 'submission', 'attachments', 'dueSoonNotified', 'overdueNotified'
+          ]) &&
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['title']) ||
+           (request.resource.data.title is string && request.resource.data.title.size() <= 300)) &&
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['description']) ||
+           (request.resource.data.description is string && request.resource.data.description.size() <= 5000)) &&
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status']) ||
+           request.resource.data.status in ['pending', 'in_progress', 'submitted', 'approved', 'returned', 'archived']) &&
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['dueSoonNotified']) || request.resource.data.dueSoonNotified is bool) &&
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['overdueNotified']) || request.resource.data.overdueNotified is bool)
+        ) ||
         isAdmin()
       );
       

@@ -240,7 +240,11 @@ export function getDefaultPreferences(): NotificationPreferences {
     'task_approved', 'task_returned', 'dtr_pending', 'dtr_approved',
     'dtr_rejected', 'document_pending', 'document_approved', 'document_rejected',
     'attendance_missing', 'qr_generated', 'leave_requested', 'leave_approved',
-    'leave_rejected', 'system_announcement', 'other',
+    'leave_rejected', 'evaluation_submitted', 'evaluation_reviewed', 'evaluation_finalized',
+    'placement_requested', 'placement_approved', 'placement_rejected',
+    'supervisor_assigned', 'supervisor_unassigned', 'trainee_assigned', 'trainee_unassigned',
+    'ojt_milestone_reached',
+    'system_announcement', 'other',
   ];
 
   return {

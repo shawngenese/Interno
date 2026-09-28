@@ -1,7 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import { ChartTooltip } from '@/shared/components/ChartTooltip';
+import { Modal } from '@/shared/components/Modal';
+import { ReportGenerator } from '@/features/reports/components/ReportGenerator';
+import { Button } from '@/shared/components/ui/Button';
+import { Download } from 'lucide-react';
 import { collection, query, getDocs, orderBy, limit, where, documentId } from 'firebase/firestore';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -35,6 +39,10 @@ interface OverviewStats {
 }
 
 export function AdminReportDashboard() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isModalOpenFromQuery = searchParams.get('modal') === 'generate' || searchParams.get('generate') === 'true';
+  const [showReportModal, setShowReportModal] = useState(isModalOpenFromQuery);
+
   const [stats, setStats] = useState<OverviewStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +51,22 @@ export function AdminReportDashboard() {
     startDate: Date.now() - 30 * 24 * 60 * 60 * 1000,
     endDate: Date.now(),
   }));
+
+  useEffect(() => {
+    if (isModalOpenFromQuery) {
+      setShowReportModal(true);
+    }
+  }, [isModalOpenFromQuery]);
+
+  const handleCloseModal = () => {
+    setShowReportModal(false);
+    if (searchParams.get('modal') || searchParams.get('generate')) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('modal');
+      nextParams.delete('generate');
+      setSearchParams(nextParams, { replace: true });
+    }
+  };
 
   const fetchStats = useCallback(async () => {
     setError(null);
@@ -186,15 +210,15 @@ export function AdminReportDashboard() {
           <h1 className="text-2xl font-bold text-foreground">Reports</h1>
           <p className="text-muted-foreground mt-1">Analytics overview and report generation</p>
         </div>
-        <Link
-          to="/admin/reports/generate"
-          className="px-4 py-2 min-h-[44px] inline-flex items-center bg-primary text-on-primary rounded-lg hover:bg-primary-hover transition-colors text-sm font-medium gap-2"
+        <Button
+          onClick={() => setShowReportModal(true)}
+          variant="primary"
+          size="md"
+          className="gap-2 shrink-0"
         >
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
+          <Download className="h-4 w-4" />
           Generate Report
-        </Link>
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -363,6 +387,18 @@ export function AdminReportDashboard() {
           <p className="text-center py-8 text-muted-foreground">No recent activity</p>
         )}
       </div>
+
+      <Modal
+        open={showReportModal}
+        title="Generate Report"
+        onClose={handleCloseModal}
+        size="2xl"
+      >
+        <ReportGenerator
+          isModal
+          onClose={handleCloseModal}
+        />
+      </Modal>
     </div>
   );
 }

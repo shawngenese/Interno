@@ -12,6 +12,11 @@ import {
 } from 'firebase/firestore';
 import { getFirestoreInstancePublic } from '@/config/firebase';
 import type { PlacementRequest, PlacementStatus } from '@/features/admin/types';
+import {
+  notifyPlacementRequested,
+  notifyPlacementApproved,
+  notifyPlacementRejected,
+} from '@/features/notifications/services/notificationTriggers';
 
 export const placementService = {
   async requestExternalPlacement(
@@ -34,6 +39,15 @@ export const placementService = {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
+
+    notifyPlacementRequested({
+      requestId: ref.id,
+      traineeId,
+      traineeName,
+      externalCompanyId,
+      externalCompanyName,
+    }).catch((err) => console.error('Failed to notify placement requested:', err));
+
     return this.getPlacementRequest(ref.id);
   },
 
@@ -106,7 +120,15 @@ export const placementService = {
       reviewedAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
-    return this.getPlacementRequest(requestId);
+
+    const updated = await this.getPlacementRequest(requestId);
+    notifyPlacementApproved({
+      requestId,
+      traineeId: updated.traineeId,
+      externalCompanyName: updated.externalCompanyName,
+    }).catch((err) => console.error('Failed to notify placement approved:', err));
+
+    return updated;
   },
 
   async rejectPlacementRequest(
@@ -122,7 +144,16 @@ export const placementService = {
       reviewedAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
-    return this.getPlacementRequest(requestId);
+
+    const updated = await this.getPlacementRequest(requestId);
+    notifyPlacementRejected({
+      requestId,
+      traineeId: updated.traineeId,
+      externalCompanyName: updated.externalCompanyName,
+      reason: reviewerNotes,
+    }).catch((err) => console.error('Failed to notify placement rejected:', err));
+
+    return updated;
   },
 
   async getPendingPlacementRequestsCount(): Promise<number> {

@@ -223,11 +223,11 @@ export function TraineeDTRView() {
             </div>
             <div className="p-4 bg-muted/40 rounded-xl border border-border">
               <p className="text-xs text-muted-foreground">Total Late</p>
-              <p className="text-2xl font-bold text-warning mt-1">{Math.round(summary.totalLateMinutes)} min</p>
+              <p className="text-2xl font-bold text-warning mt-1">{minutesToHours(summary.totalLateMinutes)} hrs</p>
             </div>
             <div className="p-4 bg-muted/40 rounded-xl border border-border">
               <p className="text-xs text-muted-foreground">Total Undertime</p>
-              <p className="text-2xl font-bold text-warning mt-1">{Math.round(summary.totalUndertimeMinutes)} min</p>
+              <p className="text-2xl font-bold text-warning mt-1">{minutesToHours(summary.totalUndertimeMinutes)} hrs</p>
             </div>
           </div>
         )}
@@ -264,11 +264,11 @@ export function TraineeDTRView() {
                     </div>
                     <div>
                       <span className="text-muted-foreground">Late:</span>{' '}
-                      <span className="font-semibold text-warning">{Math.round(entry.lateMinutes)} min</span>
+                      <span className="font-semibold text-warning">{minutesToHours(entry.lateMinutes)} hrs</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Undertime:</span>{' '}
-                      <span className="font-semibold text-warning">{Math.round(entry.undertimeMinutes)} min</span>
+                      <span className="font-semibold text-warning">{minutesToHours(entry.undertimeMinutes)} hrs</span>
                     </div>
                   </div>
 
@@ -303,8 +303,8 @@ export function TraineeDTRView() {
                     <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Time Out</th>
                     <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Regular (hrs)</th>
                     <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">OT (hrs)</th>
-                    <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Late (min)</th>
-                    <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Undertime (min)</th>
+                    <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Late (hrs)</th>
+                    <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Undertime (hrs)</th>
                     <th className="h-[44px] px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
                     <th className="h-[44px] px-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wide">Actions</th>
                   </tr>
@@ -317,8 +317,8 @@ export function TraineeDTRView() {
                       <td className="px-4 py-3 text-muted-foreground">{entry.actualTimeOut ? formatTime12(entry.actualTimeOut) : '—'}</td>
                       <td className="px-4 py-3 font-semibold text-foreground">{minutesToHours(entry.regularMinutes)}</td>
                       <td className="px-4 py-3 font-semibold text-primary">{minutesToHours(entry.overtimeMinutes)}</td>
-                      <td className="px-4 py-3 text-warning font-medium">{Math.round(entry.lateMinutes)}</td>
-                      <td className="px-4 py-3 text-warning font-medium">{Math.round(entry.undertimeMinutes)}</td>
+                      <td className="px-4 py-3 text-warning font-medium">{minutesToHours(entry.lateMinutes)}</td>
+                      <td className="px-4 py-3 text-warning font-medium">{minutesToHours(entry.undertimeMinutes)}</td>
                       <td className="px-4 py-3">{statusBadge(entry.status)}</td>
                       <td className="px-4 py-3 text-right">
                         {entry.status === 'draft' && (

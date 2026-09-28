@@ -16,6 +16,17 @@ export type NotificationType =
   | 'leave_requested'
   | 'leave_approved'
   | 'leave_rejected'
+  | 'evaluation_submitted'
+  | 'evaluation_reviewed'
+  | 'evaluation_finalized'
+  | 'placement_requested'
+  | 'placement_approved'
+  | 'placement_rejected'
+  | 'supervisor_assigned'
+  | 'supervisor_unassigned'
+  | 'trainee_assigned'
+  | 'trainee_unassigned'
+  | 'ojt_milestone_reached'
   | 'system_announcement'
   | 'other';
 

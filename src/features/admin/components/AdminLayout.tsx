@@ -33,8 +33,8 @@ const navigation = [
   { name: 'Work Schedules', href: '/admin/work-schedules', icon: Calendar },
   { name: 'OJT Schedules', href: '/admin/ojt-schedules', icon: Clock },
   { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
-  { name: 'Audit Logs', href: '/admin/audit-logs', icon: ClipboardList },
   { name: 'Announcements', href: '/admin/announcements', icon: Megaphone },
+  { name: 'Audit Logs', href: '/admin/audit-logs', icon: ClipboardList },
 ];
 
 export function AdminLayout({ children }: { children: ReactNode }) {
