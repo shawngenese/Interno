@@ -37,7 +37,10 @@ describe('taskUtils', () => {
   });
 
   it('isTaskOverdue returns false for tasks due today if current time is before 11:59:59 PM', () => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    // Build the date string in LOCAL time — toISOString() is UTC, which is
+    // yesterday between 00:00–08:00 in UTC+8 and made this test fail nightly.
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const dueTodayEndOfDay = parseDateInputToEndOfDay(todayStr);
 
     expect(isTaskOverdue(dueTodayEndOfDay, 'pending')).toBe(false);

@@ -218,7 +218,34 @@ export async function getDocumentSummary(companyId: string): Promise<Coordinator
   const traineeIds = traineeSnap.docs.map((d) => d.id);
   const traineeNameMap = await resolveTraineeNameMap(db, traineeSnap.docs);
 
-  const requiredDocs: string[] = ['resume', 'endorsement', 'agreement', 'completion'];
+  const placementMap = new Map<string, string>();
+  traineeSnap.docs.forEach((d) => {
+    placementMap.set(d.id, d.data().placementType === 'external' ? 'external' : 'internal');
+  });
+
+  // Required types come from the company's configurable document_requirements (scope: all | internal | external)
+  const requiredScopes = new Map<string, Set<string>>();
+  const reqSnap = await getDocs(
+    query(collection(db, 'document_requirements'), where('companyId', '==', companyId)),
+  );
+  reqSnap.docs.forEach((d) => {
+    const r = d.data();
+    if (r.required === false) return;
+    const scope = (r.requiredFor as string) || 'all';
+    if (!requiredScopes.has(scope)) requiredScopes.set(scope, new Set());
+    requiredScopes.get(scope)?.add(r.documentType as string);
+  });
+
+  // Fallback mirrors the trainee checklist when a company has no configured requirements
+  const FALLBACK_REQUIRED = ['resume', 'endorsement', 'agreement', 'medical', 'consent'];
+
+  const requiredTypesFor = (placement: string): string[] => {
+    if (reqSnap.empty) return FALLBACK_REQUIRED;
+    const out = new Set<string>();
+    requiredScopes.get('all')?.forEach((t) => out.add(t));
+    requiredScopes.get(placement)?.forEach((t) => out.add(t));
+    return [...out];
+  };
 
   const docAccum = new Map<string, { pending: number; approved: number; rejected: number; uploadedTypes: Set<string>; total: number }>();
 
@@ -244,6 +271,7 @@ export async function getDocumentSummary(companyId: string): Promise<Coordinator
 
   return traineeIds.map((traineeId) => {
     const acc = docAccum.get(traineeId) ?? { pending: 0, approved: 0, rejected: 0, uploadedTypes: new Set<string>(), total: 0 };
+    const requiredTypes = requiredTypesFor(placementMap.get(traineeId) ?? 'internal');
     return {
       traineeId,
       traineeName: traineeNameMap.get(traineeId) || 'Trainee',
@@ -251,7 +279,7 @@ export async function getDocumentSummary(companyId: string): Promise<Coordinator
       pendingDocuments: acc.pending,
       approvedDocuments: acc.approved,
       rejectedDocuments: acc.rejected,
-      missingRequired: requiredDocs.filter((type) => !acc.uploadedTypes.has(type)),
+      missingRequired: requiredTypes.filter((type) => !acc.uploadedTypes.has(type)),
     };
   });
 }

@@ -47,12 +47,14 @@ import { DashboardRedirect } from '@/shared/components/DashboardRedirect';
 import { FirestoreHealthCheck } from '@/shared/components/FirestoreHealthCheck';
 import { ThemeToggle } from '@/shared/components/ThemeToggle';
 import { PageTransition } from '@/shared/components/PageTransition';
+import { WelcomeScreen } from '@/shared/components/WelcomeScreen';
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <FirestoreHealthCheck />
+        <WelcomeScreen />
         <Routes>
           <Route index element={<LandingPage />} />
           <Route path="/dashboard" element={<DashboardRedirect />} />

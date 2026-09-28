@@ -5,6 +5,7 @@ import { useFormValidation } from '@/shared/hooks/useFormValidation';
 import { required, email } from '@/shared/utils/validators';
 import { FormField, FormInput } from '@/shared/components/FormField';
 import { Button } from '@/shared/components/ui/Button';
+import { markWelcomeShown, cancelWelcome } from '@/shared/components/WelcomeScreen';
 import { AlertCircle } from 'lucide-react';
 
 export function LoginPage() {
@@ -30,9 +31,11 @@ export function LoginPage() {
     setLoading(true);
 
     try {
+      markWelcomeShown();
       await login(data.email, data.password);
       navigate(from, { replace: true });
     } catch (err: unknown) {
+      cancelWelcome();
       const errorMessage = err instanceof Error ? err.message : 'Login failed';
       if (errorMessage.includes('auth/user-not-found')) {
         setError('No account found with this email');

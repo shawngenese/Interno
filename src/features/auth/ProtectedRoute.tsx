@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useRequireRole } from './AuthProvider';
 import type { UserRole } from './AuthProvider';
+import { PageLoader } from '@/shared/components/Loader';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -17,11 +18,7 @@ export function ProtectedRoute({
   const location = useLocation();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   if (!authorized) {

@@ -1,0 +1,257 @@
+/* ============================================================
+   LOADER + WELCOME — ported 1:1 from SAMPLE.HTML (Demo 1 + Demo 2)
+   Only transform/opacity animate. Keyframes are prefixed to avoid
+   global collisions. Reduced-motion overrides are scoped here.
+   ============================================================ */
+:root {
+  --loader-primary-soft: color-mix(in oklch, var(--color-primary) 14%, transparent);
+}
+
+/* ============================================================
+   1. PAGE LOADER — branded arc spinner + breathing halo + wordmark
+   ============================================================ */
+.loader-stack {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.loader-halo {
+  position: absolute;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--loader-primary-soft), transparent 70%);
+  animation: loader-breathe 1.6s ease-in-out infinite;
+}
+
+.loader-spinner {
+  width: 46px;
+  height: 46px;
+  display: block;
+}
+
+.loader-spinner .track {
+  fill: none;
+  stroke: var(--loader-primary-soft);
+  stroke-width: 3.5;
+}
+
+.loader-spinner .arc {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-dasharray: 34 220;
+  transform-origin: 50% 50%;
+  animation: loader-spin 0.72s linear infinite;
+}
+
+.loader-wordmark {
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted-foreground);
+  opacity: 0;
+  animation: loader-mark-in 420ms var(--ease-out) 160ms forwards;
+}
+
+.loader-wordmark b {
+  color: var(--color-primary);
+  font-weight: 750;
+}
+
+@keyframes loader-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes loader-breathe {
+  0%, 100% { transform: scale(0.94); opacity: 0.75; }
+  50%      { transform: scale(1.06); opacity: 1; }
+}
+
+@keyframes loader-mark-in {
+  from { opacity: 0; transform: translateY(6px); filter: blur(4px); }
+  to   { opacity: 1; transform: none; filter: none; }
+}
+
+/* ============================================================
+   1b. INLINE SPINNER — buttons / row refresh (drop-in for Loader2)
+   ============================================================ */
+.inline-spin {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.inline-spin .arc2 {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 20 70;
+  transform-origin: 50% 50%;
+  animation: loader-spin 0.68s linear infinite;
+}
+
+/* ============================================================
+   2. WELCOME -> DASHBOARD HANDOFF (post-login first paint)
+   Positioning (fixed inset-0) comes from Tailwind on the element;
+   this block owns animation + layout only.
+   ============================================================ */
+.welcome {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 16px;
+  background: var(--color-card);
+  opacity: 0;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.welcome.play { animation: welcome-card-in 220ms var(--ease-out) forwards; }
+.welcome.exit {
+  animation: welcome-card-out 320ms var(--ease-out) forwards;
+  pointer-events: none;
+}
+
+/* Taps fall through to the full-screen skip button; content stays inert. */
+.welcome > *:not(button) {
+  pointer-events: none;
+}
+
+.w-mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.w-halo {
+  position: absolute;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--loader-primary-soft), transparent 72%);
+  opacity: 0;
+}
+
+.w-logo {
+  position: relative;
+  width: 66px;
+  height: 66px;
+  border-radius: 18px;
+  background: #fff;
+  object-fit: contain;
+  padding: 6px;
+  box-shadow: 0 8px 24px color-mix(in oklch, var(--color-primary) 22%, transparent);
+  opacity: 0;
+  transform: scale(0.94);
+  filter: blur(6px);
+}
+
+.w-word {
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-indent: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-foreground);
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.w-word span { color: var(--color-primary); }
+
+.w-rule {
+  width: 54px;
+  height: 2px;
+  background: var(--color-primary);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.w-name {
+  font-family: var(--font-display);
+  font-size: 16.5px;
+  font-weight: 600;
+  color: var(--color-foreground);
+  margin-top: 4px;
+  opacity: 0;
+  transform: translateY(8px);
+  text-align: center;
+}
+
+.w-role {
+  font-size: 13px;
+  color: var(--color-muted-foreground);
+  opacity: 0;
+  transform: translateY(8px);
+  text-align: center;
+}
+
+.w-hint {
+  font-size: 12px;
+  color: var(--color-muted-foreground);
+  opacity: 0;
+  letter-spacing: 0.04em;
+}
+
+.w-bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 100%;
+  background: linear-gradient(90deg, var(--color-primary), color-mix(in oklch, var(--color-primary) 55%, var(--color-background)));
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.welcome.play .w-halo  { animation: welcome-halo-cycle 1.7s ease-in-out 120ms infinite; }
+.welcome.play .w-logo  { animation: welcome-logo-in 420ms var(--ease-out) 80ms forwards; }
+.welcome.play .w-word  { animation: welcome-rise-in 320ms var(--ease-out) 340ms forwards; }
+.welcome.play .w-rule  { animation: welcome-rule-in 280ms var(--ease-out) 440ms forwards; }
+.welcome.play .w-name  { animation: welcome-rise-in 340ms var(--ease-out) 620ms forwards; }
+.welcome.play .w-role  { animation: welcome-rise-in 340ms var(--ease-out) 700ms forwards; }
+.welcome.play .w-hint  { animation: welcome-fade-in 300ms ease 1040ms forwards; }
+.welcome.play .w-bar   { animation: welcome-bar-sweep 640ms linear 1180ms forwards; }
+
+@keyframes welcome-card-in { to { opacity: 1; } }
+@keyframes welcome-card-out { to { opacity: 0; transform: scale(1.03); filter: blur(6px); } }
+@keyframes welcome-logo-in  { to { opacity: 1; transform: none; filter: none; } }
+@keyframes welcome-rise-in  { to { opacity: 1; transform: none; } }
+@keyframes welcome-fade-in  { to { opacity: 1; } }
+@keyframes welcome-rule-in  { to { transform: scaleX(1); } }
+@keyframes welcome-bar-sweep { to { transform: scaleX(1); } }
+@keyframes welcome-halo-cycle {
+  0%   { opacity: 0; transform: scale(0.88); }
+  35%  { opacity: 1; transform: scale(1.04); }
+  60%  { opacity: 0.85; transform: scale(1); }
+  100% { opacity: 1; transform: scale(1.04); }
+}
+
+/* ============================================================
+   REDUCED MOTION (scoped) — zero out stagger delays, keep end states.
+   The global rule in globals.css already collapses durations.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .loader-wordmark { animation-delay: 0ms !important; }
+
+  .welcome .w-logo,
+  .welcome .w-word,
+  .welcome .w-name,
+  .welcome .w-role,
+  .welcome .w-hint { animation-delay: 0ms !important; }
+
+  .welcome .w-rule,
+  .welcome .w-bar {
+    animation: none !important;
+    transform: scaleX(1) !important;
+  }
+
+  .welcome .w-halo { animation: none !important; opacity: 0.7; }
+}
